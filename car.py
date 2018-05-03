@@ -5,6 +5,7 @@
 from numpy import cos, sin, tan
 import scipy.integrate as integrate
 import numpy as np
+import matplotlib.pyplot as plt
 
 def saturation_filter(u, u_max, u_min):
     """ saturation_filter Helper Function
@@ -24,12 +25,19 @@ class KinematicCar:
                  L = 3, # length of vehicle in meters
                  a_max = 9.81, # maximum acceleration of vehicle
                  a_min = -9.81, # maximum deceleration of vehicle
-                 nu_max = 0.5, # maximum steering input in radians
-                 nu_min = -0.5): # minimum steering input in radians)
+                 nu_max = 0.5, # maximum steering input in radians/sec
+                 nu_min = -0.5, # minimum steering input in radians/sec)
+                 color = 'blue', # color of the car)
+                 fuel_level = float('inf')): # fuel level of the car)
+                     if color != 'blue' and color != 'gray':
+                         raise Exception("Color must either be blue or gray!")
                      self.init_state = np.array(init_state, dtype="float")
                      self.params = (L, a_max, a_min, nu_max, nu_min)
                      self.alive_time = 0
                      self.state = self.init_state
+                     self.color = color
+                     self.fuel_level = fuel_level
+
     def state_dot(self,
                   state,
                   t,
@@ -37,6 +45,12 @@ class KinematicCar:
                   nu):
        """
        state_dot is a Function that defines the system dynamics
+
+       Inputs
+       state: current state
+       t: current time
+       a: acceleration input
+       nu: steering input
 
        """
        (L, a_max, a_min, nu_max, nu_min) = self.params
@@ -48,16 +62,14 @@ class KinematicCar:
        return dstate_dt
 
     def next(self, inputs, dt):
+       """
+       next is a Function that updates
+
+       """
        # take only the real part of the solution
-       self.state = integrate.odeint(self.state_dot, self.state, t=(0, dt), args=inputs)[1]
+       a, nu = inputs
+       # fuel decreases linearly with acceleration
+       if self.fuel_level >= a*dt:
+           self.state = integrate.odeint(self.state_dot, self.state, t=(0, dt), args=(a, nu))[1]
+           self.fuel_level -= a * dt
        self.alive_time += dt
-
-
-car = KinematicCar()
-dt = 0.1
-t = 0
-while t < 1:
-    car.next(inputs=(1,1),dt = dt)
-    print(car.state)
-    t += dt
-
