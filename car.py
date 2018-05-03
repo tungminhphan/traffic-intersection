@@ -28,7 +28,7 @@ class KinematicCar:
                  nu_max = 0.5, # maximum steering input in radians/sec
                  nu_min = -0.5, # minimum steering input in radians/sec)
                  color = 'blue', # color of the car)
-                 fuel_level = float('inf')): # fuel level of the car)
+                 fuel_level = float('inf')): # fuel level of the car - FUTURE FEATURE)
                      if color != 'blue' and color != 'gray':
                          raise Exception("Color must either be blue or gray!")
                      self.init_state = np.array(init_state, dtype="float")
@@ -66,10 +66,10 @@ class KinematicCar:
        next is a Function that updates
 
        """
-       # take only the real part of the solution
        a, nu = inputs
-       # fuel decreases linearly with acceleration
-       if self.fuel_level >= a*dt:
-           self.state = integrate.odeint(self.state_dot, self.state, t=(0, dt), args=(a, nu))[1]
-           self.fuel_level -= a * dt
+
+       # take only the real part of the solution
+       self.state = integrate.odeint(self.state_dot, self.state, t=(0, dt), args=(a, nu))[1]
+       # fuel decreases linearly with acceleration/deceleration
+       self.fuel_level -= np.abs(a) * dt
        self.alive_time += dt
