@@ -43,7 +43,7 @@ plt.axis('on')
 
 
 # Artist Animation option is used to generate offline movies - implemented here as a backup
-use_artist_animation = False
+use_artist_animation = True
 if use_artist_animation:
     for i in range(0,100):
         # create new background
@@ -57,8 +57,8 @@ else:
     # sampling time
     dt = 0.1
     # creates cars
-    car_1 = car.KinematicCar(init_state=(0,np.pi/2,200,300), L=70)
-    car_2 = car.KinematicCar(init_state=(1,np.pi/4,300,200), color='gray', L=200)
+    car_1 = car.KinematicCar(init_state=(0,np.pi/2,300,300), L=70)
+    car_2 = car.KinematicCar(init_state=(1,np.pi/4,400,200), color='gray', L=200)
     cars = [car_1, car_2]
     background = Image.open(intersection_fig)
 
@@ -75,9 +75,10 @@ else:
         # update cars
         for vehicle in cars:
             nu = np.sin(i*0.01)
-            vehicle.next((15, nu),dt)
+            vehicle.next((0, nu),dt)
             if (vehicle.state[2] <= x_lim and vehicle.state[3] <= y_lim):
                 draw_car(vehicle)
+        plt.plot(300,300,'ro')
         stage = plt.imshow(background, origin="lower") # this origin option flips the y-axis
         return stage, # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
 
