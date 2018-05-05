@@ -27,7 +27,7 @@ car_scale_factor = 0.12
 def find_corner_coordinates(x_rel_i, y_rel_i, x_des, y_des, theta, square_fig):
     """
     This function takes an image and an angle then computes
-    the lower-right (observe that vertical axis here is flipped)
+    the coordinates of the corner (observe that vertical axis here is flipped)
     """
     w, h = square_fig.size
     theta = -theta
@@ -36,7 +36,6 @@ def find_corner_coordinates(x_rel_i, y_rel_i, x_des, y_des, theta, square_fig):
         raise Exception("Figure has to be square!")
     x_corner_rel, y_corner_rel = -w/2, -h/2
     R = np.array([[cos(theta), sin(theta)], [-sin(theta), cos(theta)]])
-    print(R)
     x_rel_f, y_rel_f = R.dot(np.array([[x_rel_i], [y_rel_i]]))
     # xy_unknown - xy_corner + xy_rel_f = xy_des
     return int(x_des - x_rel_f + x_corner_rel), int(y_des - y_rel_f + y_corner_rel)
@@ -54,7 +53,9 @@ def draw_car(vehicle):
     scaled_vehicle_fig_size  =  tuple([int(car_scale_factor * i) for i in vehicle_fig.size])
     # rescale car 
     vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size, Image.ANTIALIAS)
-    x_corner, y_corner = find_corner_coordinates(0, 0, x, y, theta, vehicle_fig)
+    # at this scale (-28, 0) is the relative coordinates of the center of the rear axle w.r.t. the
+    # center of the figure
+    x_corner, y_corner = find_corner_coordinates(-28, 0, x, y, theta, vehicle_fig)
     background.paste(vehicle_fig, (x_corner, y_corner), vehicle_fig)
 
 # creates figure
@@ -71,7 +72,7 @@ if use_artist_animation:
         # create new background
         background = Image.open(intersection_fig)
         # test values - should be changed according to needs
-        car_1 = car.KinematicCar(init_state=(2,np.pi,300,300), L=70)
+        car_1 = car.KinematicCar(init_state=(2,np.pi,300,300), L=50)
         draw_car(car_1)
         car_1.next((10, 0.001),dt)
         frames.append([plt.imshow(background, animated = True)])
@@ -79,8 +80,8 @@ if use_artist_animation:
     plt.show()
 else:
     # creates cars
-    car_1 = car.KinematicCar(init_state=(0,np.pi,300,300), L=70)
-    car_2 = car.KinematicCar(init_state=(0,np.pi/2,300,500), color='gray', L=200)
+    car_1 = car.KinematicCar(init_state=(0,np.pi,300,300), L = 60)
+    car_2 = car.KinematicCar(init_state=(0,np.pi/2,300,500), color='gray', L=60)
     cars = [car_1, car_2]
     background = Image.open(intersection_fig)
     def init():
@@ -96,13 +97,14 @@ else:
         # update cars
         for vehicle in cars:
             nu = np.sin(i*0.01)
-            vehicle.next((0, nu),dt)
+            vehicle.next((10, nu),dt)
             if (vehicle.state[2] <= x_lim and vehicle.state[3] <= y_lim):
                 draw_car(vehicle)
         stage = plt.imshow(background, origin="lower") # this origin option flips the y-axis
-        dots = plt.axes().plot(300,300,'.')
-        dots = plt.axes().plot(300,500,'.')
-        return stage, dots  # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
+#        dots = plt.axes().plot(300,300,'.')
+#        dots = plt.axes().plot(240,300,'.')
+#        return stage, dots  # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
+        return stage,   # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
 
     from time import time
     t0 = time()
