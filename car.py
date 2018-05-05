@@ -2,10 +2,10 @@
 # Tung M. Phan
 # California Institute of Technology
 # May 3, 2018
-from numpy import cos, sin, tan
 import scipy.integrate as integrate
 import numpy as np
 import matplotlib.pyplot as plt
+from numpy import cos, sin, tan
 
 def saturation_filter(u, u_max, u_min):
     """ saturation_filter Helper Function
@@ -56,9 +56,9 @@ class KinematicCar:
        (L, a_max, a_min, nu_max, nu_min) = self.params
        dstate_dt = np.zeros(np.shape(state))
        dstate_dt[0] = saturation_filter(a, a_max, a_min)
-       dstate_dt[1] = state[0] / L * np.tan(saturation_filter(nu, nu_max, nu_min))
-       dstate_dt[2] = state[0] * np.cos(state[1])
-       dstate_dt[3] = state[0] * np.sin(state[1])
+       dstate_dt[1] = state[0] / L * tan(saturation_filter(nu, nu_max, nu_min))
+       dstate_dt[2] = state[0] * cos(state[1])
+       dstate_dt[3] = state[0] * sin(state[1])
        return dstate_dt
 
     def next(self, inputs, dt):

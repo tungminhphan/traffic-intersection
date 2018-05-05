@@ -31,7 +31,6 @@ def find_corner_coordinates(x_rel_i, y_rel_i, x_des, y_des, theta, square_fig):
     """
     w, h = square_fig.size
     theta = -theta
-    print(w, h)
     if w != h:
         raise Exception("Figure has to be square!")
     x_corner_rel, y_corner_rel = -w/2, -h/2
@@ -80,8 +79,8 @@ if use_artist_animation:
     plt.show()
 else:
     # creates cars
-    car_1 = car.KinematicCar(init_state=(0,np.pi,300,300), L = 60)
-    car_2 = car.KinematicCar(init_state=(0,np.pi/2,300,500), color='gray', L=60)
+    car_1 = car.KinematicCar(init_state=(0,np.pi,300,400), L = 60)
+    car_2 = car.KinematicCar(init_state=(0,np.pi/2,400,500), color='gray', L=60)
     cars = [car_1, car_2]
     background = Image.open(intersection_fig)
     def init():
@@ -97,7 +96,7 @@ else:
         # update cars
         for vehicle in cars:
             nu = np.sin(i*0.01)
-            vehicle.next((10, nu),dt)
+            vehicle.next((5, nu),dt)
             if (vehicle.state[2] <= x_lim and vehicle.state[3] <= y_lim):
                 draw_car(vehicle)
         stage = plt.imshow(background, origin="lower") # this origin option flips the y-axis
