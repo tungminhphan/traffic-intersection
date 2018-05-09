@@ -22,8 +22,6 @@ blue_car_fig = dir_path + "/imglib/blue_car.png"
 gray_car_fig = dir_path + "/imglib/gray_car.png"
 car_scale_factor = 0.12
 
-
-
 def find_corner_coordinates(x_rel_i, y_rel_i, x_des, y_des, theta, square_fig):
     """
     This function takes an image and an angle then computes
@@ -60,7 +58,7 @@ def draw_car(vehicle):
 # creates figure
 fig = plt.figure()
 # turn on/off axes
-plt.axis('off')
+plt.axis('on')
 # sampling time
 dt = 0.1
 # Artist Animation option is used to generate offline movies - implemented here as a backup

@@ -27,12 +27,13 @@ class KinematicCar:
                  a_min = -9.81, # maximum deceleration of vehicle
                  nu_max = 0.5, # maximum steering input in radians/sec
                  nu_min = -0.5, # minimum steering input in radians/sec)
+                 vee_max = 100,
                  color = 'blue', # color of the car)
                  fuel_level = float('inf')): # fuel level of the car - FUTURE FEATURE)
                      if color != 'blue' and color != 'gray':
                          raise Exception("Color must either be blue or gray!")
                      self.init_state = np.array(init_state, dtype="float")
-                     self.params = (L, a_max, a_min, nu_max, nu_min)
+                     self.params = (L, a_max, a_min, nu_max, nu_min, vee_max)
                      self.alive_time = 0
                      self.state = self.init_state
                      self.color = color
@@ -53,10 +54,14 @@ class KinematicCar:
        nu: steering input
 
        """
-       (L, a_max, a_min, nu_max, nu_min) = self.params
+       (L, a_max, a_min, nu_max, nu_min, vee_max) = self.params
        dstate_dt = np.zeros(np.shape(state))
        dstate_dt[0] = saturation_filter(a, a_max, a_min)
-       dstate_dt[1] = state[0] / L * tan(saturation_filter(nu, nu_max, nu_min))
+       # if already at maximum speed, can't no longer accelerate
+       if np.abs(state[1]) >= vee_max and np.sign(a) == np.sign(state[1]):
+           dstate_dt[1] = 0
+       else:
+           dstate_dt[1] = state[0] / L * tan(saturation_filter(nu, nu_max, nu_min))
        dstate_dt[2] = state[0] * cos(state[1])
        dstate_dt[3] = state[0] * sin(state[1])
        return dstate_dt
