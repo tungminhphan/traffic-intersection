@@ -1,25 +1,33 @@
+# Contract Automaton Class
 # Tung M. Phan
 # California Institute of Technology
 # May 8, 2018
 
+from random import sample
+
 class ContractAutomaton:
 
     def __init__(self):
-        self.transitions = {} # implemented as a dict
+        self.transitions_dict = {} # dictionary of all transitions
         self.startState = None
         self.endStates = []
 
-    def add_state(self, name, transition, end_state=0):
+    def add_state(self, name, transitions, end_state = 0):
         if end_state:
             self.endStates.append(name)
-        self.handlers[name] = handler
+        self.transitions_dict[name] = transitions
 
     def set_start_state(self, name):
         self.startState = name.upper()
 
-    def simulate(self. name):
+    def simulate(self.name):
         state = self.startState
         while state not in self.endStates:
-            continue
+            state, = random.sample(transistions[state],1) # sample from set of all transistions uniformly at random
+            print("taking transitions, output, input")
+        print("simulation has terminated or deadlocked!")
+
+
+
 
 
