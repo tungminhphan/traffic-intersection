@@ -20,7 +20,7 @@ class ContractAutomaton:
     def set_start_state(self, name):
         self.startState = name.upper()
 
-    def simulate(self.name):
+    def simulate(self):
         state = self.startState
         while state not in self.endStates:
             state, = random.sample(transistions[state],1) # sample from set of all transistions uniformly at random
@@ -30,4 +30,4 @@ class ContractAutomaton:
 
 
 
-
+contract_1 = ContractAutomaton()

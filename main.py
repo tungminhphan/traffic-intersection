@@ -4,17 +4,12 @@
 # May 2, 2018
 
 import os
-import random
 import car
 import matplotlib.animation as animation
-import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 import numpy as np
-import scipy.integrate as integrate
 from numpy import cos, sin, tan
 from PIL import Image
-from PIL import ImageDraw
-from PIL import ImageFont
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 intersection_fig = dir_path + "/imglib/intersection.png"
