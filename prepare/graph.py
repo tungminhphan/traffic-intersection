@@ -1,4 +1,4 @@
-# SImple Directed Graph Class for Waypoint Graph
+# Simple Directed Graph Class for Waypoint Graph
 # Tung M. Phan
 # California Institute of Technology
 # May 9th, 2018
