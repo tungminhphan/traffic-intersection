@@ -72,8 +72,8 @@ if use_artist_animation:
     plt.show()
 else:
     # creates cars
-    car_1 = car.KinematicCar(init_state=(0,np.pi,300,400), L = 60)
-    car_2 = car.KinematicCar(init_state=(0,np.pi/2,400,500), color='gray', L=60)
+    car_1 = car.KinematicCar(init_state=(50,np.pi,500,400), L = 60)
+    car_2 = car.KinematicCar(init_state=(50,np.pi/2,400,500), color='gray', L=60)
     cars = [car_1, car_2]
     background = Image.open(intersection_fig)
     def init():
@@ -89,7 +89,10 @@ else:
         # update cars
         for vehicle in cars:
             nu = np.sin(i*0.01)
-            vehicle.next((5, nu),dt)
+            if np.floor(vehicle.alive_time / 10.0) % 2 == 0:
+                vehicle.next((0, nu),dt)
+            else:
+                vehicle.next((0, -nu),dt)
             if (vehicle.state[2] <= x_lim and vehicle.state[3] <= y_lim):
                 draw_car(vehicle)
         stage = plt.imshow(background, origin="lower") # this origin option flips the y-axis
