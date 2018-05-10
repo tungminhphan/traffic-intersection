@@ -15,20 +15,24 @@ plt.axis("on")
 background = Image.open(intersection_fig)
 plt.imshow(background, origin="Lower")
 
-
-#dots = plt.axes().plot(300,300,'.')
-markersize = 1
-arrow_width = 3
-
-x = (0,315)
+markersize = 10
+arrow_width = 4
 
 G = DirectedGraph()
-
-G.add_edges([(,
-             (1,2),
+# a node is of the form (v, theta, x, y)
+G.add_edges([((0, 0, 0, 315), (0, 0, 244,232)),
+             ((0, 0, 200, 232), (0, 0, 442, 552))
              ])
-G.print_graph()
 
-plt.plot(x[0],x[1], 'r.', markersize = markersize)
-plt.arrow(x[0],x[1], 20, 60, width = arrow_width, color = 'r')
+for start_node in G._edges:
+    start_x = start_node[2]
+    start_y = start_node[3]
+    plt.plot(start_x, start_y, 'r.', markersize = markersize)
+    for end_node in G._edges[start_node]:
+        end_x = end_node[2]
+        end_y = end_node[3]
+        dx = end_x - start_x
+        dy = end_y - start_y
+        plt.arrow(start_x,start_y, dx, dy, width = arrow_width, color = 'r')
+
 plt.show()
