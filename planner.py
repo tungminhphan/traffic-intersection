@@ -13,8 +13,15 @@
 
 import prepare.graph as graph
 input_graph = graph.WeightedDirectedGraph()
-input_graph.add_edges([('a', 'b', 10), ('a', 'c', 2), ('c', 'z', 3)])
-input_graph.add_edges([('b', 'z', 5), ('b', 'c', 1), ('a', 'z', 19)])
+input_graph.add_edges([('1', '2', 2)])
+input_graph.add_edges([('1', '3', 4)])
+input_graph.add_edges([('2', '3', 1)])
+input_graph.add_edges([('2', '4', 4)])
+input_graph.add_edges([('2', '5', 2)])
+input_graph.add_edges([('3', '5', 3)])
+input_graph.add_edges([('5', '4', 3)])
+input_graph.add_edges([('4', '6', 2)])
+input_graph.add_edges([('5', '6', 2)])
 
 def compute_path(start, end, graph):
     # input
@@ -45,10 +52,11 @@ def dijkstra(start, end, graph):
     current = start # set currently processed node to start node
 
     while current != end:
-        for neighbor in graph._edges[current]:
-            if score[neighbor] > score[current] + graph._weights[(current, neighbor)]:
-                score[neighbor] = score[current] + graph._weights[(current, neighbor)]
-                predecessor[neighbor] = current
+        if current in graph._edges:
+            for neighbor in graph._edges[current]:
+                if score[neighbor] > score[current] + graph._weights[(current, neighbor)]:
+                    score[neighbor] = score[current] + graph._weights[(current, neighbor)]
+                    predecessor[neighbor] = current
         unmarked_nodes.remove(current) # mark current node
         # find unmarked node with lowest score
         min_node = None
@@ -69,6 +77,6 @@ def dijkstra(start, end, graph):
     return score[end], shortest_path
 
 input_graph.print_graph()
-score, shortest_path = dijkstra('a', 'z', input_graph)
+score, shortest_path = dijkstra('1', '6', input_graph)
 print('The cost is: ' + str(score))
 print('The path is: ' + str(shortest_path))
