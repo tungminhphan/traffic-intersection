@@ -13,7 +13,8 @@
 
 import prepare.graph as graph
 input_graph = graph.WeightedDirectedGraph()
-input_graph.add_edges([('a', 'b', 10), ('a', 'c', 2), ('z', 'c', 3)])
+input_graph.add_edges([('a', 'b', 10), ('a', 'c', 2), ('c', 'z', 3)])
+input_graph.add_edges([('b', 'z', 5), ('b', 'c', 1), ('a', 'z', 19)])
 
 def compute_path(start, end, graph):
     # input
@@ -31,15 +32,43 @@ def compute_path(start, end, graph):
 
 def dijkstra(start, end, graph):
     score = {}
+    predecessor = {}
+    unmarked_nodes = graph._nodes
     if start not in graph._nodes or end not in graph._nodes:
         raise SyntaxError("Either the start or end node is not in the graph!")
+
     for node in graph._nodes:
         if node != start:
-            score[node] = float('inf') # initialize all scores to 0
-        else
-            score[node] = 0
-    return score
+            score[node] = float('inf') # initialize all scores to inf
+        else:
+            score[node] = 0 # start node is initalized to 0
+    current = start # set currently processed node to start node
+
+    while current != end:
+        for neighbor in graph._edges[current]:
+            if score[neighbor] > score[current] + graph._weights[(current, neighbor)]:
+                score[neighbor] = score[current] + graph._weights[(current, neighbor)]
+                predecessor[neighbor] = current
+        unmarked_nodes.remove(current) # mark current node
+        # find unmarked node with lowest score
+        min_node = None
+        score[min_node] = float('inf')
+        for unmarked in unmarked_nodes:
+            if score[unmarked] < score[min_node]:
+                min_node = unmarked
+        current = min_node # set current to unmarked node with min score
+    start_of_prefix = end
+    shortest_path = [end]
+    while predecessor[start_of_prefix] != start:
+        shortest_path.append(predecessor[start_of_prefix])
+        start_of_prefix = predecessor[start_of_prefix]
+    # add start node then reverse list
+    shortest_path.append(start)
+    shortest_path.reverse()
+
+    return score[end], shortest_path
 
 input_graph.print_graph()
-score = dijkstra('a', 'x', input_graph)
-print(score)
+score, shortest_path = dijkstra('a', 'z', input_graph)
+print('The cost is: ' + str(score))
+print('The path is: ' + str(shortest_path))
