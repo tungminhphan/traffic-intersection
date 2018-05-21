@@ -54,8 +54,9 @@ def dijkstra(start, end, graph):
     while current != end:
         if current in graph._edges:
             for neighbor in graph._edges[current]:
-                if score[neighbor] > score[current] + graph._weights[(current, neighbor)]:
-                    score[neighbor] = score[current] + graph._weights[(current, neighbor)]
+                new_score = score[current] + graph._weights[(current, neighbor)]
+                if score[neighbor] > new_score:
+                    score[neighbor] = new_score
                     predecessor[neighbor] = current
         unmarked_nodes.remove(current) # mark current node
         # find unmarked node with lowest score
