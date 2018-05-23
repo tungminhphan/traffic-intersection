@@ -8,6 +8,7 @@ from random import sample
 class ContractAutomaton:
 
     def __init__(self):
+        self.alphabet = {} # the alphabet for the contract
         self.transitions_dict = {} # dictionary of all transitions
         self.startState = None
         self.endStates = []
