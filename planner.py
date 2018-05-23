@@ -23,12 +23,12 @@ input_graph.add_edges([('5', '4', 3)])
 input_graph.add_edges([('4', '6', 2)])
 input_graph.add_edges([('5', '6', 2)])
 
-def compute_path(start, end, graph):
+def compute_path(start, goal, graph):
     # input
     # start node, end node
     # graph
     # outputs shortest path
-    global world_map
+    global world_map, traffic_light
     # take the waypoint if it hasn't been taken... otherwise, paint it
     # paint the path that has been c
     # return painted graph
