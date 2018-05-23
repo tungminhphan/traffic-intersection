@@ -23,12 +23,39 @@ input_graph.add_edges([('5', '4', 3)])
 input_graph.add_edges([('4', '6', 2)])
 input_graph.add_edges([('5', '6', 2)])
 
+def traffic_controller():
+    global traffic_signal, queues
+    # while True
+    # check traffic light
+    # try to empty car
+    pass
+
+
+
+world_map = {'A1': {'to': {'A2': {'weight': 1, 'timestamp': 5}, 'A3': {'weight': 2,
+    'timestamp': 2}}}}
+print(world_map['A1']['to']['A2']['timestamp'])
+
+
 def compute_path(start, end, graph):
+    global world_map
+    # assumes world graph given is correct...
+    # guarantees a marked graph output, in the process updating world map
+    # as one enters an intersection, all information that is available to him is
+    # traffic light, how other cars move...? he should also have an idea of what to
+    # do, a purpose in the intersection..
+    # since we already have Dijkstra i guess the question would be how the edges shouldbe
+    # relabelled also what happens when blocked?? requeued?
+    # how many queues are needed? one for each direction?
+    
+
+
+
+
     # input
     # start node, end node
     # graph
     # outputs shortest path
-    global world_map
     # take the waypoint if it hasn't been taken... otherwise, paint it
     # paint the path that has been c
     # return painted graph
@@ -38,6 +65,16 @@ def compute_path(start, end, graph):
     print("check")
 
 def dijkstra(start, end, graph):
+    '''
+    This code takes in a weighted directed graph, a start node, an end node and outputs
+    the shortest path from the start node to the end node on that graph
+    
+    Input:  start - start node
+            end - end node
+            graph - weighted directed graph
+    Output: shortest path from start to end node
+
+    '''
     score = {}
     predecessor = {}
     unmarked_nodes = graph._nodes
