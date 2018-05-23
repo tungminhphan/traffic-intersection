@@ -53,3 +53,7 @@ class WeightedDirectedGraph(DirectedGraph):
         for start_node in self._edges:
             for end_node in self._edges[start_node]:
                 print(str(start_node) + ' -(' + str(self._weights[start_node, end_node]) +  ')-> ' +  str(end_node))
+
+class WorldMap(WeightedDirectedGraph):
+    def __init__(self):
+        WeighedDirectedGraph.__init__(self)
