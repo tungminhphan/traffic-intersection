@@ -12,6 +12,9 @@
 # map is global
 
 import prepare.graph as graph
+import time
+
+
 input_graph = graph.WeightedDirectedGraph()
 input_graph.add_edges([('1', '2', 2)])
 input_graph.add_edges([('1', '3', 4)])
@@ -23,8 +26,6 @@ input_graph.add_edges([('5', '4', 3)])
 input_graph.add_edges([('4', '6', 2)])
 input_graph.add_edges([('5', '6', 2)])
 
-def compute_path(start, goal, graph):
-=======
 def traffic_controller():
     global traffic_signal, queues
     # while True
@@ -36,11 +37,47 @@ def traffic_controller():
 
 world_map = {'A1': {'to': {'A2': {'weight': 1, 'timestamp': 5}, 'A3': {'weight': 2,
     'timestamp': 2}}}}
-print(world_map['A1']['to']['A2']['timestamp'])
+print('The timestamp is ' + str(world_map['A1']['to']['A2']['timestamp']) + " units")
 
 
-def compute_path(start, end, graph):
-    global world_map
+def to_planning_graph(graph):
+    return 10
+
+def check_collision(path):
+    score = {}
+
+    for node in path:
+        score[node] = score[previous_node] + world_map[new_node]
+        if abs(world_map[node][timestamp] - score[node]) >= safety:
+            pass
+
+    return True
+
+def enqueue():
+    return True
+
+def timestamp_path(path):
+    for node in path:
+        world_map[node][timestamp] = time.clock() + cummulative_weight
+
+
+
+def compute_path(start, end, world_map):
+    global traffic_signal, itineraries, work_queue, clock
+    tentative_cost, tentative_path = dijkstra(start, end, world_map)
+    if check_collision():
+        destination = check_collision()
+        marked_execution(partial_path)
+
+    return destination
+
+
+
+
+    # convert graph to something that can be used by
+
+
+
     # assumes world graph given is correct...
     # guarantees a marked graph output, in the process updating world map
     # as one enters an intersection, all information that is available to him is
@@ -49,10 +86,6 @@ def compute_path(start, end, graph):
     # since we already have Dijkstra i guess the question would be how the edges shouldbe
     # relabelled also what happens when blocked?? requeued?
     # how many queues are needed? one for each direction?
-    
-
-
-
 
     # input
     # start node, end node
@@ -70,7 +103,6 @@ def dijkstra(start, end, graph):
     '''
     This code takes in a weighted directed graph, a start node, an end node and outputs
     the shortest path from the start node to the end node on that graph
-    
     Input:  start - start node
             end - end node
             graph - weighted directed graph
@@ -116,7 +148,7 @@ def dijkstra(start, end, graph):
 
     return score[end], shortest_path
 
-input_graph.print_graph()
-score, shortest_path = dijkstra('1', '6', input_graph)
-print('The cost is: ' + str(score))
-print('The path is: ' + str(shortest_path))
+#input_graph.print_graph()
+#score, shortest_path = dijkstra('1', '6', input_graph)
+#print('The cost is: ' + str(score))
+#print('The path is: ' + str(shortest_path))
