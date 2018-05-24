@@ -41,7 +41,7 @@ print('The timestamp is ' + str(world_map['A1']['to']['A2']['timestamp']) + " un
 
 
 def to_planning_graph(graph):
-    return 10
+    return True
 
 def check_collision(path):
     score = {}
@@ -68,6 +68,8 @@ def compute_path(start, end, world_map):
     if check_collision():
         destination = check_collision()
         marked_execution(partial_path)
+    # should mark an attempt time and a release time
+
 
     return destination
 
@@ -89,8 +91,7 @@ def compute_path(start, end, world_map):
 
     # input
     # start node, end node
-    # graph
-    # outputs shortest path
+    # graph # outputs shortest path
     # take the waypoint if it hasn't been taken... otherwise, paint it
     # paint the path that has been c
     # return painted graph
@@ -111,7 +112,7 @@ def dijkstra(start, end, graph):
     '''
     score = {}
     predecessor = {}
-    unmarked_nodes = graph._nodes
+    unmarked_nodes = graph._nodes.copy() # create a copy of set of nodes in graph
     if start not in graph._nodes or end not in graph._nodes:
         raise SyntaxError("Either the start or end node is not in the graph!")
 
@@ -121,7 +122,6 @@ def dijkstra(start, end, graph):
         else:
             score[node] = 0 # start node is initalized to 0
     current = start # set currently processed node to start node
-
     while current != end:
         if current in graph._edges:
             for neighbor in graph._edges[current]:
@@ -145,10 +145,28 @@ def dijkstra(start, end, graph):
     # add start node then reverse list
     shortest_path.append(start)
     shortest_path.reverse()
-
     return score[end], shortest_path
+time_stamps = {}
+def time_stamp(path):
+    global time_stamps
+    stamp = time.clock()
+    first = path[0]
+    try: time_stamps[first].add(stamp)
+    except KeyError:
+        time_stamps[first] = {stamp}
+    for prev, curr in zip(path[0::1], shortest_path[1::1]):
+        stamp = stamp + input_graph._weights[(prev,curr)]
+        try: time_stamps[curr].add(stamp)
+        except KeyError:
+            time_stamps[curr] = {stamp}
 
-#input_graph.print_graph()
-#score, shortest_path = dijkstra('1', '6', input_graph)
-#print('The cost is: ' + str(score))
-#print('The path is: ' + str(shortest_path))
+score, shortest_path = dijkstra('1', '6', input_graph)
+print('The cost is: ' + str(score))
+print('The path is: ' + str(shortest_path))
+
+time_stamp(shortest_path)
+print(time_stamps)
+time.sleep(2)
+score, shortest_path = dijkstra('2', '5', input_graph)
+time_stamp(shortest_path)
+print(time_stamps)
