@@ -35,7 +35,7 @@ def compute_path(start, end, world_map):
 
 def dijkstra(start, end, graph):
     '''
-    This code takes in a weighted directed graph, a start node, an end node and outputs
+    This function takes in a weighted directed graph, a start node, an end node and outputs
     the shortest path from the start node to the end node on that graph
     Input:  start - start node
             end - end node
@@ -80,6 +80,19 @@ def dijkstra(start, end, graph):
     shortest_path.reverse()
     return score[end], shortest_path
 
+def get_scheduled_times(path):
+    '''
+    This function takes in a path and computes the scheduled times of arrival at the nodes on this path
+    Input: path - the path whose nodes the user would like to compute the scheduled times of arrival for
+    Output: a tuple of scheduled times
+    '''
+    global start_time
+    now = round(time.time() - start_time, 2) # round to 2nd decimal place
+    scheduled_times = [now]
+    for prev, curr in zip(path[0::1], shortest_path[1::1]):
+        scheduled_times.append(scheduled_times[-1] + primitive_graph._weights[(prev, curr)])
+    return scheduled_times
+
 
 def time_stamp(path):
     '''
@@ -89,17 +102,28 @@ def time_stamp(path):
     Output:  modifies time_stamps
     '''
     global time_stamps, start_time, primitive_graph
-    now = round(time.time() - start_time, 2) # round to 2nd decimal place
-    scheduled_times = [now]
-    for prev, curr in zip(path[0::1], shortest_path[1::1]):
-        scheduled_times.append(scheduled_times[-1] + primitive_graph._weights[(prev, curr)])
+    scheduled_times = get_scheduled_times(path)
     for k in range(0,len(path)):
         left = max(0, k-1)
         right = min(len(path)-1, k+1)
         stamp = (scheduled_times[left], scheduled_times[right]) # interval stamp
-        try: time_stamps[k].add(stamp)
+        try: time_stamps[path[k]].add(stamp)
         except KeyError:
-            time_stamps[k] = {stamp}
+            time_stamps[path[k]] = {stamp}
+
+def safety_check(path):
+    global start_time
+    now = round(time.time() - start_time, 2) # round to 2nd decimal place
+    scheduled_times = [now]
+    for prev, curr in zip(path[0::1], shortest_path[1::1]):
+        scheduled_times.append(scheduled_times[-1] + primitive_graph._weights[(prev, curr)])
+        if curr in time_stamps:
+            current_time = scheduled_times[-1]
+            for interval in time_stamps[curr]:
+                if current_time >= interval[0] and current_time <= interval[1]:
+                    print(curr)
+                    return False
+    return True
 
     ######################################################
     ######################################################
@@ -128,10 +152,13 @@ time_stamps = {}
 start_time = time.time()
 
 score, shortest_path = dijkstra('1', '6', primitive_graph)
+
+
 time_stamp(shortest_path)
 print(time_stamps)
-time.sleep(3)
+time.sleep(0.1)
 score, shortest_path = dijkstra('2', '6', primitive_graph)
 time_stamp(shortest_path)
 print(time_stamps)
+print(safety_check(shortest_path))
 
