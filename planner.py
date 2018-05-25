@@ -86,8 +86,7 @@ def get_scheduled_times(path):
     Input: path - the path whose nodes the user would like to compute the scheduled times of arrival for
     Output: a tuple of scheduled times
     '''
-    global start_time
-    now = round(time.time() - start_time, 2) # round to 2nd decimal place
+    now = get_now()
     scheduled_times = [now]
     for prev, curr in zip(path[0::1], shortest_path[1::1]):
         scheduled_times.append(scheduled_times[-1] + primitive_graph._weights[(prev, curr)])
@@ -111,27 +110,50 @@ def time_stamp(path):
         except KeyError:
             time_stamps[path[k]] = {stamp}
 
-def safety_check(path):
+def get_now():
+    '''
+    Get current time
+    '''
     global start_time
-    now = round(time.time() - start_time, 2) # round to 2nd decimal place
-    scheduled_times = [now]
-    for prev, curr in zip(path[0::1], shortest_path[1::1]):
-        scheduled_times.append(scheduled_times[-1] + primitive_graph._weights[(prev, curr)])
-        if curr in time_stamps:
-            current_time = scheduled_times[-1]
-            for interval in time_stamps[curr]:
-                if current_time >= interval[0] and current_time <= interval[1]:
-                    print(curr)
-                    return False
-    return True
+    now = time.time() - start_time
+    return now
 
-    ######################################################
-    ######################################################
-    ##                                                  ##
-    ##                   SIMULATION                     ##
-    ##                                                  ##
-    ######################################################
-    ######################################################
+
+def safety_check(path):
+    now = get_now()
+    scheduled_times = [now]
+    k = 0
+    for curr, nxt in zip(path[0::1], shortest_path[1::1]):
+        scheduled_times.append(scheduled_times[-1] + primitive_graph._weights[(curr, nxt)])
+        left = max(0, k-1)
+        right = -1
+        curr_interval = (scheduled_times[left], scheduled_times[right]) # next interval to check
+        if curr in time_stamps: # if current loc is already stamped
+            for interval in time_stamps[curr]:
+                if (curr_interval[1] >= interval[0] and curr_interval[0] <= interval[1]) or (interval[1] >= curr_interval[0] and interval[0] <= curr_interval[1]):
+                    # if the two intervals overlap
+                    return curr # return node with conflict
+        k += 1
+        # check last node
+        left = max(0, k-1)
+        right = -1
+        curr_interval = (scheduled_times[left], scheduled_times[right]) # last interval
+        curr = path[-1]
+        if curr in time_stamps: # if current loc is already stamped
+            for interval in time_stamps[curr]:
+                if (curr_interval[1] >= interval[0] and curr_interval[0] <= interval[1]) or (interval[1] >= curr_interval[0] and interval[0] <= curr_interval[1]):
+                    # if the two intervals overlap
+                    return curr # return node with conflict
+        return True
+
+
+         ######################################################
+         ######################################################
+         ##                                                  ##
+         ##                    SIMULATION                    ##
+         ##                                                  ##
+         ######################################################
+         ######################################################
 
 # define primitive_graph
 primitive_graph = graph.WeightedDirectedGraph()
@@ -150,15 +172,13 @@ time_stamps = {}
 
 # start_time is the start time of the simulation
 start_time = time.time()
-
 score, shortest_path = dijkstra('1', '6', primitive_graph)
-
-
 time_stamp(shortest_path)
+print(shortest_path)
 print(time_stamps)
-time.sleep(0.1)
+
+time.sleep(10)
+
 score, shortest_path = dijkstra('2', '6', primitive_graph)
-time_stamp(shortest_path)
-print(time_stamps)
+print(shortest_path)
 print(safety_check(shortest_path))
-
