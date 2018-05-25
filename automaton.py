@@ -29,5 +29,3 @@ class ContractAutomaton:
 
 
 
-
-contract_1 = ContractAutomaton()
