@@ -43,41 +43,44 @@ def dijkstra(start, end, graph):
     Output: shortest path from start to end node
 
     '''
-    score = {}
-    predecessor = {}
-    unmarked_nodes = graph._nodes.copy() # create a copy of set of nodes in graph
-    if start not in graph._nodes or end not in graph._nodes:
-        raise SyntaxError("Either the start or end node is not in the graph!")
+    if start == end: # if start coincides with end
+        return 0, [start]
+    else: # otherwise
+        score = {}
+        predecessor = {}
+        unmarked_nodes = graph._nodes.copy() # create a copy of set of nodes in graph
+        if start not in graph._nodes or end not in graph._nodes:
+            raise SyntaxError("Either the start or end node is not in the graph!")
 
-    for node in graph._nodes:
-        if node != start:
-            score[node] = float('inf') # initialize all scores to inf
-        else:
-            score[node] = 0 # start node is initalized to 0
-    current = start # set currently processed node to start node
-    while current != end:
-        if current in graph._edges:
-            for neighbor in graph._edges[current]:
-                new_score = score[current] + graph._weights[(current, neighbor)]
-                if score[neighbor] > new_score:
-                    score[neighbor] = new_score
-                    predecessor[neighbor] = current
-        unmarked_nodes.remove(current) # mark current node
-        # find unmarked node with lowest score
-        min_node = None
-        score[min_node] = float('inf')
-        for unmarked in unmarked_nodes:
-            if score[unmarked] < score[min_node]:
-                min_node = unmarked
-        current = min_node # set current to unmarked node with min score
-    start_of_prefix = end
-    shortest_path = [end]
-    while predecessor[start_of_prefix] != start:
-        shortest_path.append(predecessor[start_of_prefix])
-        start_of_prefix = predecessor[start_of_prefix]
-    # add start node then reverse list
-    shortest_path.append(start)
-    shortest_path.reverse()
+        for node in graph._nodes:
+            if node != start:
+                score[node] = float('inf') # initialize all scores to inf
+            else:
+                score[node] = 0 # start node is initalized to 0
+        current = start # set currently processed node to start node
+        while current != end:
+            if current in graph._edges:
+                for neighbor in graph._edges[current]:
+                    new_score = score[current] + graph._weights[(current, neighbor)]
+                    if score[neighbor] > new_score:
+                        score[neighbor] = new_score
+                        predecessor[neighbor] = current
+            unmarked_nodes.remove(current) # mark current node
+            # find unmarked node with lowest score
+            min_node = None
+            score[min_node] = float('inf')
+            for unmarked in unmarked_nodes:
+                if score[unmarked] < score[min_node]:
+                    min_node = unmarked
+            current = min_node # set current to unmarked node with min score
+        start_of_prefix = end
+        shortest_path = [end]
+        while predecessor[start_of_prefix] != start:
+            shortest_path.append(predecessor[start_of_prefix])
+            start_of_prefix = predecessor[start_of_prefix]
+        # add start node then reverse list
+        shortest_path.append(start)
+        shortest_path.reverse()
     return score[end], shortest_path
 
 def get_scheduled_times(path):
@@ -88,7 +91,7 @@ def get_scheduled_times(path):
     '''
     now = get_now()
     scheduled_times = [now]
-    for prev, curr in zip(path[0::1], shortest_path[1::1]):
+    for prev, curr in zip(path[0::1], path[1::1]):
         scheduled_times.append(scheduled_times[-1] + primitive_graph._weights[(prev, curr)])
     return scheduled_times
 
@@ -119,31 +122,44 @@ def get_now():
     return now
 
 
-def safety_check(path):
+def is_overlapping(interval_A, interval_B):
+    '''
+    This subroutine checks if two intervals intersect with each other. It returns True if
+    they do and False otherwise
+
+    Input : interval_A - first interval
+            interval_B - second interval
+    Output: is_intersecting - True if interval_A intersects interval_B, False otherwise
+    
+    '''
+    is_intersecting = interval_A[1] >= interval_B[0] and interval_A[0] <= interval_B[1] or interval_B[1] >= interval_A[0] and interval_B[0] <= interval_A[1]
+    return is_intersecting
+
+def is_safe(path):
     now = get_now()
     scheduled_times = [now]
     k = 0
-    for curr, nxt in zip(path[0::1], shortest_path[1::1]):
+    for curr, nxt in zip(path[0::1], path[1::1]):
         scheduled_times.append(scheduled_times[-1] + primitive_graph._weights[(curr, nxt)])
         left = max(0, k-1)
         right = -1
         curr_interval = (scheduled_times[left], scheduled_times[right]) # next interval to check
         if curr in time_stamps: # if current loc is already stamped
             for interval in time_stamps[curr]:
-                if (curr_interval[1] >= interval[0] and curr_interval[0] <= interval[1]) or (interval[1] >= curr_interval[0] and interval[0] <= curr_interval[1]):
+                if is_overlapping(curr_interval, interval):
                     # if the two intervals overlap
                     return curr # return node with conflict
         k += 1
-        # check last node
-        left = max(0, k-1)
-        right = -1
-        curr_interval = (scheduled_times[left], scheduled_times[right]) # last interval
-        curr = path[-1]
-        if curr in time_stamps: # if current loc is already stamped
-            for interval in time_stamps[curr]:
-                if (curr_interval[1] >= interval[0] and curr_interval[0] <= interval[1]) or (interval[1] >= curr_interval[0] and interval[0] <= curr_interval[1]):
-                    # if the two intervals overlap
-                    return curr # return node with conflict
+    # now check last node
+    left = max(0, k-1)
+    right = -1
+    curr_interval = (scheduled_times[left], scheduled_times[right]) # last interval
+    curr = path[-1]
+    if curr in time_stamps: # if current loc is already stamped
+        for interval in time_stamps[curr]:
+            if is_overlapping(curr_interval, interval):
+                # if the two intervals overlap
+                return curr # return node with conflict
         return True
 
 
@@ -177,8 +193,6 @@ time_stamp(shortest_path)
 print(shortest_path)
 print(time_stamps)
 
-time.sleep(10)
-
-score, shortest_path = dijkstra('2', '6', primitive_graph)
+score, shortest_path = dijkstra('2', '2', primitive_graph)
 print(shortest_path)
-print(safety_check(shortest_path))
+print(is_safe(shortest_path))
