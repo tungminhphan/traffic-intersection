@@ -3,28 +3,11 @@
 # May 16th, 2018
 # California Institute of Technology
 
-# looks at current state
-# 
-# Input: Current State (Traffic Light Signal etc)
-#        Graph?
-# Output: A set of nodes or primitives to follow
-# how do you define the graph structure 
-# map is global
-
-import prepare.graph as graph
 import time
+import prepare.graph as graph
+import numpy as np
+np.set_printoptions(precision=2)
 
-
-input_graph = graph.WeightedDirectedGraph()
-input_graph.add_edges([('1', '2', 2)])
-input_graph.add_edges([('1', '3', 4)])
-input_graph.add_edges([('2', '3', 1)])
-input_graph.add_edges([('2', '4', 4)])
-input_graph.add_edges([('2', '5', 2)])
-input_graph.add_edges([('3', '5', 3)])
-input_graph.add_edges([('5', '4', 3)])
-input_graph.add_edges([('4', '6', 2)])
-input_graph.add_edges([('5', '6', 2)])
 
 def traffic_controller():
     global traffic_signal, queues
@@ -33,34 +16,13 @@ def traffic_controller():
     # try to empty car
     pass
 
-
-
-world_map = {'A1': {'to': {'A2': {'weight': 1, 'timestamp': 5}, 'A3': {'weight': 2,
-    'timestamp': 2}}}}
-print('The timestamp is ' + str(world_map['A1']['to']['A2']['timestamp']) + " units")
-
-
-def to_planning_graph(graph):
-    return True
-
 def check_collision(path):
     score = {}
-
     for node in path:
         score[node] = score[previous_node] + world_map[new_node]
         if abs(world_map[node][timestamp] - score[node]) >= safety:
             pass
-
     return True
-
-def enqueue():
-    return True
-
-def timestamp_path(path):
-    for node in path:
-        world_map[node][timestamp] = time.clock() + cummulative_weight
-
-
 
 def compute_path(start, end, world_map):
     global traffic_signal, itineraries, work_queue, clock
@@ -69,36 +31,7 @@ def compute_path(start, end, world_map):
         destination = check_collision()
         marked_execution(partial_path)
     # should mark an attempt time and a release time
-
-
     return destination
-
-
-
-
-    # convert graph to something that can be used by
-
-
-
-    # assumes world graph given is correct...
-    # guarantees a marked graph output, in the process updating world map
-    # as one enters an intersection, all information that is available to him is
-    # traffic light, how other cars move...? he should also have an idea of what to
-    # do, a purpose in the intersection..
-    # since we already have Dijkstra i guess the question would be how the edges shouldbe
-    # relabelled also what happens when blocked?? requeued?
-    # how many queues are needed? one for each direction?
-
-    # input
-    # start node, end node
-    # graph # outputs shortest path
-    # take the waypoint if it hasn't been taken... otherwise, paint it
-    # paint the path that has been c
-    # return painted graph
-    # find shortest path
-    # paint it and return
-    # compute next move
-    print("check")
 
 def dijkstra(start, end, graph):
     '''
@@ -146,27 +79,59 @@ def dijkstra(start, end, graph):
     shortest_path.append(start)
     shortest_path.reverse()
     return score[end], shortest_path
-time_stamps = {}
+
+
 def time_stamp(path):
-    global time_stamps
-    stamp = time.clock()
-    first = path[0]
-    try: time_stamps[first].add(stamp)
-    except KeyError:
-        time_stamps[first] = {stamp}
+    '''
+    Given a weighted path, this function updates the time_stamps set according to the given path.
+
+    Input:   path - weighted path
+    Output:  modifies time_stamps
+    '''
+    global time_stamps, start_time, primitive_graph
+    now = round(time.time() - start_time, 2) # round to 2nd decimal place
+    scheduled_times = [now]
     for prev, curr in zip(path[0::1], shortest_path[1::1]):
-        stamp = stamp + input_graph._weights[(prev,curr)]
-        try: time_stamps[curr].add(stamp)
+        scheduled_times.append(scheduled_times[-1] + primitive_graph._weights[(prev, curr)])
+    for k in range(0,len(path)):
+        left = max(0, k-1)
+        right = min(len(path)-1, k+1)
+        stamp = (scheduled_times[left], scheduled_times[right]) # interval stamp
+        try: time_stamps[k].add(stamp)
         except KeyError:
-            time_stamps[curr] = {stamp}
+            time_stamps[k] = {stamp}
 
-score, shortest_path = dijkstra('1', '6', input_graph)
-print('The cost is: ' + str(score))
-print('The path is: ' + str(shortest_path))
+    ######################################################
+    ######################################################
+    ##                                                  ##
+    ##                   SIMULATION                     ##
+    ##                                                  ##
+    ######################################################
+    ######################################################
 
+# define primitive_graph
+primitive_graph = graph.WeightedDirectedGraph()
+primitive_graph.add_edges([('1', '2', 2.5)])
+primitive_graph.add_edges([('1', '3', 4.2)])
+primitive_graph.add_edges([('2', '3', 3.5)])
+primitive_graph.add_edges([('2', '4', 4.6)])
+primitive_graph.add_edges([('2', '5', 2.1)])
+primitive_graph.add_edges([('3', '5', 3.8)])
+primitive_graph.add_edges([('5', '4', 3.9)])
+primitive_graph.add_edges([('4', '6', 2.1)])
+primitive_graph.add_edges([('5', '6', 2.5)])
+
+# time_stamps a dictionary with nodes as keys containing reserved intervals
+time_stamps = {}
+
+# start_time is the start time of the simulation
+start_time = time.time()
+
+score, shortest_path = dijkstra('1', '6', primitive_graph)
 time_stamp(shortest_path)
 print(time_stamps)
-time.sleep(2)
-score, shortest_path = dijkstra('2', '5', input_graph)
+time.sleep(3)
+score, shortest_path = dijkstra('2', '6', primitive_graph)
 time_stamp(shortest_path)
 print(time_stamps)
+
