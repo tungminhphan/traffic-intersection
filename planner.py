@@ -5,9 +5,7 @@
 
 import time
 import prepare.graph as graph
-import numpy as np
-np.set_printoptions(precision=2)
-
+import prepare.queue as queue
 
 def traffic_controller():
     global traffic_signal, queues
@@ -115,7 +113,7 @@ def time_stamp(path):
 
 def get_now():
     '''
-    Get current time
+    Get the current time
     '''
     global start_time
     now = time.time() - start_time
@@ -160,7 +158,7 @@ def is_safe(path):
             if is_overlapping(curr_interval, interval):
                 # if the two intervals overlap
                 return curr # return node with conflict
-        return True
+    return True
 
 
          ######################################################
@@ -191,8 +189,11 @@ start_time = time.time()
 score, shortest_path = dijkstra('1', '6', primitive_graph)
 time_stamp(shortest_path)
 print(shortest_path)
-print(time_stamps)
-
+for node_set in shortest_path:
+    for interval in time_stamps[node_set]:
+        print('(', round(interval[0], 2),',',round(interval[1],2),')')
+time.sleep(5)
 score, shortest_path = dijkstra('2', '2', primitive_graph)
 print(shortest_path)
 print(is_safe(shortest_path))
+queue = []
