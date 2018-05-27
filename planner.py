@@ -3,7 +3,7 @@
 # May 16th, 2018
 # California Institute of Technology
 
-import time
+import time, random
 import prepare.graph as graph
 import prepare.queue as queue
 
@@ -186,14 +186,32 @@ time_stamps = {}
 
 # start_time is the start time of the simulation
 start_time = time.time()
-score, shortest_path = dijkstra('1', '6', primitive_graph)
-time_stamp(shortest_path)
-print(shortest_path)
-for node_set in shortest_path:
-    for interval in time_stamps[node_set]:
-        print('(', round(interval[0], 2),',',round(interval[1],2),')')
-time.sleep(5)
-score, shortest_path = dijkstra('2', '2', primitive_graph)
-print(shortest_path)
-print(is_safe(shortest_path))
-queue = []
+
+# request queue
+request_queue = queue.Queue()
+
+def process_request():
+    global request_queue
+    if request_queue.len() == 0:
+        pass
+    else:   
+        curr_req = request_queue.pop()
+        path_score, shortest_path = dijkstra(request['start'], request['end'], primitive_graph)
+        safety_check = is_safe(shortest_path)
+        if safety_check == True:
+            time_stamp(shortest_path)
+            print('A new request has been processed... Returning the following trace:')
+            for node_set in shortest_path:
+                for interval in time_stamps[node_set]:
+                    print(node_set, ':', '(', round(interval[0], 2),',',round(interval[1],2),')')
+        else:
+            request['end'] = safety_check
+            request_queue.enqueue(request)
+
+while True:
+    process_request()
+    start = random.choice(list(primitive_graph._nodes))
+    end = random.choice(list(primitive_graph._nodes))
+    dest = end
+    request = {'start': start, 'end': end, 'dest': dest}
+    request_queue.enqueue(request)
