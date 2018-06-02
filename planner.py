@@ -232,7 +232,7 @@ def process_request():
         curr_req = request_queue.pop()
         path_score, shortest_path = dijkstra(request['start'], request['end'], primitive_graph)
         if path_score == float('inf'):
-            print('nodes unreachable, rejecting request')
+            print('the request to find a path from node', request['start'], 'to node', request['dest'], ' is rejected due to start and destination nodes being unreachable')
         else:
             safety_check = is_safe(shortest_path)
             if safety_check == True:
