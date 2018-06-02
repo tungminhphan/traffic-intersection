@@ -208,6 +208,8 @@ def process_request():
             request['end'] = safety_check
             request_queue.enqueue(request)
 
+def poisson_next(lambda)
+
 while True:
     process_request()
     start = random.choice(list(primitive_graph._nodes))
