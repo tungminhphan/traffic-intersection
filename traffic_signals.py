@@ -72,12 +72,12 @@ class TrafficLights():
         self._state['vertical'] = self.get_counterpart(new_horizontal_state)
 ################################## SIMULATION ##########################################################
 
-import time
-traffic_lights = TrafficLights(yellow_max = 5, green_max = 30)
-dt = 1
-
-start_time = time.time()
-while True:
-   traffic_lights.update(dt)
-   print(traffic_lights._state)
-   time.sleep(dt)
+#import time
+#traffic_lights = TrafficLights(yellow_max = 5, green_max = 30)
+#dt = 1
+#
+#start_time = time.time()
+#while True:
+#   traffic_lights.update(dt)
+#   print(traffic_lights._state)
+#   time.sleep(dt)

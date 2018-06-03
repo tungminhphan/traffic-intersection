@@ -267,11 +267,10 @@ def process_request():
 #    process_request()
 #process_request()
 
-def poisson_next(lambda)
 
 while True:
     process_request()
-    if random.random() >= 0.9:
+    if random.random() >= 0.1:
         start = random.choice(list(primitive_graph._nodes))
         end = random.choice(list(primitive_graph._nodes))
         dest = end

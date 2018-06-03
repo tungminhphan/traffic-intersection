@@ -4,15 +4,17 @@
 # May 2, 2018
 
 import os
-import car
+import car, traffic_signals
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
-import numpy as np
+from time import time
 from numpy import cos, sin, tan
+import numpy as np
 from PIL import Image
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
-intersection_fig = dir_path + "/imglib/intersection.png"
+#intersection_fig = dir_path + "/imglib/intersection.png"
+intersection_fig = dir_path + "/imglib/intersection_states/intersection_"
 blue_car_fig = dir_path + "/imglib/blue_car.png"
 gray_car_fig = dir_path + "/imglib/gray_car.png"
 car_scale_factor = 0.12
@@ -74,17 +76,25 @@ else:
     # creates cars
     car_1 = car.KinematicCar(init_state=(50,np.pi,500,400), L = 60)
     car_2 = car.KinematicCar(init_state=(50,np.pi/2,400,500), color='gray', L=60)
+    # create traffic lights
+    traffic_lights = traffic_signals.TrafficLights(1, 5)
     cars = [car_1, car_2]
-    background = Image.open(intersection_fig)
+    horizontal_light = traffic_lights._state['horizontal'][0]
+    vertical_light = traffic_lights._state['vertical'][0]
+    background = Image.open(intersection_fig + horizontal_light + '_' + vertical_light + '.png')
     def init():
         stage = plt.imshow(background, origin="lower") # this origin option flips the y-axis
         return stage, # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
 
     def animate(i):
         """ online frame update """
-        global dt, background
+        global background
+        # update traffic lights
+        traffic_lights.update(dt)
+        horizontal_light = traffic_lights._state['horizontal'][0]
+        vertical_light = traffic_lights._state['vertical'][0]
         # update background
-        background = Image.open(intersection_fig)
+        background = Image.open(intersection_fig + horizontal_light + '_' + vertical_light + '.png')
         x_lim, y_lim = background.size
         # update cars
         for vehicle in cars:
@@ -101,7 +111,6 @@ else:
 #        return stage, dots  # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
         return stage,   # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
 
-    from time import time
     t0 = time()
     animate(0)
     t1 = time()
