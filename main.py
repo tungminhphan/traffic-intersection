@@ -97,6 +97,8 @@ else:
         background = Image.open(intersection_fig + horizontal_light + '_' + vertical_light + '.png')
         x_lim, y_lim = background.size
         # update cars
+        ## USES PRIMITIVES
+        ## TO BE INPLEMENTED
         for vehicle in cars:
             nu = np.sin(i*0.01)
             if np.floor(vehicle.alive_time / 10.0) % 2 == 0:
@@ -111,6 +113,10 @@ else:
 #        return stage, dots  # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
         return stage,   # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
 
+    ##
+    ## OBSERVER GOES HERE 
+    ## TAKES IN CONTRACTS, CARS AND TRAFFIC LIGHT,  AS OS
+    ##
     t0 = time()
     animate(0)
     t1 = time()
