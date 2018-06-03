@@ -97,7 +97,7 @@ def get_scheduled_times(path):
 
 def time_stamp(path):
     '''
-    given a weighted path, this function updates the time_stamps set according to the given path.
+    given a weighted path, this function updates the (node) time_stamps set according to the given path.
     input:   path - weighted path
     output:  modifies time_stamps
     '''
@@ -150,33 +150,32 @@ def is_overlapping(interval_A, interval_B):
     is_intersecting = interval_A[1] >= interval_B[0] and interval_A[0] <= interval_B[1] or interval_B[1] >= interval_A[0] and interval_B[0] <= interval_A[1]
     return is_intersecting
 
-#This is the node version
-#def is_safe(path):
-#    now = get_now()
-#    scheduled_times = [now]
-#    k = 0
-#    for curr, nxt in zip(path[0::1], path[1::1]):
-#        scheduled_times.append(scheduled_times[-1] + primitive_graph._weights[(curr, nxt)])
-#        left = max(0, k-1)
-#        right = -1
-#        curr_interval = (scheduled_times[left], scheduled_times[right]) # next interval to check
-#        if curr in time_stamps: # if current loc is already stamped
-#            for interval in time_stamps[curr]:
-#                if is_overlapping(curr_interval, interval):
-#                    # if the two intervals overlap
-#                    return curr # return node with conflict
-#        k += 1
-#    # now check last node
-#    left = max(0, k-1)
-#    right = -1
-#    curr_interval = (scheduled_times[left], scheduled_times[right]) # last interval
-#    curr = path[-1]
-#    if curr in time_stamps: # if current loc is already stamped
-#        for interval in time_stamps[curr]:
-#            if is_overlapping(curr_interval, interval):
-#                # if the two intervals overlap
-#                return curr # return node with conflict
-#    return True
+def nodes_are_safe(path):
+    now = get_now()
+    scheduled_times = [now]
+    k = 0
+    for curr, nxt in zip(path[0::1], path[1::1]):
+        scheduled_times.append(scheduled_times[-1] + primitive_graph._weights[(curr, nxt)])
+        left = max(0, k-1)
+        right = -1
+        curr_interval = (scheduled_times[left], scheduled_times[right]) # next interval to check
+        if curr in time_stamps: # if current loc is already stamped
+            for interval in time_stamps[curr]:
+                if is_overlapping(curr_interval, interval):
+                    # if the two intervals overlap
+                    return curr # return node with conflict
+        k += 1
+    # now check last node
+    left = max(0, k-1)
+    right = -1
+    curr_interval = (scheduled_times[left], scheduled_times[right]) # last interval
+    curr = path[-1]
+    if curr in time_stamps: # if current loc is already stamped
+        for interval in time_stamps[curr]:
+            if is_overlapping(curr_interval, interval):
+                # if the two intervals overlap
+                return curr # return node with conflict
+    return True
 
 def is_safe(path):
     now = get_now()
@@ -232,7 +231,7 @@ def process_request():
         curr_req = request_queue.pop()
         path_score, shortest_path = dijkstra(request['start'], request['end'], primitive_graph)
         if path_score == float('inf'):
-            print('the request to find a path from node', request['start'], 'to node', request['dest'], ' is rejected due to start and destination nodes being unreachable')
+            print('the request to find a path from node', request['start'], 'to node', request['dest'], 'is rejected due to start and destination nodes being unreachable')
         else:
             safety_check = is_safe(shortest_path)
             if safety_check == True:
@@ -266,7 +265,6 @@ def process_request():
 #    print(round(time.time()-start_time,2))
 #    process_request()
 #process_request()
-
 
 while True:
     process_request()
