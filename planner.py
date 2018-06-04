@@ -231,7 +231,7 @@ def process_request():
                     request_queue.enqueue(request)
 while True:
     process_request()
-    if random.random() >= 0.9 and request_queue.len() < 5:
+    if random.random() >= 0.1 and request_queue.len() < 5:
         start = random.choice(list(primitive_graph._nodes))
         end = random.choice(list(primitive_graph._nodes))
         import string
