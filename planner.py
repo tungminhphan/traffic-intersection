@@ -8,31 +8,6 @@ import prepare.graph as graph
 import prepare.queue as queue
 import pdb
 
-
-def traffic_controller():
-    global traffic_signal, queues
-    # while True
-    # check traffic light
-    # try to empty car
-    pass
-
-def check_collision(path):
-    score = {}
-    for node in path:
-        score[node] = score[previous_node] + world_map[new_node]
-        if abs(world_map[node][timestamp] - score[node]) >= safety:
-            pass
-    return True
-
-def compute_path(start, end, world_map):
-    global traffic_signal, itineraries, work_queue, clock
-    tentative_cost, tentative_path = dijkstra(start, end, world_map)
-    if check_collision():
-        destination = check_collision()
-        marked_execution(partial_path)
-    # should mark an attempt time and a release time
-    return destination
-
 def dijkstra(start, end, graph):
     '''
     this function takes in a weighted directed graph, a start node, an end node and outputs
@@ -138,7 +113,6 @@ def get_now():
     now = time.time() - start_time
     return now
 
-
 def is_overlapping(interval_A, interval_B):
     '''
     this subroutine checks if two intervals intersect with each other; it returns True if
@@ -180,6 +154,7 @@ def nodes_are_safe(path):
 def is_safe(path):
     now = get_now()
     scheduled_times = [now]
+    current_edge_idx = 0 
     for left_node, right_node in zip(path[0::1], path[1::1]):
         edge = (left_node, right_node)
         scheduled_times.append(scheduled_times[-1] + primitive_graph._weights[edge])
@@ -190,8 +165,16 @@ def is_safe(path):
             for interval in edge_time_stamps[edge]:
                 if is_overlapping(curr_interval, interval):
                     # if the two intervals overlap
-                    return edge # return node with conflict
+                    return current_edge_idx # return node with conflict
+        current_edge_idx += 1
     return True
+
+def print_state():
+    request_queue.print()
+    #for edge in edge_time_stamps:
+    #    print(edge[0], '->', edge[1])
+    #    for interval in edge_time_stamps[edge]:
+    #        print('(', round(interval[0], 2),',',round(interval[1],2),')')
                    ######################################################
                    ######################################################
                    ###                                                ###
@@ -224,54 +207,37 @@ start_time = time.time()
 request_queue = queue.Queue()
 
 def process_request():
+    '''
+    TODO: write comments
+    '''
     global request_queue
     if request_queue.len() == 0: # if request queue is empty, do nothing
         pass
-    else:
-        curr_req = request_queue.pop()
-        path_score, shortest_path = dijkstra(request['start'], request['end'], primitive_graph)
-        if path_score == float('inf'):
-            print('the request to find a path from node', request['start'], 'to node', request['dest'], 'is rejected due to start and destination nodes being unreachable')
+    else: # else start processing next item in queue
+        request = request_queue.pop() # take the next request in line
+        path_score, shortest_path = dijkstra(request['start'], request['end'], primitive_graph) # find the shortest path for it
+        if path_score == float('inf'): # if there is no path between start and end
+            print('the request to go from', request['start'], 'to', request['end'], 'was rejected due to the start and end nodes being unreachable')
         else:
-            safety_check = is_safe(shortest_path)
-            if safety_check == True:
-                time_stamp_edge(shortest_path)
-                print('the request', request,  'has been processed at time',round(time.time()-start_time,2)  , ', resulting in the following reservation state:')
-                for edge in edge_time_stamps:
-                    print(edge[0], '->', edge[1])
-                    for interval in edge_time_stamps[edge]:
-                        print('(', round(interval[0], 2),',',round(interval[1],2),')')
+            safety_check = is_safe(shortest_path) # check if shortest_path is safe
+            if safety_check == True: # if it is, honor request
+                time_stamp_edge(shortest_path) # timestamp request
+                print('the request to go from', request['start'],  'to', request['end'], '(car_id ' + str(request['car_id']) + ') was fully processed at time',round(time.time()-start_time,2))
             else:
-                request['end'] = safety_check[1]
-                request_queue.enqueue(request)
-
-#process_request()
-#start = '1'
-#end = '6'
-#dest = end
-#request = {'start': start, 'end': end, 'dest': dest}
-#request_queue.enqueue(request)
-#process_request()
-#
-#process_request()
-#start = '1'
-#end = '2'
-#dest = end
-#request = {'start': start, 'end': end, 'dest': dest}
-#request_queue.enqueue(request)
-#process_request()
-#for k in range(0,100):
-#    time.sleep(0.2)
-#    print(round(time.time()-start_time,2))
-#    process_request()
-#process_request()
-
+                    service_path = shortest_path[0:safety_check]
+                    time_stamp_edge(service_path)
+                    print('the request to go from', request['start'], 'to', request['end'],'along the path', shortest_path, 'was only granted up to ' + str(shortest_path[safety_check]))
+                    request['start']= shortest_path[safety_check]
+                    request_queue.enqueue(request)
 while True:
     process_request()
-    if random.random() >= 0.1:
+    if random.random() >= 0.9 and request_queue.len() < 5:
         start = random.choice(list(primitive_graph._nodes))
         end = random.choice(list(primitive_graph._nodes))
-        dest = end
-        request = {'start': start, 'end': end, 'dest': dest}
+        import string
+        car_id = random.choice(string.ascii_letters)
+        request = {'start': start, 'end': end, 'car_id': car_id}
+        print('a new request', request, 'has been added')
         request_queue.enqueue(request)
+    print_state()
     time.sleep(random.random())
