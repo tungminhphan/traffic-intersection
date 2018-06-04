@@ -7,6 +7,8 @@ class DirectedGraph():
     def __init__(self):
         self._nodes = set() # set of nodes
         self._edges = {} # set of edges is a dictionary of sets (of nodes)
+        self._sources = set()
+        self._sinks = set()
 
     def add_node(self, node): # add a node
             self._nodes.add(node)

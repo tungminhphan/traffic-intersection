@@ -5,6 +5,7 @@
 
 import os
 import car, traffic_signals
+import prepare.waypoint_graph as waypoint_graph
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 from time import time
@@ -13,7 +14,6 @@ import numpy as np
 from PIL import Image
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
-#intersection_fig = dir_path + "/imglib/intersection.png"
 intersection_fig = dir_path + "/imglib/intersection_states/intersection_"
 blue_car_fig = dir_path + "/imglib/blue_car.png"
 gray_car_fig = dir_path + "/imglib/gray_car.png"
@@ -83,7 +83,7 @@ else:
     vertical_light = traffic_lights._state['vertical'][0]
     background = Image.open(intersection_fig + horizontal_light + '_' + vertical_light + '.png')
     def init():
-        stage = plt.imshow(background, origin="lower") # this origin option flips the y-axis
+        stage = plt.imshow(background, origin="lower",zorder=0) # this origin option flips the y-axis
         return stage, # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
 
     def animate(i):
@@ -94,8 +94,14 @@ else:
         horizontal_light = traffic_lights._state['horizontal'][0]
         vertical_light = traffic_lights._state['vertical'][0]
         # update background
+        # TODO: implement option to show waypoint graph
+        plt.axes().plot(100,100,color='r',markersize='10', zorder=0)
         background = Image.open(intersection_fig + horizontal_light + '_' + vertical_light + '.png')
         x_lim, y_lim = background.size
+        if waypoint_graph == True:
+            graph = waypoint_graph.plot_edges(plt, waypoint_graph.G, plt_src_snk=True)
+            background.paste(graph, (0, 0), graph)
+
         # update cars
         ## USES PRIMITIVES
         ## TO BE INPLEMENTED
@@ -121,5 +127,6 @@ else:
     animate(0)
     t1 = time()
     interval = (t1 - t0)
+    show_waypoint_graph = True
     ani = animation.FuncAnimation(fig, animate, frames=300, interval=interval, blit=True, init_func = init)
 plt.show()
