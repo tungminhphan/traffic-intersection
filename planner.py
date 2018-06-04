@@ -4,9 +4,8 @@
 # California Institute of Technology
 
 import time, random
-import prepare.graph as graph
 import prepare.queue as queue
-import pdb
+import prepare.waypoint_graph as waypoint_graph
 
 def dijkstra(start, end, graph):
     '''
@@ -170,41 +169,8 @@ def is_safe(path):
     return True
 
 def print_state():
+    print('The current request queue state is')
     request_queue.print()
-    #for edge in edge_time_stamps:
-    #    print(edge[0], '->', edge[1])
-    #    for interval in edge_time_stamps[edge]:
-    #        print('(', round(interval[0], 2),',',round(interval[1],2),')')
-                   ######################################################
-                   ######################################################
-                   ###                                                ###
-                   ###                    SIMULATION                  ###
-                   ###                                                ###
-                   ######################################################
-                   ######################################################
-# define primitive_graph
-primitive_graph = graph.WeightedDirectedGraph()
-primitive_graph.add_edges([('1', '2', 2.5)])
-primitive_graph.add_edges([('1', '3', 4.2)])
-primitive_graph.add_edges([('2', '3', 3.5)])
-primitive_graph.add_edges([('2', '4', 4.6)])
-primitive_graph.add_edges([('2', '5', 2.1)])
-primitive_graph.add_edges([('3', '5', 3.8)])
-primitive_graph.add_edges([('5', '4', 3.9)])
-primitive_graph.add_edges([('4', '6', 2.1)])
-primitive_graph.add_edges([('5', '6', 2.5)])
-
-# time_stamps a dictionary with nodes as keys containing reserved intervals
-time_stamps = {}
-
-# edge_time_stamps a dictionary with edges as keys containing reserved intervals
-edge_time_stamps = {}
-
-# start_time is the start time of the simulation
-start_time = time.time()
-
-# request queue
-request_queue = queue.Queue()
 
 def process_request():
     '''
@@ -222,22 +188,54 @@ def process_request():
             safety_check = is_safe(shortest_path) # check if shortest_path is safe
             if safety_check == True: # if it is, honor request
                 time_stamp_edge(shortest_path) # timestamp request
-                print('the request to go from', request['start'],  'to', request['end'], '(car_id ' + str(request['car_id']) + ') was fully processed at time',round(time.time()-start_time,2))
+                print('the request to go from', request['start'],  'to', request['end'], '(car_id ' + str(request['license_plate']) + ') was fully processed at time',round(time.time()-start_time,2))
             else:
                     service_path = shortest_path[0:safety_check]
                     time_stamp_edge(service_path)
                     print('the request to go from', request['start'], 'to', request['end'],'along the path', shortest_path, 'was only granted up to ' + str(shortest_path[safety_check]))
                     request['start']= shortest_path[safety_check]
                     request_queue.enqueue(request)
-while True:
+
+                   ######################################################
+                   ######################################################
+                   ###                                                ###
+                   ###                    SIMULATION                  ###
+                   ###                                                ###
+                   ######################################################
+                   ######################################################
+
+def generate_license_plate():
+    import string
+    choices = string.digits + string.ascii_uppercase
+    plate_number = ''
+    for i in range(0,7):
+        plate_number = plate_number + random.choice(choices)
+    return plate_number
+
+def planner_update():
     process_request()
-    if random.random() >= 0.1 and request_queue.len() < 5:
-        start = random.choice(list(primitive_graph._nodes))
-        end = random.choice(list(primitive_graph._nodes))
-        import string
-        car_id = random.choice(string.ascii_letters)
-        request = {'start': start, 'end': end, 'car_id': car_id}
-        print('a new request', request, 'has been added')
+    if random.random() >= arrival_chance:
+        start = random.choice(list(primitive_graph._sources))
+        end = random.choice(list(primitive_graph._sinks))
+        car_id = generate_license_plate()
+        request = {'start': start, 'end': end, 'license_plate': car_id}
+        print('the car with license plate number', request['license_plate'], 'requests to go from', request['start'], 'to', request['end'])
         request_queue.enqueue(request)
     print_state()
     time.sleep(random.random())
+
+# define primitive_graph
+primitive_graph = waypoint_graph.G
+# time_stamps a dictionary with nodes as keys containing reserved intervals
+time_stamps = {}
+# edge_time_stamps a dictionary with edges as keys containing reserved intervals
+edge_time_stamps = {}
+# start_time is the start time of the simulation
+start_time = time.time()
+# request queue
+request_queue = queue.Queue()
+# probability of new arrival
+arrival_chance = 0.7
+
+while True:
+    planner_update()

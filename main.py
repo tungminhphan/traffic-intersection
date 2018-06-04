@@ -5,6 +5,7 @@
 
 import os
 import car, traffic_signals
+import planner
 import prepare.waypoint_graph as waypoint_graph
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
@@ -86,7 +87,7 @@ else:
         stage = plt.imshow(background, origin="lower",zorder=0) # this origin option flips the y-axis
         return stage, # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
 
-    def animate(i):
+    def animate(i): # update animation by dt
         """ online frame update """
         global background
         # update traffic lights
@@ -94,13 +95,27 @@ else:
         horizontal_light = traffic_lights._state['horizontal'][0]
         vertical_light = traffic_lights._state['vertical'][0]
         # update background
-        # TODO: implement option to show waypoint graph
-        plt.axes().plot(100,100,color='r',markersize='10', zorder=0)
+        # TODO: implement option to lay waypoint graph over background
         background = Image.open(intersection_fig + horizontal_light + '_' + vertical_light + '.png')
         x_lim, y_lim = background.size
         if waypoint_graph == True:
             graph = waypoint_graph.plot_edges(plt, waypoint_graph.G, plt_src_snk=True)
             background.paste(graph, (0, 0), graph)
+        # update planner
+        
+        
+        #while True:
+        #    process_request()
+        #    if random.random() >= 0.1 and request_queue.len() < 5:
+        #        start = random.choice(list(primitive_graph._nodes))
+        #        end = random.choice(list(primitive_graph._nodes))
+        #        import string
+        #        car_id = random.choice(string.ascii_letters)
+        #        request = {'start': start, 'end': end, 'car_id': car_id}
+        #        print('a new request', request, 'has been added')
+        #        request_queue.enqueue(request)
+        #    print_state()
+        #    time.sleep(random.random())
 
         # update cars
         ## USES PRIMITIVES
