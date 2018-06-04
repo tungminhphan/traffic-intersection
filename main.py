@@ -5,7 +5,6 @@
 
 import os
 import car, traffic_signals
-import planner
 import prepare.waypoint_graph as waypoint_graph
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
@@ -13,6 +12,7 @@ from time import time
 from numpy import cos, sin, tan
 import numpy as np
 from PIL import Image
+import random
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 intersection_fig = dir_path + "/imglib/intersection_states/intersection_"
@@ -75,10 +75,10 @@ if use_artist_animation:
     plt.show()
 else:
     # creates cars
-    car_1 = car.KinematicCar(init_state=(50,np.pi,500,400), L = 60)
-    car_2 = car.KinematicCar(init_state=(50,np.pi/2,400,500), color='gray', L=60)
+    car_1 = car.KinematicCar(init_state=(100,np.pi,1000,500), L = 60)
+    car_2 = car.KinematicCar(init_state=(100,np.pi/2,600,300), color='gray', L=60)
     # create traffic lights
-    traffic_lights = traffic_signals.TrafficLights(1, 5)
+    traffic_lights = traffic_signals.TrafficLights(0.5, 2)
     cars = [car_1, car_2]
     horizontal_light = traffic_lights._state['horizontal'][0]
     vertical_light = traffic_lights._state['vertical'][0]
@@ -102,30 +102,18 @@ else:
             graph = waypoint_graph.plot_edges(plt, waypoint_graph.G, plt_src_snk=True)
             background.paste(graph, (0, 0), graph)
         # update planner
-        
-        
-        #while True:
-        #    process_request()
-        #    if random.random() >= 0.1 and request_queue.len() < 5:
-        #        start = random.choice(list(primitive_graph._nodes))
-        #        end = random.choice(list(primitive_graph._nodes))
-        #        import string
-        #        car_id = random.choice(string.ascii_letters)
-        #        request = {'start': start, 'end': end, 'car_id': car_id}
-        #        print('a new request', request, 'has been added')
-        #        request_queue.enqueue(request)
-        #    print_state()
-        #    time.sleep(random.random())
 
         # update cars
         ## USES PRIMITIVES
         ## TO BE INPLEMENTED
         for vehicle in cars:
-            nu = np.sin(i*0.01)
-            if np.floor(vehicle.alive_time / 10.0) % 2 == 0:
-                vehicle.next((0, nu),dt)
-            else:
-                vehicle.next((0, -nu),dt)
+            nu = 0
+            acc = 0
+            if random.random() > 0.1:
+                nu = random.uniform(-0.05,0.05)
+            if random.random() > 0.3:
+                acc = random.uniform(-5,10)
+            vehicle.next((acc, nu),dt)
             if (vehicle.state[2] <= x_lim and vehicle.state[3] <= y_lim):
                 draw_car(vehicle)
         stage = plt.imshow(background, origin="lower") # this origin option flips the y-axis

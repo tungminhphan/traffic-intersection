@@ -188,21 +188,13 @@ def process_request():
             safety_check = is_safe(shortest_path) # check if shortest_path is safe
             if safety_check == True: # if it is, honor request
                 time_stamp_edge(shortest_path) # timestamp request
-                print('the request to go from', request['start'],  'to', request['end'], '(car_id ' + str(request['license_plate']) + ') was fully processed at time',round(time.time()-start_time,2))
+                print('the request to go from', request['start'],  'to', request['end'], '(with license plate ' + str(request['license_plate']) + ') was fully processed at time',round(time.time()-start_time,2))
             else:
                     service_path = shortest_path[0:safety_check]
                     time_stamp_edge(service_path)
                     print('the request to go from', request['start'], 'to', request['end'],'along the path', shortest_path, 'was only granted up to ' + str(shortest_path[safety_check]))
                     request['start']= shortest_path[safety_check]
                     request_queue.enqueue(request)
-
-                   ######################################################
-                   ######################################################
-                   ###                                                ###
-                   ###                    SIMULATION                  ###
-                   ###                                                ###
-                   ######################################################
-                   ######################################################
 
 def generate_license_plate():
     import string
@@ -223,6 +215,15 @@ def planner_update():
         request_queue.enqueue(request)
     print_state()
     time.sleep(random.random())
+
+                   ######################################################
+                   ######################################################
+                   ###                                                ###
+                   ###                    SIMULATION                  ###
+                   ###                                                ###
+                   ######################################################
+                   ######################################################
+
 
 # define primitive_graph
 primitive_graph = waypoint_graph.G
