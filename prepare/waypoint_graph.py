@@ -80,3 +80,4 @@ def plot_edges(plt, graph, plt_src_snk = False):
             k += 1
         plt.axes().plot(node_x, node_y, 'bo', markersize=10)
         plt.axes().legend(['sources', 'sinks'])
+
