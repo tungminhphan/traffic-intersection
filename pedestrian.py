@@ -54,7 +54,7 @@ class Pedestrian:
    
     def next(self, inputs, dt):
         """
-        The pedestrian takes one step forward
+        The pedestrian advances forward
         """
         theta, v = inputs 
         self.state[0] += v * np.cos(theta) * dt # update x coordinate of pedestrian
@@ -89,4 +89,3 @@ class Pedestrian:
 #while True:
 #    my_pedestrian.next((0.1, 0.05), dt)
 #    print(my_pedestrian.state)
-

@@ -4,7 +4,7 @@
 # May 2, 2018
 
 import os
-import car, traffic_signals
+import car, pedestrian, traffic_signals
 import prepare.waypoint_graph as waypoint_graph
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
@@ -47,14 +47,29 @@ def draw_car(vehicle):
     vehicle_fig = vehicle_fig.rotate(theta_d, expand = False)
     scaled_vehicle_fig_size  =  tuple([int(car_scale_factor * i) for i in vehicle_fig.size])
     # rescale car 
-    vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size, Image.ANTIALIAS)
+    #vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size, Image.ANTIALIAS)
+    vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size) # disable antialiasing for better performance
     # at this scale (-28, 0) is the relative coordinates of the center of the rear axle w.r.t. the
     # center of the figure
     x_corner, y_corner = find_corner_coordinates(-28, 0, x, y, theta, vehicle_fig)
     background.paste(vehicle_fig, (x_corner, y_corner), vehicle_fig)
 
 def draw_pedestrian(pedestrian):
-    pass
+    x, y = pedestrian.state[0], pedestrian.state[1]
+    print(x)
+    print(y)
+    current_gait = pedestrian.state[3]
+    i = current_gait % pedestrian.film_dim[1]
+    j = current_gait // pedestrian.film_dim[1]
+    film_fig = Image.open(pedestrian.fig)
+    width, height = film_fig.size
+    sub_width = width/pedestrian.film_dim[1]
+    sub_height = height/pedestrian.film_dim[0]
+    lower = (i*sub_width,j*sub_height)
+    upper = ((i+1)*sub_width, (j+1)*sub_height)
+    area = (lower[0], lower[1], upper[0], upper[1])
+    person_fig = film_fig.crop(area)
+    background.paste(person_fig, (int(x), int(y)), person_fig) 
 
 # creates figure
 fig = plt.figure()
@@ -82,6 +97,9 @@ else:
     car_2 = car.KinematicCar(init_state=(100,np.pi/2,600,300), color='gray', L=60)
     car_3 = car.KinematicCar(init_state=(100,0,0,250), color='blue', L=60)
     cars = [car_1, car_2, car_3]
+    # creates pedestrians
+    pedestrian_1 = pedestrian.Pedestrian(init_state=[100,100,np.pi/2,1])
+    pedestrians = [pedestrian_1]
     # create traffic lights
     traffic_lights = traffic_signals.TrafficLights(0.5, 2)
     horizontal_light = traffic_lights.get_states('horizontal', 'color')
@@ -105,11 +123,16 @@ else:
         if waypoint_graph == True:
             graph = waypoint_graph.plot_edges(plt, waypoint_graph.G, plt_src_snk=True)
             background.paste(graph, (0, 0), graph)
+        # update pedestrians
+        for person in pedestrians:
+            theta = 5
+            v = 10
+            person.next((theta, v),dt)
+            draw_pedestrian(person)
         # update planner
-
+        # TODO: integrate planner
         # update cars
-        ## USES PRIMITIVES
-        ## TO BE INPLEMENTED
+        ## TODO: USES PRIMITIVES
         for vehicle in cars:
             nu = 0
             acc = 0
