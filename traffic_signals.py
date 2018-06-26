@@ -70,6 +70,12 @@ class TrafficLights():
         new_horizontal_state = [horizontal_color, horizontal_time]
         self._state['horizontal'] = new_horizontal_state
         self._state['vertical'] = self.get_counterpart(new_horizontal_state)
+    def get_states(self, which_light, color_or_time):
+        if color_or_time == 'color':
+            color_or_time = 0
+        else:
+            color_or_time = 1
+        return self._state[which_light][color_or_time]
 ################################## SIMULATION ##########################################################
 
 #import time

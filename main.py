@@ -53,6 +53,9 @@ def draw_car(vehicle):
     x_corner, y_corner = find_corner_coordinates(-28, 0, x, y, theta, vehicle_fig)
     background.paste(vehicle_fig, (x_corner, y_corner), vehicle_fig)
 
+def draw_pedestrian(pedestrian):
+    pass
+
 # creates figure
 fig = plt.figure()
 # turn on/off axes
@@ -77,11 +80,12 @@ else:
     # creates cars
     car_1 = car.KinematicCar(init_state=(100,np.pi,1000,500), L = 60)
     car_2 = car.KinematicCar(init_state=(100,np.pi/2,600,300), color='gray', L=60)
+    car_3 = car.KinematicCar(init_state=(100,0,0,250), color='blue', L=60)
+    cars = [car_1, car_2, car_3]
     # create traffic lights
     traffic_lights = traffic_signals.TrafficLights(0.5, 2)
-    cars = [car_1, car_2]
-    horizontal_light = traffic_lights._state['horizontal'][0]
-    vertical_light = traffic_lights._state['vertical'][0]
+    horizontal_light = traffic_lights.get_states('horizontal', 'color')
+    vertical_light = traffic_lights.get_states('vertical', 'color')
     background = Image.open(intersection_fig + horizontal_light + '_' + vertical_light + '.png')
     def init():
         stage = plt.imshow(background, origin="lower",zorder=0) # this origin option flips the y-axis
@@ -92,8 +96,8 @@ else:
         global background
         # update traffic lights
         traffic_lights.update(dt)
-        horizontal_light = traffic_lights._state['horizontal'][0]
-        vertical_light = traffic_lights._state['vertical'][0]
+        horizontal_light = traffic_lights.get_states('horizontal', 'color')
+        vertical_light = traffic_lights.get_states('vertical', 'color')
         # update background
         # TODO: implement option to lay waypoint graph over background
         background = Image.open(intersection_fig + horizontal_light + '_' + vertical_light + '.png')

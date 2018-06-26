@@ -4,7 +4,6 @@
 # May 3, 2018
 import scipy.integrate as integrate
 import numpy as np
-import matplotlib.pyplot as plt
 from numpy import cos, sin, tan
 
 def saturation_filter(u, u_max, u_min):
