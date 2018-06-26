@@ -9,29 +9,28 @@ import numpy as np
 from PIL import Image
 import scipy.integrate as integrate
 
-
 dir_path = os.path.dirname(os.path.realpath(__file__))
-pedestrian_fig = dir_path + "/imglib/pedestrians/walking2.png"
-film_dim = (3, 5)
-film_dim = (1, 8)
-film_dim = (1, 6)
 
-img = Image.open(pedestrian_fig)
-width, height = img.size
-sub_width = width/film_dim[1]
-sub_height = height/film_dim[0]
-images = []
-for j in range(film_dim[0], 0, -1):
-    for i in range(0, film_dim[1]):
-        lower = (i*sub_width, (j-1)*sub_height)
-        upper = ((i+1)*sub_width, j*sub_height)
-        area = (lower[0], lower[1], upper[0], upper[1])
-        cropped_img = img.crop(area)
-        cropped_img = np.asarray(cropped_img)
-        images.append(cropped_img)
+def generate_walking_gif():
+    pedestrian_fig = dir_path + "/imglib/pedestrians/walking2.png"
+    #film_dim = (3, 5)
+    #film_dim = (1, 8)
+    film_dim = (1, 6)
+    img = Image.open(pedestrian_fig)
+    width, height = img.size
+    sub_width = width/film_dim[1]
+    sub_height = height/film_dim[0]
+    images = []
+    for j in range(film_dim[0], 0, -1):
+        for i in range(0, film_dim[1]):
+            lower = (i*sub_width, (j-1)*sub_height)
+            upper = ((i+1)*sub_width, j*sub_height)
+            area = (lower[0], lower[1], upper[0], upper[1])
+            cropped_img = img.crop(area)
+            cropped_img = np.asarray(cropped_img)
+            images.append(cropped_img)
 
-imageio.mimsave('movie.gif', images, duration=0.1)
-print('done')
+    imageio.mimsave('movie.gif', images, duration=0.1)
 
 
 class Pedestrian:
@@ -39,7 +38,9 @@ class Pedestrian:
                  init_state = [0,0,0,0], 
                  number_of_gaits = 6, 
                  gait_length = 2,
-                 gait_progress = 0):
+                 gait_progress = 0,
+                 film_dim = (1, 6),
+                 pedestrian_type = '2'): # two types 1 or 2 
         """
         Pedestrian class
         """
@@ -50,6 +51,8 @@ class Pedestrian:
         self.number_of_gaits = 6
         self.gait_length = 2
         self.gait_progress = 0
+        self.film_dim = film_dim
+        self.fig = dir_path + '/imglib/pedestrians/walking' + pedestrian_type + '.png'
    
     def next(self, inputs, dt):
         """
@@ -60,13 +63,30 @@ class Pedestrian:
         self.state[1] += v * np.sin(theta) * dt # update y coordinate of pedestrian
         self.state[2] = theta # update heading of pedestrian
         distance_travelled = v * dt # compute distance travelled during dt
-        gait_change = (self.gait_progress + distance_travelled / self.gait_length) // 1
+        gait_change = (self.gait_progress + distance_travelled / self.gait_length) // 1 # compute number of gait change
         self.gait_progress = (self.gait_progress + distance_travelled / self.gait_length) % 1
         self.state[3] = int((self.state[3] + gait_change) % self.number_of_gaits)
 
+
+    def visualize(self):
+        i = self.state[3]
+        j = 1 # hardcoded for film_dim = (1, 6)
+        img = Image.open(self.fig)
+        width, height = img.size
+        sub_width = width/self.film_dim[1]
+        sub_height = height/self.film_dim[0]
+        lower = (i*sub_width, (j-1)*sub_height)
+        upper = ((i+1)*sub_width, j*sub_height)
+        area = (lower[0], lower[1], upper[0], upper[1])
+        cropped_img = img.crop(area)
+        return cropped_img
+
 my_pedestrian = Pedestrian()
 dt = 0.1
+#from matplotlib import pyplot as plt
+#box = (70, 70, 30, 30)
+my_pedestrian.visualize()
 while True:
-    my_pedestrian.next((0.1, 1), dt)
+    my_pedestrian.next((0.1, 0.05), dt)
     print(my_pedestrian.state)
 
