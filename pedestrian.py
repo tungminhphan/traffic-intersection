@@ -69,8 +69,8 @@ class Pedestrian:
     def visualize(self):
         # convert gait number to i, j coordinates of subfigure
         current_gait = self.state[3]
-        j = current_gait // self.film_dim[0]
-        i = current_gait % self.film_dim[0]
+        i = current_gait % self.film_dim[1]
+        j = current_gait // self.film_dim[1]
         img = Image.open(self.fig)
         width, height = img.size
         sub_width = width/self.film_dim[1]
