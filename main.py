@@ -19,6 +19,7 @@ intersection_fig = dir_path + "/imglib/intersection_states/intersection_"
 blue_car_fig = dir_path + "/imglib/blue_car.png"
 gray_car_fig = dir_path + "/imglib/gray_car.png"
 car_scale_factor = 0.12
+pedestrian_scale_factor = 0.6
 
 def find_corner_coordinates(x_rel_i, y_rel_i, x_des, y_des, theta, square_fig):
     """
@@ -55,13 +56,12 @@ def draw_car(vehicle):
     background.paste(vehicle_fig, (x_corner, y_corner), vehicle_fig)
 
 def draw_pedestrian(pedestrian):
-    x, y = pedestrian.state[0], pedestrian.state[1]
-    print(x)
-    print(y)
-    current_gait = pedestrian.state[3]
+    x, y, theta, current_gait = pedestrian.state
     i = current_gait % pedestrian.film_dim[1]
     j = current_gait // pedestrian.film_dim[1]
     film_fig = Image.open(pedestrian.fig)
+    scaled_film_fig_size  =  tuple([int(pedestrian_scale_factor * i) for i in film_fig.size])
+    film_fig = film_fig.resize( scaled_film_fig_size) # disable antialiasing for better performance
     width, height = film_fig.size
     sub_width = width/pedestrian.film_dim[1]
     sub_height = height/pedestrian.film_dim[0]
@@ -69,6 +69,7 @@ def draw_pedestrian(pedestrian):
     upper = ((i+1)*sub_width, (j+1)*sub_height)
     area = (lower[0], lower[1], upper[0], upper[1])
     person_fig = film_fig.crop(area)
+    person_fig = person_fig.rotate(theta, expand = False)
     background.paste(person_fig, (int(x), int(y)), person_fig) 
 
 # creates figure
@@ -98,7 +99,7 @@ else:
     car_3 = car.KinematicCar(init_state=(100,0,0,250), color='blue', L=60)
     cars = [car_1, car_2, car_3]
     # creates pedestrians
-    pedestrian_1 = pedestrian.Pedestrian(init_state=[100,100,np.pi/2,1])
+    pedestrian_1 = pedestrian.Pedestrian(init_state=[330,550,2,0])
     pedestrians = [pedestrian_1]
     # create traffic lights
     traffic_lights = traffic_signals.TrafficLights(0.5, 2)
@@ -125,8 +126,8 @@ else:
             background.paste(graph, (0, 0), graph)
         # update pedestrians
         for person in pedestrians:
-            theta = 5
-            v = 10
+            theta = -np.pi/2
+            v = 20
             person.next((theta, v),dt)
             draw_pedestrian(person)
         # update planner

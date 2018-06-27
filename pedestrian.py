@@ -8,7 +8,6 @@ import os
 import numpy as np
 from PIL import Image
 import scipy.integrate as integrate
-
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 def generate_walking_gif():
@@ -33,12 +32,12 @@ def generate_walking_gif():
 
 class Pedestrian:
     def __init__(self, 
-                 init_state = [0,0,0,0], 
+                 init_state = [0,0,0,0], # (x, y, theta, gait)
                  number_of_gaits = 6, 
-                 gait_length = 2,
+                 gait_length = 4,
                  gait_progress = 0,
                  film_dim = (1, 6),
-                 pedestrian_type = '2'): # two types 1 or 2 
+                 pedestrian_type = '3'): # three types 1 or 2 or 3
         """
         Pedestrian class
         """
@@ -46,8 +45,8 @@ class Pedestrian:
         self.init_state = init_state
         self.alive_time = 0
         self.state = self.init_state
-        self.number_of_gaits = 6
-        self.gait_length = 2
+        self.number_of_gaits = film_dim[0] * film_dim[1]
+        self.gait_length = gait_length
         self.gait_progress = 0
         self.film_dim = film_dim
         self.fig = dir_path + '/imglib/pedestrians/walking' + pedestrian_type + '.png'
