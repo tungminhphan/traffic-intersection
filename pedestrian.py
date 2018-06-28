@@ -55,10 +55,10 @@ class Pedestrian:
         """
         The pedestrian advances forward
         """
-        theta, v = inputs 
-        self.state[0] += v * np.cos(theta) * dt # update x coordinate of pedestrian
-        self.state[1] += v * np.sin(theta) * dt # update y coordinate of pedestrian
-        self.state[2] = theta # update heading of pedestrian
+        dee_theta, v = inputs 
+        self.state[2] += dee_theta # update heading of pedestrian
+        self.state[0] += v * np.cos(self.state[2]) * dt # update x coordinate of pedestrian
+        self.state[1] += v * np.sin(self.state[2]) * dt # update y coordinate of pedestrian
         distance_travelled = v * dt # compute distance travelled during dt
         gait_change = (self.gait_progress + distance_travelled / self.gait_length) // 1 # compute number of gait change
         self.gait_progress = (self.gait_progress + distance_travelled / self.gait_length) % 1

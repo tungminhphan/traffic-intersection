@@ -16,8 +16,8 @@ import random
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 intersection_fig = dir_path + "/imglib/intersection_states/intersection_"
-blue_car_fig = dir_path + "/imglib/blue_car.png"
-gray_car_fig = dir_path + "/imglib/gray_car.png"
+blue_car_fig = dir_path + "/imglib/cars/blue_car.png"
+gray_car_fig = dir_path + "/imglib/cars/gray_car.png"
 car_scale_factor = 0.12
 pedestrian_scale_factor = 0.6
 
@@ -61,7 +61,7 @@ def draw_pedestrian(pedestrian):
     j = current_gait // pedestrian.film_dim[1]
     film_fig = Image.open(pedestrian.fig)
     scaled_film_fig_size  =  tuple([int(pedestrian_scale_factor * i) for i in film_fig.size])
-    film_fig = film_fig.resize( scaled_film_fig_size) # disable antialiasing for better performance
+    film_fig = film_fig.resize( scaled_film_fig_size) 
     width, height = film_fig.size
     sub_width = width/pedestrian.film_dim[1]
     sub_height = height/pedestrian.film_dim[0]
@@ -69,7 +69,7 @@ def draw_pedestrian(pedestrian):
     upper = ((i+1)*sub_width, (j+1)*sub_height)
     area = (lower[0], lower[1], upper[0], upper[1])
     person_fig = film_fig.crop(area)
-    person_fig = person_fig.rotate(theta, expand = False)
+    person_fig = person_fig.rotate(theta/np.pi * 180 + 90, expand = False)
     background.paste(person_fig, (int(x), int(y)), person_fig) 
 
 # creates figure
@@ -77,7 +77,7 @@ fig = plt.figure()
 # turn on/off axes
 plt.axis('on')
 # sampling time
-dt = 0.1
+dt = 0.5
 # Artist Animation option is used to generate offline movies - implemented here as a backup
 use_artist_animation = False
 if use_artist_animation:
@@ -97,12 +97,14 @@ else:
     car_1 = car.KinematicCar(init_state=(100,np.pi,1000,500), L = 60)
     car_2 = car.KinematicCar(init_state=(100,np.pi/2,600,300), color='gray', L=60)
     car_3 = car.KinematicCar(init_state=(100,0,0,250), color='blue', L=60)
-    cars = [car_1, car_2, car_3]
+    car_4 = car.KinematicCar(init_state=(400,-np.pi/2,100,250), color='blue', L=60)
+    cars = [car_1, car_2, car_3, car_4]
     # creates pedestrians
-    pedestrian_1 = pedestrian.Pedestrian(init_state=[330,550,2,0])
-    pedestrians = [pedestrian_1]
+    pedestrian_1 = pedestrian.Pedestrian(init_state=[330,550,-np.pi/2,0])
+    pedestrian_2 = pedestrian.Pedestrian(init_state=[680,0, np.pi/2,0])
+    pedestrians = [pedestrian_1, pedestrian_2]
     # create traffic lights
-    traffic_lights = traffic_signals.TrafficLights(0.5, 2)
+    traffic_lights = traffic_signals.TrafficLights(3, 10)
     horizontal_light = traffic_lights.get_states('horizontal', 'color')
     vertical_light = traffic_lights.get_states('vertical', 'color')
     background = Image.open(intersection_fig + horizontal_light + '_' + vertical_light + '.png')
@@ -126,10 +128,11 @@ else:
             background.paste(graph, (0, 0), graph)
         # update pedestrians
         for person in pedestrians:
-            theta = -np.pi/2
+            dee_theta = 0
             v = 20
-            person.next((theta, v),dt)
-            draw_pedestrian(person)
+            if (person.state[0] <= x_lim and person.state[1] <= y_lim):
+                person.next((dee_theta, v),dt)
+                draw_pedestrian(person)
         # update planner
         # TODO: integrate planner
         # update cars
@@ -137,12 +140,12 @@ else:
         for vehicle in cars:
             nu = 0
             acc = 0
-            if random.random() > 0.1:
-                nu = random.uniform(-0.05,0.05)
-            if random.random() > 0.3:
-                acc = random.uniform(-5,10)
-            vehicle.next((acc, nu),dt)
             if (vehicle.state[2] <= x_lim and vehicle.state[3] <= y_lim):
+                if random.random() > 0.1:
+                    nu = random.uniform(-0.05,0.05)
+                if random.random() > 0.3:
+                    acc = random.uniform(-5,10)
+                vehicle.next((acc, nu),dt)
                 draw_car(vehicle)
         stage = plt.imshow(background, origin="lower") # this origin option flips the y-axis
 #        dots = plt.axes().plot(300,300,'.')
