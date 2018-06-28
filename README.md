@@ -6,11 +6,11 @@ California Institute of Technology <br />
 This project involves the design and implementation of an autonomous traffic intersection system that can be extended to other road sections.
 ## Requirements
 Python 3.* <br />
-Packages: see "requirements.txt" <br />
+Packages: see **requirements.txt** <br />
 ## Instructions
 1. Install all required packages
 2. Modify parameters if desired
-3. Run "main.py"
+3. Run **main.py**
 ## License
 
 This is free software released under the terms of `the BSD 3-Clause License
