@@ -1,5 +1,5 @@
 # street_intersection
-## Authors
+## Authors and Contributors
 Tung M. Phan <br />
 California Institute of Technology <br />
 ## Description
@@ -7,6 +7,10 @@ This project involves the design and implementation of an autonomous traffic int
 ## Requirements
 Python 3.* <br />
 Packages: see requirements.txt <br />
+## Instructions
+1. Install all required packages
+2. Modify parameters if desired
+3. Run "main.py"
 ## License
 
 This is free software released under the terms of `the BSD 3-Clause License
