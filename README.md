@@ -1,5 +1,5 @@
 # street_intersection
-## Author
+## Authors
 Tung M. Phan <br />
 California Institute of Technology <br />
 ## Description
@@ -10,7 +10,7 @@ Packages: see requirements.txt <br />
 ## License
 
 This is free software released under the terms of `the BSD 3-Clause License
-[http://opensource.org/licenses/BSD-3-Clause].  There is no warranty; not even
+(http://opensource.org/licenses/BSD-3-Clause).  There is no warranty; not even
 for merchantability or fitness for a particular purpose.  Consult LICENSE for
 copying conditions. <br />
 
