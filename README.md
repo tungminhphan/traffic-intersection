@@ -1,7 +1,7 @@
 # street_intersection
 ## Author
-Tung M. Phan
-California Institute of Technology
+Tung M. Phan <br />
+California Institute of Technology <br />
 ## Description
 This project involves the design and implementation of an autonomous traffic intersection system that can be extended to other road sections.
 ## Requirements
@@ -10,7 +10,7 @@ Packages: see requirements.txt <br />
 ## License
 
 This is free software released under the terms of `the BSD 3-Clause License
-<http://opensource.org/licenses/BSD-3-Clause>`_.  There is no warranty; not even
+[http://opensource.org/licenses/BSD-3-Clause].  There is no warranty; not even
 for merchantability or fitness for a particular purpose.  Consult LICENSE for
 copying conditions. <br />
 
