@@ -67,7 +67,7 @@ def draw_pedestrian(pedestrian):
     sub_height = height/pedestrian.film_dim[0]
     lower = (i*sub_width,j*sub_height)
     upper = ((i+1)*sub_width, (j+1)*sub_height)
-    area = (lower[0], lower[1], upper[0], upper[1])
+    area = (int(lower[0]), int(lower[1]), int(upper[0]), int(upper[1]))
     person_fig = film_fig.crop(area)
     person_fig = person_fig.rotate(theta/np.pi * 180 + 90, expand = False)
     background.paste(person_fig, (int(x), int(y)), person_fig) 
