@@ -75,9 +75,9 @@ def draw_pedestrian(pedestrian):
 # creates figure
 fig = plt.figure()
 # turn on/off axes
-plt.axis('on')
+plt.axis('off')
 # sampling time
-dt = 0.5
+dt = 0.1
 # Artist Animation option is used to generate offline movies - implemented here as a backup
 use_artist_animation = False
 if use_artist_animation:
@@ -94,10 +94,10 @@ if use_artist_animation:
     plt.show()
 else:
     # creates cars
-    car_1 = car.KinematicCar(init_state=(100,np.pi,1000,500), L = 60)
-    car_2 = car.KinematicCar(init_state=(100,np.pi/2,600,300), color='gray', L=60)
-    car_3 = car.KinematicCar(init_state=(100,0,0,250), color='blue', L=60)
-    car_4 = car.KinematicCar(init_state=(400,-np.pi/2,100,250), color='blue', L=60)
+    car_1 = car.KinematicCar(init_state=(100,np.pi,1000,500))
+    car_2 = car.KinematicCar(init_state=(150,np.pi/2,600,300), color='gray')
+    car_3 = car.KinematicCar(init_state=(250,0,0,250), color='blue')
+    car_4 = car.KinematicCar(init_state=(400,-np.pi/2,450,710), color='gray')
     cars = [car_1, car_2, car_3, car_4]
     # creates pedestrians
     pedestrian_1 = pedestrian.Pedestrian(init_state=[330,550,-np.pi/2,0])
@@ -161,6 +161,12 @@ else:
     animate(0)
     t1 = time()
     interval = (t1 - t0)
-    show_waypoint_graph = True
-    ani = animation.FuncAnimation(fig, animate, frames=300, interval=interval, blit=True, init_func = init)
+    show_waypoint_graph = False
+    save_video = True
+    frames = 240 # number of the first frames to save in video
+    ani = animation.FuncAnimation(fig, animate, frames=frames, interval=interval, blit=True, init_func = init)
+    if save_video:
+        Writer = animation.writers['ffmpeg']
+        writer = Writer(fps=60, metadata=dict(artist='Me'), bitrate=1800)
+        ani.save('intersection.avi', writer=writer, dpi=100)
 plt.show()

@@ -21,7 +21,7 @@ class KinematicCar:
     coordinates of the car respectively
     """
     def __init__(self, init_state = [0, 0, 0, 0],
-                 L = 3, # length of vehicle in meters
+                 L = 60, # length of vehicle
                  a_max = 9.81, # maximum acceleration of vehicle
                  a_min = -9.81, # maximum deceleration of vehicle
                  nu_max = 0.5, # maximum steering input in radians/sec
