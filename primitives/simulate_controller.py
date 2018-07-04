@@ -14,7 +14,7 @@ if not prim['controller_found'][0,0][0,0]:
     print('Maneuver does not exist yet. Please choose different maneuver_number.')
 
 N = 5 # number of segments for the reference trajectory
-G_u = np.array([[175], [1.29]]) # size of input set
+G_u = np.diag([175, 1.29]) # size of input set
 nu = 2 # number of inputs
 nx = 4 # number of states
 
@@ -28,9 +28,14 @@ x4 = np.matmul(np.linalg.inv(np.diag([4, 0.02, 4, 4])), (x_temp0-prim['x0'][0,0]
 x[:,0] = (np.vstack((x1,x2,x3,x4)))[:,0]
 for k in range(0,N):
     dist= np.array([[8*(2*np.random.rand())], [0.065*(2*np.random.rand()-1)]]) # % random constant disturbance for this time step, disturbance can vary freely. Constant implementation only for easier simulation.
-    print(dist)
-    print('\n')
-
+#    print(prim['K'][0,0][k,0])
+#    print(prim['K'][0,0][k,0].reshape((-1, 1), order='F'))
+    q1 = prim['K'][0,0][k,0].reshape((-1, 1), order='F')
+    q2 = 0.5 * (prim['x_ref'][0,0][:,k+1] + prim['x_ref'][0,0][:,k]).reshape(-1,1)
+    q3 = prim['u_ref'][0,0][:,k].reshape(-1,1)
+    q4 = prim['u_ref'][0,0][:,k].reshape(-1,1)
+    q5 = np.matmul(G_u, prim['alpha'][0,0][k*nu:(k+1)*nu,:]).reshape((-1,1), order='F')
+    q = np.vstack((q1,q2,q3,q4,q5)) # parameters for the controlller
 
 # q=[reshape(MA{maneuver_number}.K{k},[],1);0.5*(MA{maneuver_number}.x_ref(:,k+1)+MA{maneuver_number}.x_ref(:,k));MA{maneuver_number}.u_ref(:,k);MA{maneuver_number}.u_ref(:,k);reshape(G_u*MA{maneuver_number}.alpha((k-1)*nu+1:k*nu,:),[],1)]; % parameters for the controller
 
