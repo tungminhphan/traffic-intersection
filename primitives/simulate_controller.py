@@ -5,6 +5,7 @@
 
 import scipy.io
 import numpy as np
+import scipy.integrate.ode as ode
 mat = scipy.io.loadmat('MA3.mat')
 
 prim_num = 0 # primitive number
@@ -36,6 +37,6 @@ for k in range(0,N):
     q4 = prim['u_ref'][0,0][:,k].reshape(-1,1)
     q5 = np.matmul(G_u, prim['alpha'][0,0][k*nu:(k+1)*nu,:]).reshape((-1,1), order='F')
     q = np.vstack((q1,q2,q3,q4,q5)) # parameters for the controlller
+    ode(f, jac=None)
 
-# q=[reshape(MA{maneuver_number}.K{k},[],1);0.5*(MA{maneuver_number}.x_ref(:,k+1)+MA{maneuver_number}.x_ref(:,k));MA{maneuver_number}.u_ref(:,k);MA{maneuver_number}.u_ref(:,k);reshape(G_u*MA{maneuver_number}.alpha((k-1)*nu+1:k*nu,:),[],1)]; % parameters for the controller
 

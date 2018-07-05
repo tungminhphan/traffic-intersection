@@ -167,6 +167,6 @@ else:
     ani = animation.FuncAnimation(fig, animate, frames=frames, interval=interval, blit=True, init_func = init)
     if save_video:
         Writer = animation.writers['ffmpeg']
-        writer = Writer(fps=60, metadata=dict(artist='Me'), bitrate=1800)
+        writer = Writer(fps=15, metadata=dict(artist='Me'), bitrate=1800)
         ani.save('intersection.avi', writer=writer, dpi=100)
 plt.show()
