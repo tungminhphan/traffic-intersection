@@ -5,7 +5,9 @@
 
 import scipy.io
 import numpy as np
-import scipy.integrate.ode as ode
+import matplotlib.pyplot as plt
+from scipy.integrate import odeint
+import controlled_car as cc
 mat = scipy.io.loadmat('MA3.mat')
 
 prim_num = 0 # primitive number
@@ -37,6 +39,27 @@ for k in range(0,N):
     q4 = prim['u_ref'][0,0][:,k].reshape(-1,1)
     q5 = np.matmul(G_u, prim['alpha'][0,0][k*nu:(k+1)*nu,:]).reshape((-1,1), order='F')
     q = np.vstack((q1,q2,q3,q4,q5)) # parameters for the controlller
-    ode(f, jac=None)
+    t_end =prim['t_end'][0,0][0,0]
+    x_temp, infodict = odeint(cc.controlled_car, x[:,k], [0, t_end/5], args=(dist, q), full_output = True)
+    x[:,k+1] = x_temp[-1,:]
 
+# plot of the resulting trajectory in different dimensions over time. Comparison with reference trajectory in red.    
+
+plt.subplot(221)
+plt.plot(x[0,:])
+plt.xlabel('t')
+plt.ylabel('v')
+plt.subplot(222)
+plt.plot(x[1,:])
+plt.xlabel('t')
+plt.ylabel('psi')
+plt.subplot(223)
+plt.plot(x[2,:])
+plt.xlabel('t')
+plt.ylabel('x')
+plt.subplot(224)
+plt.plot(x[3,:])
+plt.xlabel('t')
+plt.ylabel('y')
+plt.show()
 
