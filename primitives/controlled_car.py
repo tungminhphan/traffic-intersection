@@ -3,13 +3,13 @@
 # California Institute of Technology
 # July 4, 2018
 import numpy as np
+import pdb 
 
 def controlled_car(x, t, u, q):
     x_real = x[0:4] # actual state
     x_ref_nl = x[4:8] # reference state for the center
     x_ref_lin = x[8:12] # reference state for linearized dynamics
     beta = x[12:16] # parameters for intial state
-
     w = u[0:2,0] # disturbance
     K = q[0:8].reshape((2,4), order='F')
     x_lin = q[8:12,0] # linearization point states
