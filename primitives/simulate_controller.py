@@ -45,21 +45,31 @@ for k in range(0,N):
 
 # plot of the resulting trajectory in different dimensions over time. Comparison with reference trajectory in red.    
 
+x_ref = prim['x_ref'][0,0]
+
 plt.subplot(221)
 plt.plot(x[0,:])
+plt.plot(x_ref[0,:])
+plt.legend(('real', 'ref'))
 plt.xlabel('t')
 plt.ylabel('v')
 plt.subplot(222)
 plt.plot(x[1,:])
+plt.plot(x_ref[1,:])
+plt.legend(('real', 'ref'))
 plt.xlabel('t')
 plt.ylabel('psi')
 plt.subplot(223)
 plt.plot(x[2,:])
+plt.plot(x_ref[2,:])
+plt.legend(('real', 'ref'))
 plt.xlabel('t')
 plt.ylabel('x')
 plt.subplot(224)
 plt.plot(x[3,:])
+plt.plot(x_ref[3,:])
 plt.xlabel('t')
 plt.ylabel('y')
+plt.legend(('real', 'ref'))
 plt.show()
 
