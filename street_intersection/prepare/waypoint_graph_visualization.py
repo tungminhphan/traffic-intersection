@@ -13,7 +13,7 @@ else:
 import matplotlib.pyplot as plt
 from PIL import Image
 dir_path = os.path.dirname(os.path.realpath(__file__))
-intersection_fig = os.path.dirname(dir_path) + "/imglib/intersection.png"
+intersection_fig = os.path.dirname(dir_path) + "/components/imglib/intersection.png"
 fig = plt.figure()
 
 # turn on/off axes

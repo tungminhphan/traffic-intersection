@@ -5,7 +5,7 @@
 import scipy.integrate as integrate
 import numpy as np
 from numpy import cos, sin, tan
-
+from ..primitives import prim_car
 def saturation_filter(u, u_max, u_min):
     """ saturation_filter Helper Function
 
@@ -44,7 +44,7 @@ class KinematicCar:
                   a,
                   nu):
        """
-       state_dot is a Function that defines the system dynamics
+       state_dot is a function that defines the system dynamics
 
        Inputs
        state: current state
@@ -67,7 +67,7 @@ class KinematicCar:
 
     def next(self, inputs, dt):
        """
-       next is a Function that updates
+       next is a function that updates the current position of the car when inputs are applied for a duration of dt
 
        """
        a, nu = inputs
@@ -77,3 +77,22 @@ class KinematicCar:
        # fuel decreases linearly with acceleration/deceleration
        self.fuel_level -= np.abs(a) * dt
        self.alive_time += dt
+
+#    def prim_next(self, inputs, prim_id, dt):
+#       """
+#       updates with primitive
+#       Inputs
+#       prim_id: primitive ID
+#       dt: integration time
+#
+#       """
+#       #TODO: implement compatibility check with primitive to make sure that the params & dynamics match
+#
+#
+#       a, nu = inputs
+#
+#       # take only the real part of the solution
+#       self.state = integrate.odeint(prim_car.prim_cstate_dot, self.state, t=(0, dt), args=(a, nu))[1]
+#       # fuel decreases linearly with acceleration/deceleration
+#       self.fuel_level -= np.abs(a) * dt
+#       self.alive_time += dt

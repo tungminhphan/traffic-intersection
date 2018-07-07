@@ -7,7 +7,7 @@ import scipy.io
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import odeint
-import controlled_car as dynamics_model
+import prim_car as model
 import pdb
 mat = scipy.io.loadmat('MA3.mat')
 
@@ -41,7 +41,7 @@ for k in range(0,N):
     q = np.vstack((q1,q2,q3,q4,q5)) # parameters for the controller
     t_end = prim['t_end'][0,0][0,0]
 
-    x_temp = odeint(func = dynamics_model.controlled_car, y0 = x[:,k], t = np.linspace(0, t_end/N), args=(dist, q))
+    x_temp = odeint(func = model.prim_state_dot, y0 = x[:,k], t = np.linspace(0, t_end/N), args=(dist, q))
     x[:,k+1] = x_temp[-1,:]
 
 # plot of the resulting trajectory in different dimensions over time. Comparison with reference trajectory in red.    

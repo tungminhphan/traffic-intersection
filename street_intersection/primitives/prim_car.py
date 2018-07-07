@@ -3,9 +3,9 @@
 # California Institute of Technology
 # July 4, 2018
 import numpy as np
-import pdb 
 
-def controlled_car(x, t, u, q):
+def prim_state_dot(x, t, u, q):
+
     x_real = x[0:4] # actual state
     x_ref_nl = x[4:8] # reference state for the center
     x_ref_lin = x[8:12] # reference state for linearized dynamics

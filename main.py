@@ -4,10 +4,10 @@
 # May 2, 2018
 
 import os
-import components.car as car 
-import components.pedestrian as pedestrian
-import components.traffic_signals as traffic_signals
-import prepare.waypoint_graph as waypoint_graph
+import street_intersection.components.car as car 
+import street_intersection.components.pedestrian as pedestrian
+import street_intersection.components.traffic_signals as traffic_signals
+import street_intersection.prepare.waypoint_graph as waypoint_graph
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 from time import time
@@ -17,9 +17,9 @@ from PIL import Image
 import random
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
-intersection_fig = dir_path + "/components/imglib/intersection_states/intersection_"
-blue_car_fig = dir_path + "/components/imglib/cars/blue_car.png"
-gray_car_fig = dir_path + "/components/imglib/cars/gray_car.png"
+intersection_fig = dir_path + "/street_intersection/components/imglib/intersection_states/intersection_"
+blue_car_fig = dir_path + "/street_intersection/components/imglib/cars/blue_car.png"
+gray_car_fig = dir_path + "/street_intersection/components/imglib/cars/gray_car.png"
 car_scale_factor = 0.12
 pedestrian_scale_factor = 0.6
 
@@ -76,6 +76,8 @@ def draw_pedestrian(pedestrian):
 
 # creates figure
 fig = plt.figure()
+fig.add_axes([0,0,1,1]) # get rid of white border
+
 # turn on/off axes
 plt.axis('off')
 # sampling time
@@ -163,12 +165,12 @@ else:
     t1 = time()
     interval = (t1 - t0)
     show_waypoint_graph = False
-    save_video = True
-    frames = 240 # number of the first frames to save in video
+    save_video = False
+    frames = 200 # number of the first frames to save in video
     ani = animation.FuncAnimation(fig, animate, frames=frames, interval=interval, blit=True, init_func = init)
     
     if save_video:
         Writer = animation.writers['ffmpeg']
-        writer = Writer(fps=15, metadata=dict(artist='Me'), bitrate=1800)
+        writer = Writer(fps=60, metadata=dict(artist='Me'), bitrate=1800)
         ani.save('movies/new.avi', writer=writer, dpi=100)
 plt.show()
