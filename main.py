@@ -154,7 +154,6 @@ else:
 #        dots = plt.axes().plot(240,300,'.')
 #        return stage, dots  # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
         return stage,   # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
-
     ##
     ## OBSERVER GOES HERE 
     ## TAKES IN CONTRACTS, CARS AND TRAFFIC LIGHT,  AS OS
@@ -164,11 +163,12 @@ else:
     t1 = time()
     interval = (t1 - t0)
     show_waypoint_graph = False
-    save_video = False
+    save_video = True
     frames = 240 # number of the first frames to save in video
     ani = animation.FuncAnimation(fig, animate, frames=frames, interval=interval, blit=True, init_func = init)
+    
     if save_video:
         Writer = animation.writers['ffmpeg']
         writer = Writer(fps=15, metadata=dict(artist='Me'), bitrate=1800)
-        ani.save('intersection.avi', writer=writer, dpi=100)
+        ani.save('movies/new.avi', writer=writer, dpi=100)
 plt.show()
