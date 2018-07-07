@@ -10,7 +10,9 @@ def controlled_car(x, t, u, q):
     x_ref_nl = x[4:8] # reference state for the center
     x_ref_lin = x[8:12] # reference state for linearized dynamics
     beta = x[12:16] # parameters for intial state
+
     w = u[0:2,0] # disturbance
+
     K = q[0:8].reshape((2,4), order='F')
     x_lin = q[8:12,0] # linearization point states
     u_lin = q[12:14,0] # linearization point inputs
@@ -27,7 +29,7 @@ def controlled_car(x, t, u, q):
                  [0,0,0,0], \
                  [u_lin[1]/50.,0,0,0], 
                  [np.cos(x_lin[1]),-x_lin[0]*np.sin(x_lin[1]),0,0], \
-                 [np.sin(x_lin[1]),x_lin[0]*np.cos(x_lin[1]),0,0]])
+                 [np.sin(x_lin[1]), x_lin[0]*np.cos(x_lin[1]),0,0]])
 
     B = np.array([ \
                 [1,0], \
@@ -35,14 +37,10 @@ def controlled_car(x, t, u, q):
                 [0, 0], \
                 [0, 0]])
 
-
-    f = np.zeros((12,1))
-    f[0:4] = np.vstack((u_ff[0]+u_fb[0]+w[0], x[0]/50.*(u_ff[1]+u_fb[1]+w[1]), np.cos(x[1])*x[0], np.sin(x[1]*x[0]))) # actual dynamics
-
-    f[4:8] = np.vstack((u_ff_nl[0], x[4]/50. * (u_ff_nl[1]), np.cos(x[5]) * x[4], np.sin(x[5])*x[4] )) # reference dynamics for center
-    f[8:12] = np.reshape(np.matmul(A,x_ref_lin) + np.matmul(B,u_ff_lin), (-1, 1)) # linearized reference dynamics
-    f = np.vstack((f, np.zeros((4,1))))
-    f = f[:,0] # make array one dimensional for odeint
+    f = np.zeros(16)
+    f[0:4] = np.vstack((u_ff[0]+u_fb[0]+w[0], x[0]/50.*(u_ff[1]+u_fb[1]+w[1]), np.cos(x[1])*x[0], np.sin(x[1])*x[0]))[:,0] # actual dynamics
+    f[4:8] = np.vstack((u_ff_nl[0], x[4]/50. * (u_ff_nl[1]), np.cos(x[5]) * x[4], np.sin(x[5])*x[4] ))[:,0] # reference dynamics for center
+    f[8:12] = np.reshape(np.matmul(A, x_ref_lin) + np.matmul(B, u_ff_lin), (-1, 1))[:,0] # linearized reference dynamics
     return f
 
 

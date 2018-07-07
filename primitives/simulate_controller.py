@@ -31,7 +31,8 @@ x1 = x_temp0
 x2 = prim['x0'][0,0]
 x3 = x_temp0 - prim['x0'][0,0]
 x4 = np.matmul(np.linalg.inv(np.diag([4, 0.02, 4, 4])), (x_temp0-prim['x0'][0,0]))
-x[:,0] = (np.vstack((x1,x2,x3,x4)))[:,0]
+x[:,0] = (np.vstack((x1,x2,x3,x4)))[:,0] # initial state, consisting of actual state and virtual states for the controller
+
 for k in range(0,N):
     dist= np.array([[8*(2*np.random.rand())], [0.065*(2*np.random.rand()-1)]]) # random constant disturbance for this time step, disturbance can vary freely. Constant implementation only for easier simulation.
     dist= np.array([[0.1*(k+1)], [-0.1*(k+1)]]) # TODO: REMOVE
@@ -39,10 +40,11 @@ for k in range(0,N):
     q2 = 0.5 * (prim['x_ref'][0,0][:,k+1] + prim['x_ref'][0,0][:,k]).reshape(-1,1)
     q3 = prim['u_ref'][0,0][:,k].reshape(-1,1)
     q4 = prim['u_ref'][0,0][:,k].reshape(-1,1)
-    q5 = np.matmul(G_u, prim['alpha'][0,0][k*nu:(k+1)*nu,:]).reshape((-1,1), order='F')
-    q = np.vstack((q1,q2,q3,q4,q5)) # parameters for the controlller
-    t_end =prim['t_end'][0,0][0,0]
-    x_temp = odeint(dynamics_model.controlled_car, x[:,k], np.linspace(0, t_end/5.,65), args=(dist, q))
+    q5 = np.matmul(G_u, prim['alpha'][0,0][k*nu:(k+1)*nu]).reshape((-1,1), order='F')
+    q = np.vstack((q1,q2,q3,q4,q5)) # parameters for the controller
+    t_end = prim['t_end'][0,0][0,0]
+
+    x_temp = odeint(func = dynamics_model.controlled_car, y0 = x[:,k], t = np.linspace(0, t_end/N), args=(dist, q))
     x[:,k+1] = x_temp[-1,:]
 
 # plot of the resulting trajectory in different dimensions over time. Comparison with reference trajectory in red.    
