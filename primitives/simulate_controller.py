@@ -25,8 +25,6 @@ nx = 4 # number of states
 x = np.zeros([4*nx, N+1])
 x_temp0 = np.array(prim['x0'][0,0]) + np.matmul(np.diag([4, 0.02, 4, 4]),2*np.random.rand(nx,1)-np.ones((nx,1))) # random state in initial set
 
-x_temp0 = np.array([[1.5586],[-0.0073],[3.6018],[321.2756]]) #TODO: REMOVE
-
 x1 = x_temp0
 x2 = prim['x0'][0,0]
 x3 = x_temp0 - prim['x0'][0,0]
@@ -35,7 +33,6 @@ x[:,0] = (np.vstack((x1,x2,x3,x4)))[:,0] # initial state, consisting of actual s
 
 for k in range(0,N):
     dist= np.array([[8*(2*np.random.rand())], [0.065*(2*np.random.rand()-1)]]) # random constant disturbance for this time step, disturbance can vary freely. Constant implementation only for easier simulation.
-    dist= np.array([[0.1*(k+1)], [-0.1*(k+1)]]) # TODO: REMOVE
     q1 = prim['K'][0,0][k,0].reshape((-1, 1), order='F')
     q2 = 0.5 * (prim['x_ref'][0,0][:,k+1] + prim['x_ref'][0,0][:,k]).reshape(-1,1)
     q3 = prim['u_ref'][0,0][:,k].reshape(-1,1)

@@ -4,7 +4,9 @@
 # May 2, 2018
 
 import os
-import car, pedestrian, traffic_signals
+import components.car as car 
+import components.pedestrian as pedestrian
+import components.traffic_signals as traffic_signals
 import prepare.waypoint_graph as waypoint_graph
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
@@ -15,9 +17,9 @@ from PIL import Image
 import random
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
-intersection_fig = dir_path + "/imglib/intersection_states/intersection_"
-blue_car_fig = dir_path + "/imglib/cars/blue_car.png"
-gray_car_fig = dir_path + "/imglib/cars/gray_car.png"
+intersection_fig = dir_path + "/components/imglib/intersection_states/intersection_"
+blue_car_fig = dir_path + "/components/imglib/cars/blue_car.png"
+gray_car_fig = dir_path + "/components/imglib/cars/gray_car.png"
 car_scale_factor = 0.12
 pedestrian_scale_factor = 0.6
 
@@ -162,7 +164,7 @@ else:
     t1 = time()
     interval = (t1 - t0)
     show_waypoint_graph = False
-    save_video = True
+    save_video = False
     frames = 240 # number of the first frames to save in video
     ani = animation.FuncAnimation(fig, animate, frames=frames, interval=interval, blit=True, init_func = init)
     if save_video:
