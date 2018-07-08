@@ -100,11 +100,14 @@ if use_artist_animation:
     plt.show()
 else:
     # creates cars
-    car_1 = car.KinematicCar(init_state=(100,np.pi,1000,500))
+    x0 = [4.70399575e-02, 2.36148214e-03, -3.22361082e+00, 3.21774108e+02]
+    car_1 = car.KinematicCar(init_state = np.reshape(x0, (-1, 1))) # primitive car
+#    car_1 = car.KinematicCar(init_state=(100,np.pi,1000,500)) # original test
     car_2 = car.KinematicCar(init_state=(150,np.pi/2,600,300), color='gray')
     car_3 = car.KinematicCar(init_state=(250,0,0,250), color='gray')
     car_4 = car.KinematicCar(init_state=(400,-np.pi/2,450,710), color='gray')
-    cars = [car_1, car_2, car_3, car_4]
+    enemy_cars = [car_2, car_3, car_4]
+    controlled_cars = [car_1]
     # creates pedestrians
     pedestrian_1 = pedestrian.Pedestrian(init_state=[330,550,-np.pi/2,0])
     pedestrian_2 = pedestrian.Pedestrian(init_state=[680,0, np.pi/2,0])
@@ -141,9 +144,8 @@ else:
                 draw_pedestrian(person)
         # update planner
         # TODO: integrate planner
-        # update cars
-        ## TODO: USES PRIMITIVES
-        for vehicle in cars:
+        # update enemy cars
+        for vehicle in enemy_cars:
             nu = 0
             acc = 0
             if (vehicle.state[2] <= x_lim and vehicle.state[3] <= y_lim):
@@ -154,6 +156,19 @@ else:
                 vehicle.next((acc, nu),dt)
                 draw_car(vehicle)
         stage = plt.imshow(background, origin="lower") # this origin option flips the y-axis
+
+
+
+        ## update controlled cars with primitives
+        for vehicle in controlled_cars:
+            if vehicle.prim_progress <= 1:
+                vehicle.prim_next(prim_id = 0, dt = 0.1)
+                draw_car(vehicle)
+        stage = plt.imshow(background, origin="lower") # this origin option flips the y-axis
+
+
+
+
 #        dots = plt.axes().plot(300,300,'.')
 #        dots = plt.axes().plot(240,300,'.')
 #        return stage, dots  # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)

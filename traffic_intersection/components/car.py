@@ -35,7 +35,8 @@ class KinematicCar:
                  nu_max = 0.5, # maximum steering input in radians/sec
                  nu_min = -0.5, # minimum steering input in radians/sec)
                  vee_max = 100,
-                 color = 'blue', # color of the car)
+                 color = 'blue', # color of the car
+                 prim_progress = 0, # progress of primitive (if used)
                  fuel_level = float('inf')): # fuel level of the car - FUTURE FEATURE)
                      if color != 'blue' and color != 'gray':
                          raise Exception("Color must either be blue or gray!")
@@ -44,6 +45,7 @@ class KinematicCar:
                      self.alive_time = 0
                      self.state = self.init_state
                      self.color = color
+                     self.prim_progress = prim_progress
                      self.fuel_level = fuel_level
 
     def state_dot(self,
@@ -92,12 +94,11 @@ class KinematicCar:
        # update alive time
        self.alive_time += dt
 
-    def prim_next(self, prim_id, prim_progress, dt):
+    def prim_next(self, prim_id, dt):
        """
        updates with primitive
        Inputs:
        prim_id: primitive ID number
-       prim_progress: progress of primitive (a real number between 0 and 1)
        dt: integration time
 
        Outputs:
@@ -118,11 +119,11 @@ class KinematicCar:
 
        x1 = self.state.reshape((-1,1))
        x2 = prim['x0'][0,0]
-       x3 = x_temp0 - prim['x0'][0,0]
-       x4 = np.matmul(np.linalg.inv(np.diag([4, 0.02, 4, 4])), (x_temp0-prim['x0'][0,0]))
+       x3 = x1 - prim['x0'][0,0]
+       x4 = np.matmul(np.linalg.inv(np.diag([4, 0.02, 4, 4])), (x1-prim['x0'][0,0]))
        x = (np.vstack((x1,x2,x3,x4)))[:,0] # initial state, consisting of actual state and virtual states for the controller
 
-       k = int((prim_progress * t_end) // (t_end / N)) # calculate primitive waypoint
+       k = int((self.prim_progress * t_end) // (t_end / N)) # calculate primitive waypoint
 
        dist= np.array([[8*(2*np.random.rand())], [0.065*(2*np.random.rand()-1)]]) # random constant disturbance for this time step, disturbance can vary freely. Constant implementation only for easier simulation. TODO: move this outside of this file
 
@@ -137,14 +138,14 @@ class KinematicCar:
        # update alive time
        self.alive_time += dt
        # update progress
-       prim_progress += dt / t_end
-       return prim_progress
+       self.prim_progress += dt / t_end
 
 # TESTING
-prim_id = 0
-prim = mat['MA3'][prim_id,0] # the primitive corresponding to the primitive number
-x0 = np.array(prim['x0'][0,0]) + np.matmul(np.diag([4, 0.02, 4, 4]),2*np.random.rand(4,1)-np.ones((4,1))) # random state in initial set TODO: incorporate self.state
-my_car = KinematicCar(init_state = np.reshape(x0, (-1, 1)))
-progress = 0
-while progress <= 1:
-    progress = my_car.prim_next(prim_id = 0, prim_progress = progress, dt = 0.1)
+#prim_id = 0
+#prim = mat['MA3'][prim_id,0] # the primitive corresponding to the primitive number
+#x0 = np.array(prim['x0'][0,0]) + np.matmul(np.diag([4, 0.02, 4, 4]),2*np.random.rand(4,1)-np.ones((4,1))) # random state in initial set TODO: incorporate self.state
+#print(x0)
+#my_car = KinematicCar(init_state = np.reshape(x0, (-1, 1)))
+#progress = 0
+#while my_car.prim_progress <= 1:
+#    my_car.prim_next(prim_id = 0, dt = 0.1)
