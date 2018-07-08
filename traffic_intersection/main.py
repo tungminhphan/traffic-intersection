@@ -4,6 +4,8 @@
 # May 2, 2018
 
 import os
+import sys
+sys.path.append("..")
 import traffic_intersection.components.car as car 
 import traffic_intersection.components.pedestrian as pedestrian
 import traffic_intersection.components.traffic_signals as traffic_signals
@@ -100,7 +102,7 @@ else:
     # creates cars
     car_1 = car.KinematicCar(init_state=(100,np.pi,1000,500))
     car_2 = car.KinematicCar(init_state=(150,np.pi/2,600,300), color='gray')
-    car_3 = car.KinematicCar(init_state=(250,0,0,250), color='blue')
+    car_3 = car.KinematicCar(init_state=(250,0,0,250), color='gray')
     car_4 = car.KinematicCar(init_state=(400,-np.pi/2,450,710), color='gray')
     cars = [car_1, car_2, car_3, car_4]
     # creates pedestrians

@@ -8,7 +8,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import odeint
 import prim_car as model
-import pdb
 mat = scipy.io.loadmat('MA3.mat')
 
 prim_num = 0 # primitive number
