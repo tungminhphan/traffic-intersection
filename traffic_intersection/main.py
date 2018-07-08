@@ -83,7 +83,7 @@ fig.add_axes([0,0,1,1]) # get rid of white border
 # turn on/off axes
 plt.axis('off')
 # sampling time
-dt = 0.1
+dt = 0.5
 # Artist Animation option is used to generate offline movies - implemented here as a backup
 use_artist_animation = False
 if use_artist_animation:
@@ -101,6 +101,7 @@ if use_artist_animation:
 else:
     # creates cars
     x0 = [4.70399575e-02, 2.36148214e-03, -3.22361082e+00, 3.21774108e+02]
+    x0 = [0, 0, 0, 325]
     car_1 = car.KinematicCar(init_state = np.reshape(x0, (-1, 1))) # primitive car
 #    car_1 = car.KinematicCar(init_state=(100,np.pi,1000,500)) # original test
     car_2 = car.KinematicCar(init_state=(150,np.pi/2,600,300), color='gray')
@@ -164,12 +165,12 @@ else:
             if vehicle.prim_progress <= 1:
                 vehicle.prim_next(prim_id = 0, dt = 0.1)
                 draw_car(vehicle)
+            else:
+                vehicle.next((0, 0), dt)
+                draw_car(vehicle)
         stage = plt.imshow(background, origin="lower") # this origin option flips the y-axis
 
-
-
-
-#        dots = plt.axes().plot(300,300,'.')
+#        dots = plt.axes().plot(140,380,'ro')
 #        dots = plt.axes().plot(240,300,'.')
 #        return stage, dots  # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
         return stage,   # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)

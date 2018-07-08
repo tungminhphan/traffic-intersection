@@ -123,9 +123,9 @@ class KinematicCar:
        x4 = np.matmul(np.linalg.inv(np.diag([4, 0.02, 4, 4])), (x1-prim['x0'][0,0]))
        x = (np.vstack((x1,x2,x3,x4)))[:,0] # initial state, consisting of actual state and virtual states for the controller
 
-       k = int((self.prim_progress * t_end) // (t_end / N)) # calculate primitive waypoint
+       k = int(self.prim_progress // N) # calculate primitive waypoint
 
-       dist= np.array([[8*(2*np.random.rand())], [0.065*(2*np.random.rand()-1)]]) # random constant disturbance for this time step, disturbance can vary freely. Constant implementation only for easier simulation. TODO: move this outside of this file
+       dist = np.array([[8*(2*np.random.rand())], [0.065*(2*np.random.rand()-1)]]) # random constant disturbance for this time step, disturbance can vary freely. Constant implementation only for easier simulation. TODO: move this outside of this file
 
        q1 = prim['K'][0,0][k,0].reshape((-1, 1), order='F')
        q2 = 0.5 * (prim['x_ref'][0,0][:,k+1] + prim['x_ref'][0,0][:,k]).reshape(-1,1)
@@ -134,11 +134,11 @@ class KinematicCar:
        q5 = np.matmul(G_u, prim['alpha'][0,0][k*nu:(k+1)*nu]).reshape((-1,1), order='F')
        q = np.vstack((q1,q2,q3,q4,q5)) # parameters for the controller
 
-       self.state = odeint(func = prim_state_dot, y0 = x, t=(0, dt), args=(dist, q))[1,0:4]
+       self.state = odeint(func = prim_state_dot, y0 = x, t=(0, dt), args=(dist, q))[-1,0:4]
        # update alive time
        self.alive_time += dt
        # update progress
-       self.prim_progress += dt / t_end
+       self.prim_progress = self.prim_progress + dt / t_end
 
 # TESTING
 #prim_id = 0
