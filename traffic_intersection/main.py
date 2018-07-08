@@ -4,10 +4,10 @@
 # May 2, 2018
 
 import os
-import street_intersection.components.car as car 
-import street_intersection.components.pedestrian as pedestrian
-import street_intersection.components.traffic_signals as traffic_signals
-import street_intersection.prepare.waypoint_graph as waypoint_graph
+import components.car as car 
+import components.pedestrian as pedestrian
+import components.traffic_signals as traffic_signals
+import prepare.waypoint_graph as waypoint_graph
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 from time import time
@@ -17,9 +17,9 @@ from PIL import Image
 import random
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
-intersection_fig = dir_path + "/street_intersection/components/imglib/intersection_states/intersection_"
-blue_car_fig = dir_path + "/street_intersection/components/imglib/cars/blue_car.png"
-gray_car_fig = dir_path + "/street_intersection/components/imglib/cars/gray_car.png"
+intersection_fig = dir_path + "/components/imglib/intersection_states/intersection_"
+blue_car_fig = dir_path + "/components/imglib/cars/blue_car.png"
+gray_car_fig = dir_path + "/components/imglib/cars/gray_car.png"
 car_scale_factor = 0.12
 pedestrian_scale_factor = 0.6
 

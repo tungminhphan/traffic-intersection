@@ -1,4 +1,4 @@
-# street_intersection
+# traffic-intersection
 ## Authors and Contributors
 Tung M. Phan <br />
 California Institute of Technology <br />
