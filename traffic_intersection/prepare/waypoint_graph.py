@@ -7,7 +7,7 @@ import numpy as np
 if __name__ == '__main__':
     from graph import WeightedDirectedGraph
 else:
-    from prepare.graph import WeightedDirectedGraph
+    from traffic_intersection.prepare.graph import WeightedDirectedGraph
 # turn on/off axes
 G =  WeightedDirectedGraph()
 # a node is of the form (x, y)

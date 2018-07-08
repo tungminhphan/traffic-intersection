@@ -4,10 +4,10 @@
 # May 2, 2018
 
 import os
-import components.car as car 
-import components.pedestrian as pedestrian
-import components.traffic_signals as traffic_signals
-import prepare.waypoint_graph as waypoint_graph
+import traffic_intersection.components.car as car 
+import traffic_intersection.components.pedestrian as pedestrian
+import traffic_intersection.components.traffic_signals as traffic_signals
+import traffic_intersection.prepare.waypoint_graph as waypoint_graph
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 from time import time

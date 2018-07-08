@@ -1,5 +1,0 @@
-imageio
-scipy
-numpy
-matplotlib
-Pillow

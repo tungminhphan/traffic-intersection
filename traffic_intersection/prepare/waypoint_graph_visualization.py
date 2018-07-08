@@ -9,7 +9,7 @@ import numpy as np
 if __name__ == '__main__':
     from graph import DirectedGraph
 else:
-    from prepare.graph import DirectedGraph
+    from traffic_intersection.prepare.graph import DirectedGraph
 import matplotlib.pyplot as plt
 from PIL import Image
 dir_path = os.path.dirname(os.path.realpath(__file__))
