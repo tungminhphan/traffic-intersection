@@ -3,7 +3,7 @@
 Tung M. Phan <br />
 California Institute of Technology <br />
 ## Description
-This project involves the design and implementation of an autonomous traffic intersection system that can be extended to other road sections.
+This project involves the design and implementation of an autonomous traffic intersection system that can be extended and connected to other road sections.
 ## Requirements
 Python 3.x <br />
 Packages: see **requirements.txt** <br />
