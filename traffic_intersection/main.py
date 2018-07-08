@@ -17,8 +17,14 @@ from numpy import cos, sin, tan
 import numpy as np
 from PIL import Image
 import random
+import scipy.io
 
+#TODO: clean up this section
 dir_path = os.path.dirname(os.path.realpath(__file__))
+primitive_data = dir_path + '/primitives/MA3.mat'
+mat = scipy.io.loadmat(primitive_data)
+
+
 intersection_fig = dir_path + "/components/imglib/intersection_states/intersection_"
 blue_car_fig = dir_path + "/components/imglib/cars/blue_car.png"
 gray_car_fig = dir_path + "/components/imglib/cars/gray_car.png"
@@ -83,7 +89,7 @@ fig.add_axes([0,0,1,1]) # get rid of white border
 # turn on/off axes
 plt.axis('off')
 # sampling time
-dt = 0.5
+dt = 0.2
 # Artist Animation option is used to generate offline movies - implemented here as a backup
 use_artist_animation = False
 if use_artist_animation:
@@ -99,14 +105,17 @@ if use_artist_animation:
     ani = animation.ArtistAnimation(fig, frames, interval = 10, repeat_delay=1)
     plt.show()
 else:
+
     # creates cars
-    x0 = [4.70399575e-02, 2.36148214e-03, -3.22361082e+00, 3.21774108e+02]
-    x0 = [0, 0, 0, 325]
+    prim_id = 16 # first primitive
+    prim = mat['MA3'][prim_id,0]
+    x0 = prim['x0'][0,0]
     car_1 = car.KinematicCar(init_state = np.reshape(x0, (-1, 1))) # primitive car
+    car_1.prim_queue.enqueue((prim_id, 0))
 #    car_1 = car.KinematicCar(init_state=(100,np.pi,1000,500)) # original test
-    car_2 = car.KinematicCar(init_state=(150,np.pi/2,600,300), color='gray')
-    car_3 = car.KinematicCar(init_state=(250,0,0,250), color='gray')
-    car_4 = car.KinematicCar(init_state=(400,-np.pi/2,450,710), color='gray')
+    car_2 = car.KinematicCar(init_state=(20,np.pi/2,600,300), color='gray')
+    car_3 = car.KinematicCar(init_state=(80,0,0,250), color='gray')
+    car_4 = car.KinematicCar(init_state=(50,-np.pi/2,450,710), color='gray')
     enemy_cars = [car_2, car_3, car_4]
     controlled_cars = [car_1]
     # creates pedestrians
@@ -158,25 +167,18 @@ else:
                 draw_car(vehicle)
         stage = plt.imshow(background, origin="lower") # this origin option flips the y-axis
 
-
-
         ## update controlled cars with primitives
         for vehicle in controlled_cars:
-            if vehicle.prim_progress <= 1:
-                vehicle.prim_next(prim_id = 0, dt = 0.1)
-                draw_car(vehicle)
-            else:
-                vehicle.next((0, 0), dt)
-                draw_car(vehicle)
+            vehicle.prim_next(dt = dt)
+            draw_car(vehicle)
         stage = plt.imshow(background, origin="lower") # this origin option flips the y-axis
 
-#        dots = plt.axes().plot(140,380,'ro')
-#        dots = plt.axes().plot(240,300,'.')
+#        dots = plt.axes().plot(240,300,'ro')
 #        return stage, dots  # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
         return stage,   # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
     ##
     ## OBSERVER GOES HERE 
-    ## TAKES IN CONTRACTS, CARS AND TRAFFIC LIGHT,  AS OS
+    ## TAKES IN CONTRACTS, CARS AND TRAFFIC LIGHT
     ##
     t0 = time()
     animate(0)
