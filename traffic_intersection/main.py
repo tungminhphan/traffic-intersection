@@ -4,8 +4,12 @@
 # May 2, 2018
 
 import os
-import car, pedestrian, traffic_signals
-import prepare.waypoint_graph as waypoint_graph
+import sys
+sys.path.append("..")
+import traffic_intersection.components.car as car 
+import traffic_intersection.components.pedestrian as pedestrian
+import traffic_intersection.components.traffic_signals as traffic_signals
+import traffic_intersection.prepare.waypoint_graph as waypoint_graph
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 from time import time
@@ -13,11 +17,17 @@ from numpy import cos, sin, tan
 import numpy as np
 from PIL import Image
 import random
+import scipy.io
 
+#TODO: clean up this section
 dir_path = os.path.dirname(os.path.realpath(__file__))
-intersection_fig = dir_path + "/imglib/intersection_states/intersection_"
-blue_car_fig = dir_path + "/imglib/cars/blue_car.png"
-gray_car_fig = dir_path + "/imglib/cars/gray_car.png"
+primitive_data = dir_path + '/primitives/MA3.mat'
+mat = scipy.io.loadmat(primitive_data)
+
+
+intersection_fig = dir_path + "/components/imglib/intersection_states/intersection_"
+blue_car_fig = dir_path + "/components/imglib/cars/blue_car.png"
+gray_car_fig = dir_path + "/components/imglib/cars/gray_car.png"
 car_scale_factor = 0.12
 pedestrian_scale_factor = 0.6
 
@@ -74,10 +84,12 @@ def draw_pedestrian(pedestrian):
 
 # creates figure
 fig = plt.figure()
+fig.add_axes([0,0,1,1]) # get rid of white border
+
 # turn on/off axes
 plt.axis('off')
 # sampling time
-dt = 0.05
+dt = 0.2
 # Artist Animation option is used to generate offline movies - implemented here as a backup
 use_artist_animation = False
 if use_artist_animation:
@@ -93,12 +105,19 @@ if use_artist_animation:
     ani = animation.ArtistAnimation(fig, frames, interval = 10, repeat_delay=1)
     plt.show()
 else:
+
     # creates cars
-    car_1 = car.KinematicCar(init_state=(100,np.pi,1000,500))
-    car_2 = car.KinematicCar(init_state=(150,np.pi/2,600,300), color='gray')
-    car_3 = car.KinematicCar(init_state=(250,0,0,250), color='blue')
-    car_4 = car.KinematicCar(init_state=(400,-np.pi/2,450,710), color='gray')
-    cars = [car_1, car_2, car_3, car_4]
+    prim_id = 16 # first primitive
+    prim = mat['MA3'][prim_id,0]
+    x0 = prim['x0'][0,0]
+    car_1 = car.KinematicCar(init_state = np.reshape(x0, (-1, 1))) # primitive car
+    car_1.prim_queue.enqueue((prim_id, 0))
+#    car_1 = car.KinematicCar(init_state=(100,np.pi,1000,500)) # original test
+    car_2 = car.KinematicCar(init_state=(20,np.pi/2,600,300), color='gray')
+    car_3 = car.KinematicCar(init_state=(80,0,0,250), color='gray')
+    car_4 = car.KinematicCar(init_state=(50,-np.pi/2,450,710), color='gray')
+    enemy_cars = [car_2, car_3, car_4]
+    controlled_cars = [car_1]
     # creates pedestrians
     pedestrian_1 = pedestrian.Pedestrian(init_state=[330,550,-np.pi/2,0])
     pedestrian_2 = pedestrian.Pedestrian(init_state=[680,0, np.pi/2,0])
@@ -135,9 +154,8 @@ else:
                 draw_pedestrian(person)
         # update planner
         # TODO: integrate planner
-        # update cars
-        ## TODO: USES PRIMITIVES
-        for vehicle in cars:
+        # update enemy cars
+        for vehicle in enemy_cars:
             nu = 0
             acc = 0
             if (vehicle.state[2] <= x_lim and vehicle.state[3] <= y_lim):
@@ -148,25 +166,31 @@ else:
                 vehicle.next((acc, nu),dt)
                 draw_car(vehicle)
         stage = plt.imshow(background, origin="lower") # this origin option flips the y-axis
-#        dots = plt.axes().plot(300,300,'.')
-#        dots = plt.axes().plot(240,300,'.')
+
+        ## update controlled cars with primitives
+        for vehicle in controlled_cars:
+            vehicle.prim_next(dt = dt)
+            draw_car(vehicle)
+        stage = plt.imshow(background, origin="lower") # this origin option flips the y-axis
+
+#        dots = plt.axes().plot(240,300,'ro')
 #        return stage, dots  # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
         return stage,   # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
-
     ##
     ## OBSERVER GOES HERE 
-    ## TAKES IN CONTRACTS, CARS AND TRAFFIC LIGHT,  AS OS
+    ## TAKES IN CONTRACTS, CARS AND TRAFFIC LIGHT
     ##
     t0 = time()
     animate(0)
     t1 = time()
     interval = (t1 - t0)
     show_waypoint_graph = False
-    save_video = True
-    frames = 600 # number of the first frames to save in video
+    save_video = False
+    frames = 200 # number of the first frames to save in video
     ani = animation.FuncAnimation(fig, animate, frames=frames, interval=interval, blit=True, init_func = init)
+
     if save_video:
         Writer = animation.writers['ffmpeg']
         writer = Writer(fps=60, metadata=dict(artist='Me'), bitrate=1800)
-        ani.save('intersection.avi', writer=writer, dpi=200)
+        ani.save('movies/new.avi', writer=writer, dpi=100)
 plt.show()

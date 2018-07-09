@@ -1,16 +1,23 @@
-# street_intersection
+# traffic-intersection
 ## Authors and Contributors
 Tung M. Phan <br />
 California Institute of Technology <br />
 ## Description
-This project involves the design and implementation of an autonomous traffic intersection system that can be extended to other road sections.
+This project involves the design and implementation of an autonomous traffic intersection system that can be extended and connected to other road sections.
 ## Requirements
-Python 3.* <br />
+Python 3.x <br />
 Packages: see **requirements.txt** <br />
 ## Instructions
 1. Install all required packages
 2. Modify parameters if desired
 3. Run **main.py**
+## Installation (optional)
+1. Install with `pip3 install traffic-intersection`
+2. Create a new **.py** file and enter
+```python
+import traffic_intersection.main
+```
+3. Run the **.py** file
 ## License
 
 This is free software released under the terms of `the BSD 3-Clause License

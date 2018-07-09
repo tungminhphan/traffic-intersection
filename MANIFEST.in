@@ -1,0 +1,3 @@
+include traffic_intersection/components/imglib/cars/*.png
+include traffic_intersection/components/imglib/pedestrians/*.png
+include traffic_intersection/components/imglib/intersection_states/*.png
