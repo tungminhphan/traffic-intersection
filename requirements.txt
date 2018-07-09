@@ -1,7 +1,7 @@
-# usage: `pip install -r requirements.txt`
-
+setuptools==39.2.0
+graphviz==0.8.1
+numpy==1.14.5
+scipy==0.19.1
+matplotlib==2.0.2
 imageio==2.3.0
-scipy==1.0.0
-numpy==1.14.0
-matplotlib==2.1.2
-Pillow==5.1.0
+Pillow==5.2.0
