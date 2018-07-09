@@ -1,5 +1,9 @@
-from graphviz import Digraph
+# Traffic Light Behaviors
+# Tung M. Phan
+# July 8th, 2018
+# California Institute of Technology
 
+from graphviz import Digraph
 
 simple_lights = Digraph(filename='simple_lights.gv', comment='This is a very simple traffic light model')
 simple_lights.node_attr.update(color='green1', style='filled', fixedsize='true', width='1')

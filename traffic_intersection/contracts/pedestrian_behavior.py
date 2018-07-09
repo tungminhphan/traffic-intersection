@@ -1,3 +1,8 @@
+# Pedestrian Behaviors
+# Tung M. Phan
+# July 8th, 2018
+# California Institute of Technology
+
 from graphviz import Digraph
 
 
