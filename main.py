@@ -77,7 +77,7 @@ fig = plt.figure()
 # turn on/off axes
 plt.axis('off')
 # sampling time
-dt = 0.1
+dt = 0.05
 # Artist Animation option is used to generate offline movies - implemented here as a backup
 use_artist_animation = False
 if use_artist_animation:
@@ -163,10 +163,10 @@ else:
     interval = (t1 - t0)
     show_waypoint_graph = False
     save_video = True
-    frames = 240 # number of the first frames to save in video
+    frames = 600 # number of the first frames to save in video
     ani = animation.FuncAnimation(fig, animate, frames=frames, interval=interval, blit=True, init_func = init)
     if save_video:
         Writer = animation.writers['ffmpeg']
         writer = Writer(fps=60, metadata=dict(artist='Me'), bitrate=1800)
-        ani.save('intersection.avi', writer=writer, dpi=100)
+        ani.save('intersection.avi', writer=writer, dpi=200)
 plt.show()
