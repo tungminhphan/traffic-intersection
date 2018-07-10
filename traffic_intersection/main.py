@@ -89,7 +89,7 @@ fig.add_axes([0,0,1,1]) # get rid of white border
 # turn on/off axes
 plt.axis('off')
 # sampling time
-dt = 0.2
+dt = 0.05
 # Artist Animation option is used to generate offline movies - implemented here as a backup
 use_artist_animation = False
 if use_artist_animation:
@@ -113,9 +113,9 @@ else:
     car_1 = car.KinematicCar(init_state = np.reshape(x0, (-1, 1))) # primitive car
     car_1.prim_queue.enqueue((prim_id, 0))
 #    car_1 = car.KinematicCar(init_state=(100,np.pi,1000,500)) # original test
-    car_2 = car.KinematicCar(init_state=(20,np.pi/2,600,300), color='gray')
+    car_2 = car.KinematicCar(init_state=(20,np.pi/2,635,300), color='gray')
     car_3 = car.KinematicCar(init_state=(80,0,0,250), color='gray')
-    car_4 = car.KinematicCar(init_state=(50,-np.pi/2,450,710), color='gray')
+    car_4 = car.KinematicCar(init_state=(50,-np.pi/2,430,720), color='gray')
     enemy_cars = [car_2, car_3, car_4]
     controlled_cars = [car_1]
     # creates pedestrians
