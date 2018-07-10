@@ -1,4 +1,4 @@
-# Simple Directed Graph Class for Waypoint Graph
+# Simple Directed Graph Class for Waypoint Graphs
 # Tung M. Phan
 # California Institute of Technology
 # May 9th, 2018
@@ -41,7 +41,8 @@ class DirectedGraph():
         for start_node in self._edges:
             print(str(start_node) + ' -> ' +  str(list(self._edges[start_node])).strip('[]'))
 
-    def plot_edges(self, plt, plt_src_snk = True, edge_width = 0.5, head_width = 0.5, alpha = 0.5):
+    def plot_edges(self, plt, plt_src_snk = True, edge_width = 0.5, head_width = 0.5, alpha = 0.5,
+            markersize = 10):
         for start_node in self._edges:
             start_x = start_node[0]
             start_y = start_node[1]

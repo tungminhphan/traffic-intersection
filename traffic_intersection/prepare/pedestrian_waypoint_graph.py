@@ -1,7 +1,7 @@
-# Waypoint Graphs for Primitive Computation
+# Waypoint Graphs for Pedestrian Automaton Computation
 # Tung M. Phan
 # California Institute of Technology
-# May 9th, 2018
+# July 10th, 2018
 
 import os
 import numpy as np
@@ -25,13 +25,11 @@ plt.ylim(0, ylim)
 plt.imshow(background, origin="Lower")
 
 markersize = 30
-car_width = 8
 edge_width = 0.5
 head_width = 10
 transparency = 0.5
 
 G = WeightedDirectedGraph()
-
 # define sources/sinks
 left_bottom = (0, 170)
 right_bottom = (1062, 170)
@@ -53,9 +51,9 @@ G._sources.add(top_right) #add top-right
 G._sources.add(bottom_left) #add bottom-left
 G._sources.add(bottom_right) #add bottom-right
 
-G._sinks = G._sources.copy()
+G._sinks = G._sources.copy() # sinks are the same nodes as sources
 
-offset_wait = 25
+offset_wait = 25 # distance from the "pedestrian intersection" to waiting location
 wait_top_left = (355, 590)
 wait_top_left_vertical = (355, 590-offset_wait)
 wait_top_left_horizontal = (355+offset_wait, 590)
@@ -124,38 +122,7 @@ for edge in all_edges:
     weight = np.linalg.norm(np.array(edge[0]) - np.array(edge[1]))
     G.add_double_edges([(node_1, node_2, weight)])
 
-#def plot_edges(graph, plt_src_snk = True):
-#    for start_node in G._edges:
-#        start_x = start_node[0]
-#        start_y = start_node[1]
-#        for end_node in G._edges[start_node]:
-#            end_x = end_node[0]
-#            end_y = end_node[1]
-#            dx = end_x - start_x
-#            dy = end_y - start_y
-#            # plot transition
-#            plt.arrow(start_x,start_y, dx, dy, linestyle='dashed', color = 'r',
-#                    width=edge_width,head_width=head_width, alpha=0.5)
-#    if plt_src_snk == True:
-#        node_x = np.zeros(len(graph._sources))
-#        node_y = np.zeros(len(graph._sources))
-#        k = 0
-#        for node in graph._sources:
-#            print(node)
-#            node_x[k] = node[0]
-#            node_y[k] = node[1]
-#            k += 1
-#        plt.plot(node_x, node_y, 'ro', alpha = transparency, markersize=10)
-#        node_x = np.zeros(len(graph._sinks))
-#        node_y = np.zeros(len(graph._sinks))
-#        k = 0
-#        for node in graph._sinks:
-#            node_x[k] = node[0]
-#            node_y[k] = node[1]
-#            k += 1
-#        plt.plot(node_x, node_y, 'bo', alpha = transparency, markersize=10)
-#        plt.legend(['sources', 'sinks'])
-
-G.plot_edges(plt, alpha = transparency, edge_width = edge_width, head_width=head_width)
 G.print_graph()
+G.plot_edges(plt, alpha = transparency, edge_width = edge_width, head_width=head_width,
+        plt_src_snk=False)
 plt.show()

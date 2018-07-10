@@ -102,37 +102,6 @@ G.add_edges([
 G._sources.add(( 500, 740))
 
 
-def plot_edges(graph, plt_src_snk = False):
-    for start_node in G._edges:
-        start_x = start_node[0]
-        start_y = start_node[1]
-        for end_node in G._edges[start_node]:
-            end_x = end_node[0]
-            end_y = end_node[1]
-            dx = end_x - start_x
-            dy = end_y - start_y
-            # plot transition
-            plt.arrow(start_x,start_y, dx, dy, linestyle='dashed', color = 'w',
-                    width=edge_width,head_width=head_width, alpha=0.5)
-    if plt_src_snk == True:
-        node_x = np.zeros(len(graph._sources))
-        node_y = np.zeros(len(graph._sources))
-        k = 0
-        for node in graph._sources:
-            node_x[k] = node[0]
-            node_y[k] = node[1]
-            k += 1
-        plt.plot(node_x, node_y, 'ro', markersize=10)
-        node_x = np.zeros(len(graph._sinks))
-        node_y = np.zeros(len(graph._sinks))
-        k = 0
-        for node in graph._sinks:
-            node_x[k] = node[0]
-            node_y[k] = node[1]
-            k += 1
-        plt.plot(node_x, node_y, 'bo', markersize=10)
-        plt.legend(['sources', 'sinks'])
-
-plot_edges(G, True)
+G.plot_edges(plt, plt_src_snk=True, edge_width = 1, head_width = 2)
 G.print_graph()
 plt.show()
