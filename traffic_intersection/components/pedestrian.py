@@ -55,11 +55,11 @@ class Pedestrian:
         """
         The pedestrian advances forward
         """
-        dee_theta, v = inputs 
+        dee_theta, vee = inputs 
         self.state[2] += dee_theta # update heading of pedestrian
-        self.state[0] += v * np.cos(self.state[2]) * dt # update x coordinate of pedestrian
-        self.state[1] += v * np.sin(self.state[2]) * dt # update y coordinate of pedestrian
-        distance_travelled = v * dt # compute distance travelled during dt
+        self.state[0] += vee * np.cos(self.state[2]) * dt # update x coordinate of pedestrian
+        self.state[1] += vee * np.sin(self.state[2]) * dt # update y coordinate of pedestrian
+        distance_travelled = vee * dt # compute distance travelled during dt
         gait_change = (self.gait_progress + distance_travelled / self.gait_length) // 1 # compute number of gait change
         self.gait_progress = (self.gait_progress + distance_travelled / self.gait_length) % 1
         self.state[3] = int((self.state[3] + gait_change) % self.number_of_gaits)
@@ -79,6 +79,21 @@ class Pedestrian:
         area = (lower[0], lower[1], upper[0], upper[1])
         cropped_img = img.crop(area)
         return cropped_img
+
+    def prim_next(self, prim, dt):
+        prim_data, prim_progress = prim # extract primitive data and primitive progress from prim
+        start, finish, t_end = prim_data # extract data from primitive
+        dx = finish[0] - start[0]
+        dy = finish[1] - start[1]
+        heading = np.atan(dy/dx)
+        if self.state[2] != heading:
+            self.state[2] = heading
+        remaining_distance = prim_progress * np.linalg.norm(finish - start)
+        self.next(self, (0, t_end), remaining_distance/)
+
+        return (prim, prim_progress)
+
+
 
 #my_pedestrian = Pedestrian()
 #dt = 0.1
