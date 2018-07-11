@@ -26,7 +26,7 @@ mat = scipy.io.loadmat(primitive_data)
 
 intersection_fig = dir_path + "/components/imglib/intersection_states/intersection_"
 car_scale_factor = 0.12
-pedestrian_scale_factor = 0.45
+pedestrian_scale_factor = 0.40
 
 def find_corner_coordinates(x_rel_i, y_rel_i, x_des, y_des, theta, square_fig):
     """
@@ -125,7 +125,6 @@ else:
     bottom_right = (705, 0)
 
     offset_wait = 25 # distance from the "pedestrian intersection" to waiting location
-
     wait_top_left = (355, 590)
     wait_top_left_vertical = (355, 590-offset_wait)
     wait_top_left_horizontal = (355+offset_wait, 590)
@@ -154,13 +153,19 @@ else:
 
     pedestrian_3 = pedestrian.Pedestrian(init_state=[left_bottom[0],left_bottom[1],np.pi/2,0], pedestrian_type='3')
     pedestrian_3.prim_queue.enqueue(((left_bottom,wait_bottom_left, 10), 0))
-    pedestrian_3.prim_queue.enqueue(((wait_bottom_left,wait_bottom_left, 15), 0))
-    pedestrian_3.prim_queue.enqueue(((wait_bottom_left,wait_bottom_right, 7), 0))
-    pedestrian_3.prim_queue.enqueue(((wait_bottom_right,wait_bottom_right, 10), 0))
+    pedestrian_3.prim_queue.enqueue(((wait_bottom_left,wait_bottom_left, 1), 0))
+    pedestrian_3.prim_queue.enqueue(((wait_bottom_left,wait_bottom_right, 10), 0))
+    pedestrian_3.prim_queue.enqueue(((wait_bottom_right,wait_bottom_right, 5), 0))
     pedestrian_3.prim_queue.enqueue(((wait_bottom_right,wait_top_right, 12), 0))
     pedestrian_3.prim_queue.enqueue(((wait_top_right,right_top, 10), 0))
-    pedestrians = [pedestrian_1, pedestrian_2, pedestrian_3]
 
+    pedestrian_4 = pedestrian.Pedestrian(init_state=[bottom_right[0],bottom_right[1],np.pi/2,0], pedestrian_type='4')
+    pedestrian_4.prim_queue.enqueue(((bottom_right,wait_bottom_right_vertical, 7), 0))
+    pedestrian_4.prim_queue.enqueue(((wait_bottom_right_vertical,wait_bottom_right_vertical, 10), 0))
+    pedestrian_4.prim_queue.enqueue(((wait_bottom_right_vertical,wait_top_right_vertical, 15), 0))
+    pedestrian_4.prim_queue.enqueue(((wait_top_right_vertical,top_right, 10), 0))
+
+    pedestrians = [pedestrian_1, pedestrian_2, pedestrian_3, pedestrian_4]
     # create traffic lights
     traffic_lights = traffic_signals.TrafficLights(5, 20)
     horizontal_light = traffic_lights.get_states('horizontal', 'color')
@@ -171,6 +176,7 @@ else:
         return stage, # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
 
     def animate(i): # update animation by dt
+        print(i)
         """ online frame update """
         global background
         # update traffic lights
@@ -194,7 +200,7 @@ else:
             acc = 0
             if (vehicle.state[2] >= 0 and vehicle.state[3] >= 0 and vehicle.state[2] <= x_lim and vehicle.state[3] <= y_lim):
                 if random.random() > 0.1:
-                    nu = random.uniform(-0.05,0.05)
+                    nu = random.uniform(-0.02,0.02)
                 if random.random() > 0.3:
                     acc = random.uniform(-5,10)
                 vehicle.next((acc, nu),dt)
@@ -218,14 +224,13 @@ else:
     animate(0)
     t1 = time()
     interval = (t1 - t0)
-    show_waypoint_graph = False
-    save_video = False
-    num_frames = 500 # number of the first frames to save in video
+    save_video = True
+    num_frames = 600 # number of the first frames to save in video
     ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval, blit=True,
             init_func = init, repeat=False) # by default the animation function loops, we set repeat to False in order to limit the number of frames generated to num_frames
 
     if save_video:
         Writer = animation.writers['ffmpeg']
-        writer = Writer(fps=60, metadata=dict(artist='Me'), bitrate=1800)
-        ani.save('movies/new.avi', writer=writer, dpi=100)
+        writer = Writer(fps=30, metadata=dict(artist='Me'), bitrate=1800)
+        ani.save('movies/hi_quality.avi', writer=writer, dpi=200)
 plt.show()

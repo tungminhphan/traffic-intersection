@@ -92,8 +92,8 @@ class Pedestrian:
        """
        while self.prim_queue.len() > 0:
            if self.prim_queue.top()[1] < 1: # if the top primitive hasn't been exhausted
-               prim_id, prim_progress = self.prim_queue.top() # extract it
-               return prim_id, prim_progress
+               prim_data, prim_progress = self.prim_queue.top() # extract it
+               return prim_data, prim_progress
            else:
                self.prim_queue.pop() # pop it
        return False
@@ -104,24 +104,32 @@ class Pedestrian:
         else:
             prim_data, prim_progress = self.extract_primitive() # extract primitive data and primitive progress from prim
             start, finish, t_end = prim_data # extract data from primitive
-            if start == finish: #waiting mode
-                self.state[3] = 0
-            if prim_progress == 0: # correct starting position 
+            if prim_progress == 0: # ensure that starting position is correct at start of primitive
                 self.state[0] = start[0]
                 self.state[1] = start[1]
-            dx = finish[0] - self.state[0]
-            dy = finish[1] - self.state[1]
-            heading = np.arctan2(dy,dx)
-            if self.state[2] != heading:
-                self.state[2] = heading
+            if start == finish: #waiting mode
+                remaining_distance = 0
+                self.state[3] = 0 # reset gait
+                if self.prim_queue.len() > 1: # if current not at last primitive
+                    last_prim_data, last_prim_progress = self.prim_queue.bottom() # extract last primitive
+                    last_start, last_finish, last_t_end = last_prim_data
+                    dx_last = last_finish[0] - self.state[0]
+                    dy_last = last_finish[1] - self.state[1]
+                    heading = np.arctan2(dy_last,dx_last)
+                    if self.state[2] != heading:
+                        self.state[2] = heading
+            else: # if in walking mode
+                dx = finish[0] - self.state[0]
+                dy = finish[1] - self.state[1]
+                heading = np.arctan2(dy,dx)
+                if self.state[2] != heading:
+                    self.state[2] = heading
+                remaining_distance = np.linalg.norm(np.array([dx, dy]))
             remaining_time = (1-prim_progress) * t_end
-            remaining_distance = np.linalg.norm(np.array([dx, dy]))
             vee = remaining_distance / remaining_time
             self.next((0, vee), dt)
             prim_progress += dt / t_end
-            self.prim_queue.replace_top((prim_data, prim_progress))
-
-
+            self.prim_queue.replace_top((prim_data, prim_progress)) # update primitive queue
 
 #my_pedestrian = Pedestrian()
 #dt = 0.1

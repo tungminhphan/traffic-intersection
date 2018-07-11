@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
    name='traffic-intersection',
-   version='0.1.5',
+   version='0.1.7',
    description='This is an example of the design-by-contract approach',
    license="BSD 3-Clause",
    long_description=long_description,
