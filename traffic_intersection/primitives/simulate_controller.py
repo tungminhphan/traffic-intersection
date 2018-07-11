@@ -1,3 +1,5 @@
+#!/usr/local/bin/python
+# coding: utf-8
 # Primitive Controller
 # Authors: Bastian Schürmann, Tùng M. Phan
 # California Institute of Technology
