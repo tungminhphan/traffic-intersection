@@ -1,9 +1,8 @@
 # traffic-intersection
 ## Authors and Contributors
-Tung M. Phan <br />
-California Institute of Technology <br />
+Tung M. Phan (Caltech) <br />
 ## Description
-This project involves the design and implementation of an autonomous traffic intersection system that can be extended and connected to other road sections.
+This project involves the contract-based design and implementation of an autonomous traffic intersection system that may be extended and composed with other systems of the same class.
 ## Requirements
 Python 3.x <br />
 Packages: see **requirements.txt** <br />
