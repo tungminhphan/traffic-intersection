@@ -16,8 +16,8 @@ intersection_fig = os.path.dirname(dir_path) + "/components/imglib/intersection.
 fig = plt.figure()
 
 # turn on/off axes
-background = Image.open(intersection_fig)
 plt.axis("on")
+background = Image.open(intersection_fig)
 xlim, ylim = background.size
 plt.xlim(0, xlim)
 plt.ylim(0, ylim)

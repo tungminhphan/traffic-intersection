@@ -19,21 +19,16 @@ fig = plt.figure()
 # turn on/off axes
 plt.axis("on")
 background = Image.open(intersection_fig)
+xlim, ylim = background.size
+plt.xlim(0, xlim)
+plt.ylim(0, ylim)
+
 plt.imshow(background, origin="Lower")
 
 markersize = 15
 car_width = 8
 edge_width = 0.5
 head_width = 10
-L = 50 # distance between two axles
-show_car = True # show car (as arrow) or marker
-def plot_car(node):
-    global L
-    v, theta, x, y = node
-    if show_car:
-        plt.arrow(x, y, L*cos(theta), L*sin(theta), color='b', width=car_width,alpha=0.5)
-    else:
-        plt.plot(x,y, 'b.', markersize=markersize, alpha=0.5)
 
 G = DirectedGraph()
 
