@@ -220,8 +220,9 @@ else:
     interval = (t1 - t0)
     show_waypoint_graph = False
     save_video = False
-    frames = 200 # number of the first frames to save in video
-    ani = animation.FuncAnimation(fig, animate, frames=frames, interval=interval, blit=True, init_func = init)
+    num_frames = 400 # number of the first frames to save in video
+    ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval, blit=True,
+            init_func = init, repeat=False) # by default the animation function loops, we set repeat to False in order to limit the number of frames generated to num_frames
 
     if save_video:
         Writer = animation.writers['ffmpeg']
