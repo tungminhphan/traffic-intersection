@@ -13,7 +13,12 @@ from numpy import cos, sin, tan
 main_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 primitive_data = main_dir + '/primitives/MA3.mat'
 from prepare.queue import Queue
+from PIL import Image
 
+
+dir_path = os.path.dirname(os.path.realpath(__file__))
+blue_car_fig = dir_path + "/imglib/cars/blue_car.png"
+gray_car_fig = dir_path + "/imglib/cars/gray_car.png"
 mat = scipy.io.loadmat(primitive_data)
 def saturation_filter(u, u_max, u_min):
     """ saturation_filter Helper Function
@@ -41,13 +46,16 @@ class KinematicCar:
                  fuel_level = float('inf')): # TODO: fuel level of the car - FUTURE FEATURE)
                      if color != 'blue' and color != 'gray':
                          raise Exception("Color must either be blue or gray!")
-                     self.init_state = np.array(init_state, dtype="float")
                      self.params = (L, a_max, a_min, nu_max, nu_min, vee_max)
                      self.alive_time = 0
-                     self.state = self.init_state
+                     self.state = np.array(init_state, dtype='float')
                      self.color = color
                      self.prim_queue = prim_queue
                      self.fuel_level = fuel_level
+                     if color == 'blue':
+                         self.fig = Image.open(blue_car_fig)
+                     else:
+                         self.fig = Image.open(gray_car_fig)
 
     def state_dot(self,
                   state,

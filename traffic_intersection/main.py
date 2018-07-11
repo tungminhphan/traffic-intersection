@@ -1,3 +1,4 @@
+#!/usr/local/bin/python
 # Simulation Plaform for Street Intersection Controller
 # Tung M. Phan
 # California Institute of Technology
@@ -23,10 +24,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 primitive_data = dir_path + '/primitives/MA3.mat'
 mat = scipy.io.loadmat(primitive_data)
 
-
 intersection_fig = dir_path + "/components/imglib/intersection_states/intersection_"
-blue_car_fig = dir_path + "/components/imglib/cars/blue_car.png"
-gray_car_fig = dir_path + "/components/imglib/cars/gray_car.png"
 car_scale_factor = 0.12
 pedestrian_scale_factor = 0.6
 
@@ -49,10 +47,7 @@ def draw_car(vehicle):
     vee, theta, x, y = vehicle.state
     # convert angle to degrees and positive counter-clockwise
     theta_d = -theta/np.pi * 180
-    if vehicle.color  == 'blue':
-        vehicle_fig = Image.open(blue_car_fig)
-    elif vehicle.color  == 'gray':
-        vehicle_fig = Image.open(gray_car_fig)
+    vehicle_fig = vehicle.fig
     # set expand=True so as to disable cropping of output image
     vehicle_fig = vehicle_fig.rotate(theta_d, expand = False)
     scaled_vehicle_fig_size  =  tuple([int(car_scale_factor * i) for i in vehicle_fig.size])

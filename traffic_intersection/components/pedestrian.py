@@ -1,3 +1,4 @@
+#!/usr/local/bin/python
 # Pedestrian Class
 # Tung M. Phan
 # California Institute of Technology
@@ -9,12 +10,11 @@ import numpy as np
 from PIL import Image
 import scipy.integrate as integrate
 dir_path = os.path.dirname(os.path.realpath(__file__))
+from prepare.queue import Queue
 
 def generate_walking_gif():
-    pedestrian_fig = dir_path + "/imglib/pedestrians/walking5.png"
-    #film_dim = (1, 8)
-    #film_dim = (3, 5)
-    film_dim = (1, 6)
+    pedestrian_fig = dir_path + "/imglib/pedestrians/walking3.png"
+    film_dim = (1, 6) # dimension of the film used for animation
     img = Image.open(pedestrian_fig)
     width, height = img.size
     sub_width = width/film_dim[1]
@@ -37,25 +37,26 @@ class Pedestrian:
                  gait_length = 4,
                  gait_progress = 0,
                  film_dim = (1, 6),
+                 prim_queue = Queue(),
                  pedestrian_type = '3'): # three types 1 or 2 or 3
         """
         Pedestrian class
         """
         # init_state: initial state by default (x = 0, y = 0, theta = 0, gait = 0)
-        self.init_state = init_state
         self.alive_time = 0
-        self.state = self.init_state
+        self.state = np.array(init_state, dtype="float")
         self.number_of_gaits = film_dim[0] * film_dim[1]
         self.gait_length = gait_length
-        self.gait_progress = 0
+        self.gait_progress = gait_progress
         self.film_dim = film_dim
+        self.prim_queue = prim_queue
         self.fig = dir_path + '/imglib/pedestrians/walking' + pedestrian_type + '.png'
-   
+
     def next(self, inputs, dt):
         """
         The pedestrian advances forward
         """
-        dee_theta, vee = inputs 
+        dee_theta, vee = inputs
         self.state[2] += dee_theta # update heading of pedestrian
         self.state[0] += vee * np.cos(self.state[2]) * dt # update x coordinate of pedestrian
         self.state[1] += vee * np.sin(self.state[2]) * dt # update y coordinate of pedestrian
@@ -63,7 +64,6 @@ class Pedestrian:
         gait_change = (self.gait_progress + distance_travelled / self.gait_length) // 1 # compute number of gait change
         self.gait_progress = (self.gait_progress + distance_travelled / self.gait_length) % 1
         self.state[3] = int((self.state[3] + gait_change) % self.number_of_gaits)
-
 
     def visualize(self):
         # convert gait number to i, j coordinates of subfigure
@@ -83,15 +83,24 @@ class Pedestrian:
     def prim_next(self, prim, dt):
         prim_data, prim_progress = prim # extract primitive data and primitive progress from prim
         start, finish, t_end = prim_data # extract data from primitive
-        dx = finish[0] - start[0]
-        dy = finish[1] - start[1]
-        heading = np.atan(dy/dx)
-        if self.state[2] != heading:
-            self.state[2] = heading
-        remaining_distance = prim_progress * np.linalg.norm(finish - start)
-        self.next(self, (0, t_end), remaining_distance/)
+        if prim_progress >= 1:
+            return False
+        else:
+            if prim_progress == 0: # correct starting position 
+                self.state[0] = start[0]
+                self.state[1] = start[1]
+            dx = finish[0] - self.state[0]
+            dy = finish[1] - self.state[1]
+            heading = np.atan(dy/dx)
+            if self.state[2] != heading:
+                self.state[2] = heading
+            remaining_time = (1-prim_progress) * t_end
+            remaining_distance = np.linalg.norm(np.array([dx, dy]))
+            vee = remaining_distance / remaining_time
+            self.next(self, (0, vee), dt)
+            prim_progress += dt / t_end
 
-        return (prim, prim_progress)
+            return prim_progress
 
 
 
