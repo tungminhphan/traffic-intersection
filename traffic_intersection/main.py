@@ -9,7 +9,6 @@ sys.path.append("..")
 import traffic_intersection.components.car as car 
 import traffic_intersection.components.pedestrian as pedestrian
 import traffic_intersection.components.traffic_signals as traffic_signals
-import traffic_intersection.prepare.waypoint_graph as waypoint_graph
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 from time import time
@@ -142,9 +141,6 @@ else:
         # TODO: implement option to lay waypoint graph over background
         background = Image.open(intersection_fig + horizontal_light + '_' + vertical_light + '.png')
         x_lim, y_lim = background.size
-        if waypoint_graph == True:
-            graph = waypoint_graph.plot_edges(plt, waypoint_graph.G, plt_src_snk=True)
-            background.paste(graph, (0, 0), graph)
         # update pedestrians
         for person in pedestrians:
             dee_theta = 0
