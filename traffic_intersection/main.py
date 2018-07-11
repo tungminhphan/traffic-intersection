@@ -142,8 +142,6 @@ else:
     wait_bottom_right_vertical = (705, 170+offset_wait)
     wait_bottom_right_horizontal = (705-offset_wait, 170)
 
-
-
     pedestrian_1 = pedestrian.Pedestrian(init_state=[705,590,-np.pi/2,0], pedestrian_type='1')
     pedestrian_1.prim_queue.enqueue(((wait_top_right,wait_top_right, 10), 0))
     pedestrian_1.prim_queue.enqueue(((wait_top_right,wait_top_left, 20), 0))

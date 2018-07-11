@@ -106,6 +106,10 @@ class KinematicCar:
        # update alive time
        self.alive_time += dt
 
+       # TODO: temporary fix to floating problem
+       if self.state[0] <= 0.15:
+           self.state[0] = np.sign(self.state[0]) * abs(self.state[0]) * dt * 0.05
+
     def extract_primitive(self):
        #TODO: rewrite the comment below
        """
