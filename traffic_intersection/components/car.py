@@ -50,7 +50,10 @@ class KinematicCar:
                      self.alive_time = 0
                      self.state = np.array(init_state, dtype='float')
                      self.color = color
-                     self.prim_queue = prim_queue
+                     if prim_queue == None:
+                         self.prim_queue = Queue()
+                     else:
+                         self.prim_queue = prim_queue
                      self.fuel_level = fuel_level
                      if color == 'blue':
                          self.fig = Image.open(blue_car_fig)

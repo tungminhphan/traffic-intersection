@@ -56,7 +56,7 @@ class Queue():
         '''
         self._queue[-1] = new_item
 
-    def print(self):
+    def print_queue(self):
         '''
         print the queue
 

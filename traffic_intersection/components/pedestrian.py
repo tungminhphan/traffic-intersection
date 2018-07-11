@@ -31,13 +31,13 @@ def generate_walking_gif():
     imageio.mimsave('movie.gif', images, duration=0.1)
 
 class Pedestrian:
-    def __init__(self, 
+    def __init__(self,
                  init_state = [0,0,0,0], # (x, y, theta, gait)
-                 number_of_gaits = 6, 
+                 number_of_gaits = 6,
                  gait_length = 4,
                  gait_progress = 0,
                  film_dim = (1, 6),
-                 prim_queue = Queue(),
+                 prim_queue = None, # primitive queue
                  pedestrian_type = '3'): # three types 1 or 2 or 3
         """
         Pedestrian class
@@ -49,7 +49,10 @@ class Pedestrian:
         self.gait_length = gait_length
         self.gait_progress = gait_progress
         self.film_dim = film_dim
-        self.prim_queue = prim_queue
+        if prim_queue == None:
+            self.prim_queue = Queue()
+        else:
+            prim_queue = prim_queue
         self.fig = dir_path + '/imglib/pedestrians/walking' + pedestrian_type + '.png'
 
     def next(self, inputs, dt):
@@ -80,27 +83,43 @@ class Pedestrian:
         cropped_img = img.crop(area)
         return cropped_img
 
-    def prim_next(self, prim, dt):
-        prim_data, prim_progress = prim # extract primitive data and primitive progress from prim
-        start, finish, t_end = prim_data # extract data from primitive
-        if prim_progress >= 1:
-            return False
+    def extract_primitive(self):
+       #TODO: rewrite the comment below
+       """
+       This function updates the primitive queue and picks the next primitive to be applied. When there is no more primitive in the queue, it will
+       return False
+
+       """
+       while self.prim_queue.len() > 0:
+           if self.prim_queue.top()[1] < 1: # if the top primitive hasn't been exhausted
+               prim_id, prim_progress = self.prim_queue.top() # extract it
+               return prim_id, prim_progress
+           else:
+               self.prim_queue.pop() # pop it
+       return False
+
+    def prim_next(self, dt):
+        if self.extract_primitive() == False: # if there is no primitive to use
+            self.next((0, 0), dt)
         else:
+            prim_data, prim_progress = self.extract_primitive() # extract primitive data and primitive progress from prim
+            start, finish, t_end = prim_data # extract data from primitive
+            if start == finish: #waiting mode
+                self.state[3] = 0
             if prim_progress == 0: # correct starting position 
                 self.state[0] = start[0]
                 self.state[1] = start[1]
             dx = finish[0] - self.state[0]
             dy = finish[1] - self.state[1]
-            heading = np.atan(dy/dx)
+            heading = np.arctan2(dy,dx)
             if self.state[2] != heading:
                 self.state[2] = heading
             remaining_time = (1-prim_progress) * t_end
             remaining_distance = np.linalg.norm(np.array([dx, dy]))
             vee = remaining_distance / remaining_time
-            self.next(self, (0, vee), dt)
+            self.next((0, vee), dt)
             prim_progress += dt / t_end
-
-            return prim_progress
+            self.prim_queue.replace_top((prim_data, prim_progress))
 
 
 
