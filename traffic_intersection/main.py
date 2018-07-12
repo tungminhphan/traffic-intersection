@@ -25,8 +25,8 @@ primitive_data = dir_path + '/primitives/MA3.mat'
 mat = scipy.io.loadmat(primitive_data)
 
 intersection_fig = dir_path + "/components/imglib/intersection_states/intersection_"
-car_scale_factor = 0.12
-pedestrian_scale_factor = 0.45
+car_scale_factor = 0.12 / 6 * 5 # first number is original scale
+pedestrian_scale_factor = 0.32
 
 def find_corner_coordinates(x_rel_i, y_rel_i, x_des, y_des, theta, square_fig):
     """
@@ -85,7 +85,7 @@ fig.add_axes([0,0,1,1]) # get rid of white border
 plt.axis('off')
 # sampling time
 dt = 0.1
-# Artist Animation option is used to generate offline movies - implemented here as a backup
+# Artis
 use_artist_animation = False
 if use_artist_animation:
     frames = []
@@ -102,15 +102,20 @@ if use_artist_animation:
 else:
 
     # creates cars
-    prim_id = 16 # first primitive
+    prim_id = 0 # first primitive
     prim = mat['MA3'][prim_id,0]
-    x0 = prim['x0'][0,0]
+    x0 = np.array(prim['x0'][0,0][:,0])
+    print(x0)
     car_1 = car.KinematicCar(init_state = np.reshape(x0, (-1, 1))) # primitive car
     car_1.prim_queue.enqueue((prim_id, 0))
+    car_1.prim_queue.enqueue((4, 0))
+    car_1.prim_queue.enqueue((8, 0))
+    car_1.prim_queue.enqueue((15, 0))
+    car_1.prim_queue.enqueue((17, 0))
 #    car_1 = car.KinematicCar(init_state=(100,np.pi,1000,500)) # original test
-    car_2 = car.KinematicCar(init_state=(20,np.pi/2,635,300), color='gray')
+    car_2 = car.KinematicCar(init_state=(40,np.pi/2,635,300), color='gray')
     car_3 = car.KinematicCar(init_state=(80,0,0,250), color='gray')
-    car_4 = car.KinematicCar(init_state=(50,-np.pi/2,430,720), color='gray')
+    car_4 = car.KinematicCar(init_state=(25,-np.pi,1000,450), color='gray')
     enemy_cars = [car_2, car_3, car_4]
     controlled_cars = [car_1]
     # creates pedestrians
@@ -144,7 +149,7 @@ else:
 
     pedestrian_1 = pedestrian.Pedestrian(init_state=[705,590,-np.pi/2,0], pedestrian_type='1')
     pedestrian_1.prim_queue.enqueue(((wait_top_right,wait_top_right, 10), 0))
-    pedestrian_1.prim_queue.enqueue(((wait_top_right,wait_top_left, 20), 0))
+    pedestrian_1.prim_queue.enqueue(((wait_top_right,wait_top_left, 15), 0))
     pedestrian_1.prim_queue.enqueue(((wait_top_left,wait_bottom_left, 15), 0))
     pedestrian_1.prim_queue.enqueue(((wait_bottom_left,bottom_left, 10), 0))
 
@@ -195,8 +200,7 @@ else:
             if (vehicle.state[2] >= 0 and vehicle.state[3] >= 0 and vehicle.state[2] <= x_lim and vehicle.state[3] <= y_lim):
                 if random.random() > 0.1:
                     nu = random.uniform(-0.05,0.05)
-                if random.random() > 0.3:
-                    acc = random.uniform(-5,10)
+                acc = random.uniform(-5,10)
                 vehicle.next((acc, nu),dt)
                 draw_car(vehicle)
         stage = plt.imshow(background, origin="lower") # this origin option flips the y-axis
@@ -220,7 +224,7 @@ else:
     interval = (t1 - t0)
     show_waypoint_graph = False
     save_video = False
-    num_frames = 500 # number of the first frames to save in video
+    num_frames = 600 # number of the first frames to save in video
     ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval, blit=True,
             init_func = init, repeat=False) # by default the animation function loops, we set repeat to False in order to limit the number of frames generated to num_frames
 
