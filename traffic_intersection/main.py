@@ -35,7 +35,7 @@ def find_corner_coordinates(x_rel_i, y_rel_i, x_des, y_des, theta, square_fig):
     """
     w, h = square_fig.size
     theta = -theta
-    if w != h:
+    if abs(w- h)>1:
         print("Warning: Figure has to be square!")
     x_corner_rel, y_corner_rel = -w/2, -h/2
     R = np.array([[cos(theta), sin(theta)], [-sin(theta), cos(theta)]])
@@ -105,7 +105,6 @@ else:
     prim_id = 0 # first primitive
     prim = mat['MA3'][prim_id,0]
     x0 = np.array(prim['x0'][0,0][:,0])
-    print(x0)
     car_1 = car.KinematicCar(init_state = np.reshape(x0, (-1, 1))) # primitive car
     car_1.prim_queue.enqueue((prim_id, 0))
     car_1.prim_queue.enqueue((4, 0))
