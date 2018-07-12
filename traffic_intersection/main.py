@@ -130,7 +130,6 @@ else:
     bottom_right = (705, 0)
 
     offset_wait = 25 # distance from the "pedestrian intersection" to waiting location
-
     wait_top_left = (355, 590)
     wait_top_left_vertical = (355, 590-offset_wait)
     wait_top_left_horizontal = (355+offset_wait, 590)
@@ -159,13 +158,19 @@ else:
 
     pedestrian_3 = pedestrian.Pedestrian(init_state=[left_bottom[0],left_bottom[1],np.pi/2,0], pedestrian_type='3')
     pedestrian_3.prim_queue.enqueue(((left_bottom,wait_bottom_left, 10), 0))
-    pedestrian_3.prim_queue.enqueue(((wait_bottom_left,wait_bottom_left, 15), 0))
-    pedestrian_3.prim_queue.enqueue(((wait_bottom_left,wait_bottom_right, 7), 0))
-    pedestrian_3.prim_queue.enqueue(((wait_bottom_right,wait_bottom_right, 10), 0))
+    pedestrian_3.prim_queue.enqueue(((wait_bottom_left,wait_bottom_left, 1), 0))
+    pedestrian_3.prim_queue.enqueue(((wait_bottom_left,wait_bottom_right, 10), 0))
+    pedestrian_3.prim_queue.enqueue(((wait_bottom_right,wait_bottom_right, 5), 0))
     pedestrian_3.prim_queue.enqueue(((wait_bottom_right,wait_top_right, 12), 0))
     pedestrian_3.prim_queue.enqueue(((wait_top_right,right_top, 10), 0))
-    pedestrians = [pedestrian_1, pedestrian_2, pedestrian_3]
 
+    pedestrian_4 = pedestrian.Pedestrian(init_state=[bottom_right[0],bottom_right[1],np.pi/2,0], pedestrian_type='4')
+    pedestrian_4.prim_queue.enqueue(((bottom_right,wait_bottom_right_vertical, 7), 0))
+    pedestrian_4.prim_queue.enqueue(((wait_bottom_right_vertical,wait_bottom_right_vertical, 10), 0))
+    pedestrian_4.prim_queue.enqueue(((wait_bottom_right_vertical,wait_top_right_vertical, 15), 0))
+    pedestrian_4.prim_queue.enqueue(((wait_top_right_vertical,top_right, 10), 0))
+
+    pedestrians = [pedestrian_1, pedestrian_2, pedestrian_3, pedestrian_4]
     # create traffic lights
     traffic_lights = traffic_signals.TrafficLights(5, 20)
     horizontal_light = traffic_lights.get_states('horizontal', 'color')
@@ -176,6 +181,7 @@ else:
         return stage, # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
 
     def animate(i): # update animation by dt
+        print(i)
         """ online frame update """
         global background
         # update traffic lights
@@ -230,6 +236,6 @@ else:
 
     if save_video:
         Writer = animation.writers['ffmpeg']
-        writer = Writer(fps=60, metadata=dict(artist='Me'), bitrate=1800)
-        ani.save('movies/new.avi', writer=writer, dpi=100)
+        writer = Writer(fps=30, metadata=dict(artist='Me'), bitrate=1800)
+        ani.save('movies/hi_quality.avi', writer=writer, dpi=200)
 plt.show()
