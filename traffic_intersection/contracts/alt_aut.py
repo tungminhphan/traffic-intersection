@@ -1,16 +1,17 @@
+#!/usr/local/bin/python
+# coding: utf-8
 # Alternative Contract Automaton Class
 # Tung M. Phan
 # California Institute of Technology
 # July 12, 2018
 
 from random import sample
-import math
 import itertools
 import numpy as np
 
 # Inequality for guard. Left-hand side is variable name, and is bounded on both sides (if one-sided inequality, has +/- infty on other side.)
 class Inequality:
-    def __init__(self, var, lower = -math.inf, upper = math.inf):
+    def __init__(self, var, lower = -np.inf, upper = np.inf):
         self.var = var # variable name
         self.lwrbnd = lower # the lower bound
         self.uprbnd = upper # the upper bound
@@ -18,19 +19,20 @@ class Inequality:
     def show(self):
         if self.lwrbnd > self.uprbnd:
             txt = False
-        elif self.lwrbnd == -math.inf and self.uprbnd == math.inf:
+        elif self.lwrbnd == -np.inf and self.uprbnd == np.inf:
             txt = True
         elif self.lwrbnd == self.uprbnd:
             txt = self.var + " = " + str(self.lwrbnd)
-        elif self.lwrbnd == -math.inf and self.uprbnd != math.inf:
+        elif self.lwrbnd == -np.inf and self.uprbnd != np.inf:
             txt = self.var + ' ≤ ' + str(self.uprbnd)
-        elif self.lwrbnd != -math.inf and self.uprbnd == math.inf:
+        elif self.lwrbnd != -np.inf and self.uprbnd == np.inf:
             txt = str(self.lwrbnd) + ' ≤ ' + self.var
-        elif self.lwrbnd != -math.inf and self.uprbnd == math.inf:
+        elif self.lwrbnd != -np.inf and self.uprbnd == np.inf:
             txt = str(self.lwrbnd) + ' ≤ ' + self.var
         else:
             txt = str(self.lwrbnd) + ' ≤ ' + self.var + ' ≤ ' + str(self.uprbnd)
         return txt
+
 
 # returns a set of inequalities whose conjunction has the same truth value as the conjunction of two sets of inequalities
 def conjunct(ineq_dict1, ineq_dict2):

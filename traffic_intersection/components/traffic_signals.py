@@ -8,7 +8,7 @@ import random
 ## TODO: write comments
 
 class TrafficLights():
-    def __init__(self, yellow_max = 5, green_max = 25, random_start = True):
+    def __init__(self, yellow_max = 5, green_max = 25, random_start = True, horizontal_state = ['red', 28]):
         '''
         @param yellow_max is the duration of yellow
         @param green_max is the duration of yellow
@@ -22,7 +22,7 @@ class TrafficLights():
             random_time = random.uniform(0, self._max_time[random_color])
             horizontal_state = [random_color, random_time]
         else:
-            horizontal_state = ['red', 0]
+            horizontal_state = horizontal_state
         vertical_state = self.get_counterpart(horizontal_state)
         self._state = {'horizontal': horizontal_state, 'vertical': vertical_state}
 
