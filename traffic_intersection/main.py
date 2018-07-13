@@ -114,11 +114,23 @@ car_1c.prim_queue.enqueue((26, 0))
 car_1c.prim_queue.enqueue((28, 0))
 
 controlled_cars = [car_1a, car_1b, car_1c]
-#    car_1 = car.KinematicCar(init_state=(100,np.pi,1000,500)) # original test
 car_2 = car.KinematicCar(init_state=(60,np.pi/2,635,300), color='gray')
 car_3 = car.KinematicCar(init_state=(50,0,0,250), color='gray')
 car_4 = car.KinematicCar(init_state=(40,-np.pi,1000,520), color='gray')
 enemy_cars = [car_2, car_3, car_4]
+#
+# delayed enemy_cars
+car_6 = car.KinematicCar(init_state=(90,np.pi/2,635,0), color='gray')
+car_7b = car.KinematicCar(init_state=(45,np.pi/2,565, 80), color='gray')
+car_8 = car.KinematicCar(init_state=(80,-np.pi/2,430,762), color='gray')
+car_9b = car.KinematicCar(init_state=(40,-np.pi/2,500,690), color='gray')
+delay_time = 290
+delayed_enemy_cars = [car_6, car_7b, car_8, car_9b]
+# waiting enemy_cars
+car_7 = car.KinematicCar(init_state=(0,np.pi/2,565, 80), color='gray')
+car_9 = car.KinematicCar(init_state=(0,-np.pi/2,500,690), color='gray')
+delay_time = 290
+waiting_enemy_cars = [car_9, car_7]
 # creates pedestrians
 left_bottom = (0, 170)
 right_bottom = (1062, 170)
@@ -211,6 +223,26 @@ def animate(i): # update animation by dt
             vehicle.next((acc, nu),dt)
             draw_car(vehicle)
     stage = plt.imshow(background, origin="lower") # this origin option flips the y-axis
+
+    if i > delay_time:
+        for vehicle in delayed_enemy_cars:
+            nu = 0
+            acc = 0
+            if (vehicle.state[2] >= 0 and vehicle.state[3] >= 0 and vehicle.state[2] <= x_lim and vehicle.state[3] <= y_lim):
+                if random.random() > 0.1:
+                    nu = random.uniform(-0.02,0.02)
+                acc = random.uniform(-5,10)
+                vehicle.next((acc, nu),dt)
+                draw_car(vehicle)
+        stage = plt.imshow(background, origin="lower") # this origin option flips the y-axis
+
+    if i <= delay_time:
+        for vehicle in waiting_enemy_cars:
+            nu = 0
+            acc = 0
+            vehicle.next((acc, nu),dt)
+            draw_car(vehicle)
+        stage = plt.imshow(background, origin="lower") # this origin option flips the y-axis
 
     ## update controlled cars with primitives
     for vehicle in controlled_cars:
