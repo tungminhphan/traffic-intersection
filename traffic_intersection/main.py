@@ -228,13 +228,14 @@ else:
     t1 = time()
     interval = (t1 - t0)
     show_waypoint_graph = False
-    save_video = False
-    num_frames = 600 # number of the first frames to save in video
+    save_video = True
+    num_frames = 500 # number of the first frames to save in video
+    video_name = 'primitives'
     ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval, blit=True,
             init_func = init, repeat=False) # by default the animation function loops, we set repeat to False in order to limit the number of frames generated to num_frames
 
     if save_video:
         Writer = animation.writers['ffmpeg']
         writer = Writer(fps=30, metadata=dict(artist='Me'), bitrate=1800)
-        ani.save('movies/hi_quality.avi', writer=writer, dpi=200)
+        ani.save('movies/' + video_name + '.avi', writer=writer, dpi=200)
 plt.show()
