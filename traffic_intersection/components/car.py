@@ -42,7 +42,7 @@ class KinematicCar:
                  nu_min = -0.5, # minimum steering input in radians/sec)
                  vee_max = 100, # maximum velocity
                  color = 'blue', # color of the car
-                 prim_queue = Queue(), # queue of primitives, each item in the queue has the form (prim_id, prim_progress) where prim_id is the primitive ID and prim_progress is the progress of the primitive)
+                 prim_queue = None, # queue of primitives, each item in the queue has the form (prim_id, prim_progress) where prim_id is the primitive ID and prim_progress is the progress of the primitive)
                  fuel_level = float('inf')): # TODO: fuel level of the car - FUTURE FEATURE)
                      if color != 'blue' and color != 'gray':
                          raise Exception("Color must either be blue or gray!")
@@ -50,6 +50,7 @@ class KinematicCar:
                      self.alive_time = 0
                      self.state = np.array(init_state, dtype='float')
                      self.color = color
+                     self.extended_state = None # extended state required for Bastian's primitive computation
                      if prim_queue == None:
                          self.prim_queue = Queue()
                      else:
@@ -59,7 +60,6 @@ class KinematicCar:
                          self.fig = Image.open(blue_car_fig)
                      else:
                          self.fig = Image.open(gray_car_fig)
-                         self.extended_state = None # extended state required for Bastian's primitive computation
 
     def state_dot(self,
                   state,

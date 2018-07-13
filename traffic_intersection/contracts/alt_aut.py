@@ -1,54 +1,97 @@
-# Contract Automaton Class
+#!/usr/local/bin/python
+# coding: utf-8
+# Alternative Contract Automaton Class
 # Tung M. Phan
 # California Institute of Technology
-# May 8, 2018
-
-
+# July 12, 2018
 
 from random import sample
-import math
 import itertools
+import numpy as np
 
 # Inequality for guard. Left-hand side is variable name, and is bounded on both sides (if one-sided inequality, has +/- infty on other side.)
 class Inequality:
-    def __init__(self, left = '', lower = -math.inf, upper = math.inf):
-        self.lhs = left # a variable
-        self.lwrbnd = lower # a number
-        self.uprbnd = upper 
+    def __init__(self, var, lower = -np.inf, upper = np.inf):
+        self.var = var # variable name
+        self.lwrbnd = lower # the lower bound
+        self.uprbnd = upper # the upper bound
 
-# returns an inequality that has the same truth value as the conjunction of two inequalities
-def conjunct(ineq1, ineq2):
-    if ineq1.lhs == ineq2.lhs:
-        return Inequality(guard1.lhs, max(ineq1.lwrbnd, ineq2.lwrbnd), min(ineq1.uprbnd, ineq2.uprbnd))
-    else:
-        return (ineq1, ineq2)
+    def show(self):
+        if self.lwrbnd > self.uprbnd:
+            txt = False
+        elif self.lwrbnd == -np.inf and self.uprbnd == np.inf:
+            txt = True
+        elif self.lwrbnd == self.uprbnd:
+            txt = self.var + " = " + str(self.lwrbnd)
+        elif self.lwrbnd == -np.inf and self.uprbnd != np.inf:
+            txt = self.var + ' ≤ ' + str(self.uprbnd)
+        elif self.lwrbnd != -np.inf and self.uprbnd == np.inf:
+            txt = str(self.lwrbnd) + ' ≤ ' + self.var
+        elif self.lwrbnd != -np.inf and self.uprbnd == np.inf:
+            txt = str(self.lwrbnd) + ' ≤ ' + self.var
+        else:
+            txt = str(self.lwrbnd) + ' ≤ ' + self.var + ' ≤ ' + str(self.uprbnd)
+        return txt
 
-# returns an inequality that has the same truth value as disjunction of two inequalities
+
+# returns a set of inequalities whose conjunction has the same truth value as the conjunction of two sets of inequalities
+def conjunct(ineq_dict1, ineq_dict2):
+    keys1 = set(ineq_dict1.keys())
+    keys2 = set(ineq_dict2.keys())
+
+    shared_keys = keys1 & keys2
+    different_keys = keys1 | keys2 - keys1 & keys2
+    new_dict = dict()
+
+    for key in shared_keys:
+        ineq1 = ineq_dict1[key]
+        ineq2 = ineq_dict2[key]
+        new_ineq = Inequality(ineq1.var, min(ineq1.lwrbnd, ineq2.lwrbnd), max(ineq1.uprbnd,ineq2.uprbnd)) # take the conjunction of the two inqualities
+        if new_ineq.show() == False:
+            return False
+        elif new_ineq.show() != True:
+            new_dict[key] = new_ineq
+
+    for key in different_keys:
+        if key in ineq_dict1.keys():
+            new_dict[key] = ineq_dict1[key]
+        else:
+            new_dict[key] = ineq_dict2[key]
+    return new_dict
+
+def dictionarize(ineq):
+    ineq_dict = dict()
+    ineq_dict[ineq.var] = ineq
+    return ineq_dict
+
+def pretty_print(ineq_dict): # print contents of a dictionary of inequalities
+    keys = sorted(ineq_dict.keys())
+    for key in keys:
+        print(ineq_dict[key].show())
+
+# TODO: fix comments returns a set of inequalities that has the same truth value as the disjunction of two sets of inequalities# returns an inequality that has the same truth value as disjunction of two inequalities
 def disjunct(ineq1, ineq2):
-    if ineq1.lhs == ineq2.lhs:
-        return Inequality(guard1.lhs, min(ineq1.lwrbnd, ineq2.lwrbnd), max(ineq1.uprbnd, ineq2.uprbnd))
+    if ineq1.var == ineq2.var:
+        return Inequality(guard1.var, min(ineq1.lwrbnd, ineq2.lwrbnd), max(ineq1.uprbnd, ineq2.uprbnd))
     else:
         return False # ? don't need to ever use this in this case
 
-# returns a set of inequalities whose conjunction has the same truth value as the conjunction of two sets of inequalities
-def conjuncset(set1, set2):
-    set3 = []
-    for ineq1 in set1:
-        for ineq2 in set2:
-            if ineq1.lhs == ineq2.rhs:
-                set3.append(conjunct(ineq1, ineq2))
-    return set3
+# returns an inequality that has the same truth value as the conjunction of two inequalities (or if
+# the two inequalites correspond to different variables, a dictionary
 
-# returns a set of inequalities that has the same truth value as the disjunction of two sets of inequalities
-def disjunctset(set1, set2):
-    return True
+eq1 = dictionarize(Inequality(lower = 3, var = 'x', upper = 3))
+eq2 = dictionarize(Inequality(lower = -9, var = 'z', upper = 5))
+eq3 = dictionarize(Inequality(lower = 2, var = 'x', upper = 7))
+eq4 = dictionarize(Inequality(lower = -3, var = 'z', upper = 10))
+eq =  conjunct(conjunct(eq1,eq2), conjunct(eq3,eq4))
+pretty_print(eq)
 
 # Transition class. Has guard and optional input/output/internal action
 class Transition:
     def __init__(self, ineq = True, inp = None, out = None, inter = None, s1 = None, s2 = None):
         self.guard = ineq # guard is a set of inequalities joined by conjunction (?)
         self.input = inp # set of inputs
-        self.output = out 
+        self.output = out
         self.internal = inter # internal action?
         self.state1 = s1 # set
         self.state2 = s2 # transition from s1 to s2
@@ -97,8 +140,6 @@ class ComponentAutomaton:
             for key2 in dict2:
                 newtransitions.append(compose_transitions(dict1[key1], dict2[key2]))
         return newtransitions
-
-
 
 class ContractAutomaton:
     def __init__(self):
@@ -157,5 +198,3 @@ def refines_contracts(unrefined_c, refined_c):
             else:
                 continue
         return True
-
-contract_1 = ContractAutomaton()
