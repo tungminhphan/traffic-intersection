@@ -25,7 +25,7 @@ primitive_data = dir_path + '/primitives/MA3.mat'
 mat = scipy.io.loadmat(primitive_data)
 
 intersection_fig = dir_path + "/components/imglib/intersection_states/intersection_"
-car_scale_factor = 0.12 / 6 * 5 # first number is original scale
+car_scale_factor = 0.1 # scale for when L = 50
 pedestrian_scale_factor = 0.32
 
 def find_corner_coordinates(x_rel_i, y_rel_i, x_des, y_des, theta, square_fig):
@@ -48,15 +48,17 @@ def draw_car(vehicle):
     # convert angle to degrees and positive counter-clockwise
     theta_d = -theta/np.pi * 180
     vehicle_fig = vehicle.fig
+    w_orig, h_orig = vehicle_fig.size
     # set expand=True so as to disable cropping of output image
     vehicle_fig = vehicle_fig.rotate(theta_d, expand = False)
     scaled_vehicle_fig_size  =  tuple([int(car_scale_factor * i) for i in vehicle_fig.size])
     # rescale car 
     #vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size, Image.ANTIALIAS)
     vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size) # disable antialiasing for better performance
-    # at this scale (-28, 0) is the relative coordinates of the center of the rear axle w.r.t. the
-    # center of the figure
-    x_corner, y_corner = find_corner_coordinates(-28, 0, x, y, theta, vehicle_fig)
+    # at (full scale) the relative coordinates of the center of the rear axle w.r.t. the
+    # center of the figure is -185
+    print(vehicle_fig.size)
+    x_corner, y_corner = find_corner_coordinates(-car_scale_factor * (w_orig/2-180), 0, x, y, theta, vehicle_fig)
     background.paste(vehicle_fig, (x_corner, y_corner), vehicle_fig)
 
 def draw_pedestrian(pedestrian):
