@@ -9,6 +9,7 @@ from random import sample
 import math
 import itertools
 
+
 # Inequality for guard. Left-hand side is variable name, and is bounded on both sides (if one-sided inequality, has +/- infty on other side.)
 class Inequality:
     def __init__(self, left = '', lower = -math.inf, upper = math.inf):
@@ -158,4 +159,6 @@ def refines_contracts(unrefined_c, refined_c):
                 continue
         return True
 
+## TESTING
 contract_1 = ContractAutomaton()
+ineq = Inequality(left = 'x')
