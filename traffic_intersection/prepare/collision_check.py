@@ -52,37 +52,27 @@ def overlap(s1, s2):
     else:
         return False
 
-#takes vertices of rectangle a and rectangle b returns True if shapes collide and False if not
-def collision_check(vertices_a, vertices_b):
+#takes two objects (pedestrians only atm) and checks if they are colliding
+def collision_check(object1, object2):
+    x, y, theta, gait = object1.state
+    vertices_a = vertices_car(x, y)
+    object1_vertices = [rotate_vertex(x, y, theta, vertex) for vertex in vertices_a]
 
-    edges_a = vectors_of_edges(vertices_a) #list of the vectors of the edges/sides  
-    edges_b = vectors_of_edges(vertices_b)
+    x2, y2, theta2, gait2 = object2.state
+    vertices_b = vertices_car(x2, y2)
+    object2_vertices = [rotate_vertex(x2, y2, theta2, vertex) for vertex in vertices_b]
+
+    edges_a = vectors_of_edges(object1_vertices) #list of the vectors of the edges/sides  
+    edges_b = vectors_of_edges(object2_vertices)
     edges = edges_a + edges_b
 
     axes = [get_axis(edge) for edge in edges]
     
     for i in range(4):
-        projection_a = projection(vertices_a, axes[i]) # (min, max)
-        projection_b = projection(vertices_b, axes[i])
+        projection_a = projection(object1_vertices, axes[i]) # (min, max)
+        projection_b = projection(object2_vertices, axes[i])
         overlapping = overlap(projection_a, projection_b)
         if not overlapping:
             return False 
     return True
 
-'''
-def main():
-    a = vertices_car(0, 0)
-    car1_vertices = [rotate_vertex(0, 0, np.pi / 2, v) for v in a] 
-    b = vertices_car(48.0001, 0)
-    car2_vertices = [rotate_vertex(48.0001, 0, 2 * np.pi / 3, v) for v in b]
-
-    print(car1_vertices)
-    print()
-    print(car2_vertices)
-    print()
-
-    z = "There's a collision" if collision_check(car2_vertices, car1_vertices) else "No collision"
-    print(z)
-        
-main()
-'''
