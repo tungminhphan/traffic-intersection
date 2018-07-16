@@ -253,6 +253,16 @@ def animate(i): # update animation by dt
             draw_car(vehicle)
     stage = plt.imshow(background, origin="lower") # this origin option flips the y-axis
 
+    #collision check, work in progress
+    for i in range(len(pedestrians)):
+        for j in range(i + 1, len(pedstrians)):
+            if collision_check(pedestrian[i], pedestrian[j]):
+                print("Collision, Car index:")
+                print(i)
+                print(j)
+            else:
+                print("No Collision")
+
 #        dots = plt.axes().plot(240,300,'ro')
 #        return stage, dots  # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
     return stage,   # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
