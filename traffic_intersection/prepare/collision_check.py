@@ -11,7 +11,7 @@ def vertices_car(x, y):
 
 #***********GET THE DIMENSIONS OF PEDESTRIAN**********
 def vertices_pedestrian(x, y):
-    return [(x-47,y-24), (x-47,y+24), (x+47,y+24), (x+47,y-24)]
+    return [(x-10.5,y-6.5), (x-10.5,y+6.5), (x+10.5,y+6.5), (x+10.5,y-6.5)]
 
 #get the rotated vertices based on car/pedestrian orientation
 def rotate_vertex(x, y, theta, v): 
@@ -55,11 +55,11 @@ def overlap(s1, s2):
 #takes two objects (pedestrians only atm) and checks if they are colliding
 def collision_check(object1, object2):
     x, y, theta, gait = object1.state
-    vertices_a = vertices_car(x, y)
+    vertices_a = vertices_pedestrian(x, y)
     object1_vertices = [rotate_vertex(x, y, theta, vertex) for vertex in vertices_a]
 
     x2, y2, theta2, gait2 = object2.state
-    vertices_b = vertices_car(x2, y2)
+    vertices_b = vertices_pedestrian(x2, y2)
     object2_vertices = [rotate_vertex(x2, y2, theta2, vertex) for vertex in vertices_b]
 
     edges_a = vectors_of_edges(object1_vertices) #list of the vectors of the edges/sides  

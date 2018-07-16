@@ -18,6 +18,7 @@ import numpy as np
 from PIL import Image
 import random
 import scipy.io
+from traffic_intersection.prepare.collision_check import collision_check
 
 #TODO: clean up this section
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -255,8 +256,8 @@ def animate(i): # update animation by dt
 
     #collision check, work in progress
     for i in range(len(pedestrians)):
-        for j in range(i + 1, len(pedstrians)):
-            if collision_check(pedestrian[i], pedestrian[j]):
+        for j in range(i + 1, len(pedestrians)):
+            if collision_check(pedestrians[i], pedestrians[j]):
                 print("Collision, Car index:")
                 print(i)
                 print(j)
