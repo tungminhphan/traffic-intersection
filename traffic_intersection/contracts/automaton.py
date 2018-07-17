@@ -1,98 +1,133 @@
-# Contract Automaton Class
-# Tung M. Phan
-# California Institute of Technology
-# May 8, 2018
-
-
+# Try 2!
 
 from random import sample
-import math
+import inequality as iq
+import numpy as np
 import itertools
 from graphviz import Digraph
 
+# General state class. Has a 'set' property for the purposes of composition.
+class State:
+    def __init__(self, text, newset = None):
+        self.text = text.upper()
+        if newset == None:
+            self.set = set()
+            self.set.add(self)
+        else:
+            self.set = newset
 
-# Inequality for guard. Left-hand side is variable name, and is bounded on both sides (if one-sided inequality, has +/- infty on other side.)
-class Inequality:
-    def __init__(self, left = '', lower = -math.inf, upper = math.inf):
-        self.lhs = left # a variable
-        self.lwrbnd = lower # a number
-        self.uprbnd = upper 
+def product(state1, state2):
+    newset = state1.set.union(state2.set)
+    newtext = '('
+    for state in state1.set:
+        newtext += state.text + ', '
+    for state in state2.set:
+        newtext += state.text + ', '
+    newtext = newtext[:-2]
+    newtext += ')'
+    return State(newtext, newset)
 
-# returns an inequality that has the same truth value as the conjunction of two inequalities
-def conjunct(ineq1, ineq2):
-    if ineq1 == True:
-        return ineq2
-    elif ineq2 == True:
-        return ineq1
 
-    if ineq1.lhs == ineq2.lhs:
-        return Inequality(ineq1.lhs, max(ineq1.lwrbnd, ineq2.lwrbnd), min(ineq1.uprbnd, ineq2.uprbnd))
-    else:
-        return (ineq1, ineq2)
-
-# returns an inequality that has the same truth value as disjunction of two inequalities
-def disjunct(ineq1, ineq2):
-    if ineq1.lhs == ineq2.lhs:
-        return Inequality(guard1.lhs, min(ineq1.lwrbnd, ineq2.lwrbnd), max(ineq1.uprbnd, ineq2.uprbnd))
-    else:
-        return False # ? don't need to ever use this in this case
-
-# returns a set of inequalities whose conjunction has the same truth value as the conjunction of two sets of inequalities
-def conjuncset(set1, set2):
-    set3 = []
-    for ineq1 in set1:
-        for ineq2 in set2:
-            if ineq1.lhs == ineq2.lhs:
-                set3.append(conjunct(ineq1, ineq2))
-    return set3
-
-# returns a set of inequalities that has the same truth value as the disjunction of two sets of inequalities
-def disjunctset(set1, set2):
-    return True
-
-# Transition class. Has guard and optional input/output/internal action
+# General transition class. Transition is a string from the alphabet.
 class Transition:
-    def __init__(self, s1 = '', s2 = '', ineq = True, inp = [], out = [], inter = []):
-        self.guard = ineq # guard is a set of inequalities joined by conjunction (?)
-        self.input = inp # set of inputs
-        self.output = out
-        self.internal = inter # internal action?
-        self.state1 = s1 # set
-        self.state2 = s2 # transition from s1 to s2
+    def __init__(self, start = None, end = None, transition = None):
+        self.startState = start
+        self.endState = end
+        self.transition = transition
 
-def compose_transitions(tr1, tr2):
-    guard = conjunct(tr1.guard, tr2.guard)
+    def set_start_state(self, start):
+        self.startState = start
 
-    input1 = set(tr1.input)
-    input2 = set(tr2.input)
-    output1 = set(tr1.output)
-    output2 = set(tr2.output)
+    def set_end_state(self, end):
+        self.endState = end
 
-    inp = input1.union(input2)
-    inter = (input1.intersection(output2)).union(output1.intersection(input2))
-    out = output1.intersection(output2)
-    return Transition(guard, inp, out, inter, (tr1.state1, tr2.state1), (tr1.state2, tr2.state2))
+    def set_transition(self, transition):
+        self.transition = transition
 
+    def show(self):
+        return self.transition
 
-class ComponentAutomaton:
+# General transition class for guard (where the guard is a set of inequalities.)
+class guardTransition(Transition):
+    def __init__(self, start = None, end = None, guard = True, inp = set(), out = set(), inter = set()):
+        Transition.__init__(self, start, end)
+        self.guard = guard # guard should be a dictionary of inequalities
+        self.inputs = inp # set of inputs on the transition
+        self.outputs = out
+        self.internals = inter
+
+        # transition reads guard/?inputs, !outputs, #internals
+    def show(self):
+        transtext = ''
+
+        if self.guard == False:
+            return transtext
+
+        elif self.guard == True:
+            transtext += 'True'
+        else:
+            for key in self.guard:
+                ineq = self.guard[key]
+                transtext += ineq.show() + ', '
+
+            transtext = transtext[:-2] # deletes last comma and space
+
+        transtext += ' / '
+
+        if len(self.inputs) > 0:
+            transtext += ' ?' + ', '.join(self.inputs)
+        if len(self.outputs) > 0:
+            transtext += ' !' + ', '.join(self.outputs) 
+        if len(self.internals) > 0:
+            transtext += ' #' + ', '.join(self.internals)
+
+        return transtext
+
+# takes two guard transitions and returns their composition
+def compose_guard_trans(tr1, tr2):
+
+    if tr1.guard == True:
+        guard = tr2.guard
+    elif tr2.guard == True:
+        guard = tr1.guard
+    else:
+        guard = iq.conjunct(tr1.guard, tr2.guard)
+
+    newstart = product(tr1.startState, tr2.startState)
+    newend = product(tr1.endState, tr2.endState)
+    inp = tr1.inputs.intersection(tr2.inputs)
+    out = tr1.outputs.intersection(tr2.outputs)
+    inter = (tr1.inputs.intersection(tr2.outputs)).union(
+        tr1.outputs.intersection(tr2.inputs)).union(tr1.internals).union(tr2.internals)
+    if len(inp.union(out).union(inter)) == 0:
+        return False
+
+    return guardTransition(newstart, newend, guard, inp, out, inter)
+
+# General finite automaton. 
+class Automaton:
     def __init__(self):
-        self.alphabet = set() # the alphabet for the component
-        self.transitions_dict = {} # dictionary of all transitions
+        self.alphabet = set()
+        self.transitions_dict = {} # transitions_dict[state] is the set of transitions from that state's TEXT
         self.startState = None
-        self.endStates = []
-        self.states = []
+        self.endStates = set()
+        self.states = set()
 
-    def add_state(self, name, transitions, end_state = 0):
+    def add_state(self, state, end_state = 0, start_state = 0):
         if end_state:
-            self.endStates.append(name)
-        # self.transitions_dict[name.upper()] = map(lambda x: x.upper(), transitions) # transitions is a set of transitions
-        self.transitions_dict[name] = transitions
-        self.states.append(name)
+            self.endStates.add(state)
+        if start_state:
+            self.startState = state
 
-    def set_start_state(self, name):
-        self.startState = name
+        self.states.add(state)
+        self.transitions_dict[state] = set()
 
-    # doesn't work with current definition of transition
+    def add_transition(self, transition):
+        self.transitions_dict[transition.startState].add(transition)
+
+    def set_start_state(self, state):
+        self.startState = state
+
     def simulate(self, is_printing = False):
         state = self.startState
         while state not in self.endStates:
@@ -100,139 +135,62 @@ class ComponentAutomaton:
                 print(state + "  taking transitions, output, input")
             else:
                 print("taking transitions, output, input")
-            state, = sample(self.transitions_dict[state],1) # sample from set of all transistions uniformly at random 
-        print("simulation has terminated or deadlocked!")
+            state, = sample(self.transitions_dict[state], 1).endState # sample from set of all transistions uniformly at random
+        print("simulation has terminated or deadlocked!")           
 
-    def convert_component(self):
+    def convert_to_digraph(self):
         automata = Digraph(comment = 'insert description parameter later?')
-        # i think this automata class is missing the possibility of states without transitions? not that they matter
-        for key in self.states:
+
+        for state in self.states:
             # adds nodes
             automata.attr('node', shape = 'circle', color='green', style='filled', fixedsize='false', width='1')
-            if key in self.endStates:
+            if state in self.endStates:
                 automata.attr('node', shape = 'doublecircle')
-            if key == self.startState:
+            if state == self.startState:
                 automata.attr('node', color = 'yellow')
-            automata.node(str(key), str(key)) # i think this is the syntax?
+            automata.node(state.text, state.text)
 
         # adds transitions
-        for key in self.states:
-            transitions = self.transitions_dict[key]
-            for trans in transitions:
-                q = trans.state1 # assuming the states are strings?
-                qprime = trans.state2
-                inputs = trans.input
-                outputs = trans.output
-                internals = trans.internal
-                text = ''
-
-                guard = trans.guard
-                if guard == True:
-                    text += 'T'
-                else:
-                    lwrbnd = guard.lwrbnd
-                    uprbnd = guard.uprbnd
-                    var = guard.lhs
-                    if guard.lwrbnd != -math.inf:
-                        text += var + ' >= ' + str(lwrbnd) + ', ' # need to fix > vs >=
-                    if guard.uprbnd != math.inf:
-                        text += var + ' <= ' + str(uprbnd) + ' '
-
-                text += '/'
-                if len(inputs) > 0:
-                    text += ' ?' + ', '.join(inputs)
-                if len(outputs) > 0:
-                    text += ' !' + ', '.join(outputs) 
-                if len(internals) > 0:
-                    text += ' #' + ', '.join(internals)
-                
-                automata.edge(q, qprime, label = text)
+        for state in self.states:
+            transit = self.transitions_dict[state] # this is a set of transitions from the state
+            for trans in transit:
+                if trans != False:
+                    state2 = trans.endState
+                    transtext = trans.show()
+                    automata.edge(state.text, state2.text, label = transtext)
 
         return automata
 
+class ComponentAutomaton(Automaton):
+    def __init__(self, inputAlphabet = set(), outputAlphabet = set()):
+        Automaton.__init__(self)
+        self.input_alphabet = inputAlphabet
+        self.output_alphabet = outputAlphabet
+        self.alphabet = self.input_alphabet.union(self.output_alphabet)
+
 def compose_components(component_1, component_2):
     new_component = ComponentAutomaton()
-    newstart = (component_1.startState, component_2.startState)
-    newtransitions = {}
-    newstates = itertools.product(component_1.states, component_2.states)
-    newends = itertools.product(component_1.endStates, component_2.endStates)
     newalphabet = component_1.alphabet.union(component_2.alphabet)
+    # figure out what to do with input/output alphabets? 
     dict1 = component_1.transitions_dict
     dict2 = component_2.transitions_dict
     for key1 in dict1:
         for key2 in dict2:
+            newstate = product(key1, key2)
+
+            new_component.add_state(newstate, key1 in component_1.endStates and key2 in component_2.endStates
+                , key1 == component_1.startState and key2 == component_2.startState)
+
             for trans1 in dict1[key1]:
                 for trans2 in dict2[key2]:
-                    newtransitions[(key1, key2)] = compose_transitions(trans1, trans2)
-    
-    new_component.states = newstates
-    new_component.endStates = newends
-    new_component.startState = newstart
+                    new_component.transitions_dict[newstate].add(compose_guard_trans(trans1, trans2))
 
-    new_component.transitions = newtransitions
     new_component.alphabet = newalphabet
     return new_component
 
+# Add this later to make testing easier
+def convert_digraph_to_automaton(Digraph x):
+    return True
 
 
-class ContractAutomaton:
-    def __init__(self):
-        self.alphabet = {} # the alphabet for the contract
-        self.transitions_dict = {} # dictionary of all transitions
-        self.startState = None
-        self.endStates = {}
 
-    def add_state(self, name, transitions, end_state = 0):
-        if end_state:
-            self.endStates.append(name.upper())
-        self.transitions_dict[name.upper()] = map(lambda x: x.upper(), transitions)
-
-    def set_start_state(self, name):
-        self.startState = name.upper()
-
-    def simulate(self, is_printing = False):
-        state = self.startState
-        while state not in self.endStates:
-            if is_printing:
-                print(state + "  taking transitions, output, input")
-            else:
-                print("taking transitions, output, input")
-            state, = sample(self.transitions_dict[state],1) # sample from set of all transistions uniformly at random
-        print("simulation has terminated or deadlocked!")
-
-
-# not 
-# def merge_transition_dicts(td_1, td_2):
-#     td_merged = td_1.copy()
-#     for key in td_2:
-#         if key in td_1:
-#             td_merged[key] = td_1[key].intersection(td_2[key])
-#         else:
-#             td_merged[key] = td_2[key]
-
-# def compose_contracts(contract_1, contract_2):
-#     new_contract = ContractAutomaton()
-#     if contract_1.startState == contract_2.startState:
-#         new_contract.startState = contract_1.startState
-#         new_contract.endStates = contract_2.endStates
-#         new_contract.transitions_dict = merge_transition_dicts(contract_1.transitions_dict, contract_2.transitions_dict);
-#     return new_contract
-
-def refines_contracts(unrefined_c, refined_c):
-    if unrefined_c.startState != refined_c.startState:
-        return False
-    elif unrefined_c.startState != refined_c.startState:
-        return False
-    else: 
-        for key in unrefined_c.transitions_dict:
-            if (key not in refined_c[key]):
-                return False
-            elif not refined_c[key].issubset(unrefined_c[key]):
-                return False
-            else:
-                continue
-        return True
-
-## TESTING
-contract_1 = ContractAutomaton()
-ineq = Inequality(left = 'x')
