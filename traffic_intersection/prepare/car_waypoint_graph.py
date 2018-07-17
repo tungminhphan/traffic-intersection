@@ -4,34 +4,16 @@
 # May 9th, 2018
 
 import os
-from numpy import cos, sin, pi
 import numpy as np
+visualize = True
 if __name__ == '__main__':
-    from graph import DirectedGraph
+    from graph import WeightedDirectedGraph
 else:
-    from traffic_intersection.prepare.graph import DirectedGraph
-import matplotlib.pyplot as plt
-from PIL import Image
-dir_path = os.path.dirname(os.path.realpath(__file__))
-intersection_fig = os.path.dirname(dir_path) + "/components/imglib/intersection.png"
-fig = plt.figure()
+    # if this file is not called directly, don't plot
+    from prepare.graph import WeightedDirectedGraph
+    visualize = False
 
-# turn on/off axes
-plt.axis("on")
-background = Image.open(intersection_fig)
-xlim, ylim = background.size
-plt.xlim(0, xlim)
-plt.ylim(0, ylim)
-
-plt.imshow(background, origin="Lower")
-
-markersize = 15
-car_width = 8
-edge_width = 0.5
-head_width = 10
-
-G = DirectedGraph()
-
+G = WeightedDirectedGraph()
 # horizontal direction
 G.add_edges([
              # first lane
@@ -96,7 +78,21 @@ G.add_edges([
              ])
 G._sources.add(( 500, 740))
 
-
-G.plot_edges(plt, plt_src_snk=True, edge_width = 1, head_width = 2)
-G.print_graph()
-plt.show()
+if visualize:
+    import matplotlib.pyplot as plt
+    from PIL import Image
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    intersection_fig = os.path.dirname(dir_path) + "/components/imglib/intersection.png"
+    fig = plt.figure()
+    plt.axis("on") # turn on/off axes
+    background = Image.open(intersection_fig)
+    xlim, ylim = background.size
+    plt.xlim(0, xlim)
+    plt.ylim(0, ylim)
+    plt.imshow(background, origin="Lower")
+    markersize = 1
+    edge_width = 3
+    head_width = 20
+    G.plot_edges(plt, plt_src_snk=True, edge_width = edge_width, head_width = head_width, markersize=markersize)
+    G.print_graph()
+    plt.show()
