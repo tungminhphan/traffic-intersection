@@ -257,8 +257,8 @@ def animate(i): # update animation by dt
     #collision check, work in progress
     for i in range(len(pedestrians)):
         for j in range(i + 1, len(pedestrians)):
-            if collision_check(pedestrians[i], pedestrians[j]):
-                print("Collision, Car index:")
+            if collision_check(pedestrians[i], pedestrians[j], car_scale_factor, pedestrian_scale_factor):
+                print("Collision, pedestrian index:")
                 print(i)
                 print(j)
             else:
