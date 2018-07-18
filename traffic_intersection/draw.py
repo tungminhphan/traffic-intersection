@@ -6,6 +6,7 @@
 
 import sys, os
 sys.path.append('..')
+import time
 import traffic_intersection.components.planner as planner
 import traffic_intersection.components.car as car
 import traffic_intersection.components.pedestrian as pedestrian
@@ -15,7 +16,6 @@ import traffic_intersection.prepare.car_waypoint_graph as car_graph
 import traffic_intersection.prepare.graph as graph
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
-from time import time
 from numpy import cos, sin, tan
 import numpy as np
 from PIL import Image
@@ -149,6 +149,8 @@ def spawn_car():
             next_prim_id = edge_to_prim_id[(node_s, node_e)]
             the_car.prim_queue.enqueue((next_prim_id, 0))
 
+    out = planner.time_stamp_edge(path=shortest_path, edge_time_stamps = edge_time_stamps, start_time = start_time, primitive_graph = G)
+    print(out)
     return plate_number, the_car
 
 # create traffic lights
@@ -163,9 +165,12 @@ def init():
 pedestrian_2 = pedestrian.Pedestrian(init_state=[500,500, np.pi/2, 2], pedestrian_type='2')
 pedestrians = [pedestrian_2]
 cars = dict()
+start_time = time.time()
+edge_time_stamps = {}
+time_stamps = {}
 
 def animate(i): # update animation by dt
-    print(i)
+    print(planner.get_now(start_time))
     """ online frame update """
     global background
     if np.random.uniform() <= 0.02:
@@ -204,9 +209,9 @@ def animate(i): # update animation by dt
     stage = plt.imshow(background, origin="lower") # update the stage; the origin option flips the y-axis
     return stage,   # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
 
-t0 = time()
+t0 = time.time()
 animate(0)
-t1 = time()
+t1 = time.time()
 interval = (t1 - t0)
 show_waypoint_graph = False
 save_video = False
