@@ -59,7 +59,7 @@ def draw_car(vehicle):
     # at (full scale) the relative coordinates of the center of the rear axle w.r.t. the
     # center of the figure is -185
     print(vehicle_fig.size)
-    x_corner, y_corner = find_corner_coordinates(-car_scale_factor * (w_orig/2-180), 0, x, y, theta, vehicle_fig)
+    x_corner, y_corner = find_corner_coordinates(-car_scale_factor * (w_orig/2-185), 0, x, y, theta, vehicle_fig)
     background.paste(vehicle_fig, (x_corner, y_corner), vehicle_fig)
 
 def draw_pedestrian(pedestrian):

@@ -99,7 +99,7 @@ def draw_car(vehicle):
     vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size) # disable antialiasing for better performance
     # at (full scale) the relative coordinates of the center of the rear axle w.r.t. the
     # center of the figure is -185
-    x_corner, y_corner = find_corner_coordinates(-car_scale_factor * (w_orig/2-180), 0, x, y, theta, vehicle_fig)
+    x_corner, y_corner = find_corner_coordinates(-car_scale_factor * (w_orig/2-185), 0, x, y, theta, vehicle_fig)
     background.paste(vehicle_fig, (x_corner, y_corner), vehicle_fig)
 
 def draw_pedestrian(pedestrian):
@@ -143,7 +143,8 @@ def spawn_car():
     end_node = random.sample(G._sinks, 1)[0]
     shortest_path_length, shortest_path = planner.dijkstra(start_node, end_node, G)
 
-    the_car = car.KinematicCar(init_state=start_node, color='gray')
+    color = np.random.choice(['gray','blue'])
+    the_car = car.KinematicCar(init_state=start_node, color=color)
     for node_s, node_e  in zip(shortest_path[:-1], shortest_path[1:]):
             next_prim_id = edge_to_prim_id[(node_s, node_e)]
             the_car.prim_queue.enqueue((next_prim_id, 0))
@@ -167,7 +168,7 @@ def animate(i): # update animation by dt
     print(i)
     """ online frame update """
     global background
-    if np.random.uniform() <= 0.03:
+    if np.random.uniform() <= 0.02:
         plate_number, the_car = spawn_car()
         cars[plate_number] = the_car
     # update traffic lights
@@ -209,7 +210,7 @@ t1 = time()
 interval = (t1 - t0)
 show_waypoint_graph = False
 save_video = False
-num_frames = 550 # number of the first frames to save in video
+num_frames = 1000 # number of the first frames to save in video
 ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval, blit=True,
         init_func = init, repeat=False) # by default the animation function loops, we set repeat to False in order to limit the number of frames generated to num_frames
 
