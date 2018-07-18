@@ -100,8 +100,8 @@ class WeightedDirectedGraph(DirectedGraph):
                 try: self._edges[edge[0]].add(edge[1])
                 except KeyError:
                     self._edges[edge[0]] = {edge[1]}
-                x = np.array(edge[-2])
-                y = np.array(edge[-1])
+                x = np.array([edge[0][-2], edge[0][-1]], float) # need to cast to float, otherwise numerical precision errors may occur
+                y = np.array([edge[1][-2], edge[1][-1]], float) # same as above
                 self._weights[(edge[0], edge[1])] = np.linalg.norm(x-y)  # add Euclidean distance as weight
         else:
             for edge in edge_set:

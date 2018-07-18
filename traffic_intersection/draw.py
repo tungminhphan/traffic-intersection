@@ -6,6 +6,7 @@
 
 import sys, os
 sys.path.append('..')
+import traffic_intersection.components.planner as planner
 import traffic_intersection.components.car as car
 import traffic_intersection.components.pedestrian as pedestrian
 import traffic_intersection.components.traffic_signals as traffic_signals
@@ -23,12 +24,13 @@ import scipy.io
 
 # set dir_path to current directory
 dir_path = os.path.dirname(os.path.realpath(__file__))
+intersection_fig = dir_path + "/components/imglib/intersection_states/intersection_"
+car_scale_factor = 0.1 # scale for when L = 50
+pedestrian_scale_factor = 0.32
 # load primitive data
 primitive_data = dir_path + '/primitives/MA3.mat'
 mat = scipy.io.loadmat(primitive_data)
-
 num_of_prims = mat['MA3'].shape[0]
-
 
 def get_prim_data(prim_id, data_field):
     '''
@@ -43,27 +45,30 @@ def get_prim_data(prim_id, data_field):
 
 
 G = graph.WeightedDirectedGraph()
+edge_to_prim_id = dict() # dictionary to convert primitive move to primitive ID
+prim_id_to_edge = dict() # dictionary to convert primitive ID to edge
 
 for prim_id in range(0, num_of_prims):
-    from_node = tuple(get_prim_data(prim_id, 'x0'))
-    to_node = tuple(get_prim_data(prim_id, 'x_f'))
-    new_edge_set = [[from_node, to_node]] # convert to tuple otherwise, not hashable (can't check set membership)
-    G.add_edges(new_edge_set)
+    if get_prim_data(prim_id, 'controller_found')[0] == 1:
+        from_node = tuple(get_prim_data(prim_id, 'x0'))
+        to_node = tuple(get_prim_data(prim_id, 'x_f'))
+        new_edge = (from_node, to_node)
+        edge_to_prim_id[new_edge] = prim_id
+        prim_id_to_edge[prim_id] = new_edge
 
-    from_x = from_node[2]
-    from_y = from_node[3]
+        new_edge_set = [new_edge] # convert to tuple otherwise, not hashable (can't check set membership)
+        G.add_edges(new_edge_set)
 
-    to_x = to_node[2]
-    to_y = to_node[3]
+        from_x = from_node[2]
+        from_y = from_node[3]
 
-    if (from_x, from_y) in car_graph.G._sources:
-        G.add_source(from_node)
-    if (to_x, to_y) in car_graph.G._sinks:
-        G.add_sink(to_node)
+        to_x = to_node[2]
+        to_y = to_node[3]
 
-intersection_fig = dir_path + "/components/imglib/intersection_states/intersection_"
-car_scale_factor = 0.1 # scale for when L = 50
-pedestrian_scale_factor = 0.32
+        if (from_x, from_y) in car_graph.G._sources:
+            G.add_source(from_node)
+        if (to_x, to_y) in car_graph.G._sinks:
+            G.add_sink(to_node)
 
 def find_corner_coordinates(x_rel_i, y_rel_i, x_des, y_des, theta, square_fig):
     """
@@ -124,7 +129,7 @@ plt.axis('off')
 # sampling time
 dt = 0.1
 # create car
-def create_car():
+def spawn_car():
     def generate_license_plate():
         import string
         choices = string.digits + string.ascii_uppercase
@@ -136,9 +141,14 @@ def create_car():
     rand_num = np.random.choice(10)
     start_node = random.sample(G._sources, 1)[0]
     end_node = random.sample(G._sinks, 1)[0]
+    shortest_path_length, shortest_path = planner.dijkstra(start_node, end_node, G)
 
+    the_car = car.KinematicCar(init_state=start_node, color='gray')
+    for node_s, node_e  in zip(shortest_path[:-1], shortest_path[1:]):
+            next_prim_id = edge_to_prim_id[(node_s, node_e)]
+            the_car.prim_queue.enqueue((next_prim_id, 0))
 
-    return plate_number, car.KinematicCar(init_state=start_node, color='gray')
+    return plate_number, the_car
 
 # create traffic lights
 traffic_lights = traffic_signals.TrafficLights(3, 23, random_start = False)
@@ -157,12 +167,9 @@ def animate(i): # update animation by dt
     print(i)
     """ online frame update """
     global background
-    if np.random.uniform() <= 0.3:
-        plate_number, car = create_car()
-        cars[plate_number] = car
-    if np.random.uniform() <= 0.4 and len(cars) > 0:
-        random_choice = random.sample(cars.keys(),1)[0]
-        del cars[random_choice]
+    if np.random.uniform() <= 0.03:
+        plate_number, the_car = spawn_car()
+        cars[plate_number] = the_car
     # update traffic lights
     traffic_lights.update(dt)
     horizontal_light = traffic_lights.get_states('horizontal', 'color')
@@ -184,10 +191,15 @@ def animate(i): # update animation by dt
                     print("No Collision")
 
     # update cars with primitives
-    if len(cars) > 0:
-        for plate_number in cars:
+    cars_to_remove = set()
+    for plate_number in cars.keys():
+        if cars[plate_number].prim_queue.len() > 0: # TODO: update this
+            cars[plate_number].prim_next(dt)
             draw_car(cars[plate_number])
-
+        else:
+            cars_to_remove.add(plate_number)
+    for plate_number in cars_to_remove:
+        del cars[plate_number]
     stage = plt.imshow(background, origin="lower") # update the stage; the origin option flips the y-axis
     return stage,   # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
 
