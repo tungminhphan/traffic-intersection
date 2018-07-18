@@ -14,6 +14,12 @@ class DirectedGraph():
     def add_node(self, node): # add a node
             self._nodes.add(node)
 
+    def add_source(self, source): # add a source node
+            self._sources.add(source)
+
+    def add_sink(self, sink): # add a source node
+            self._sinks.add(sink)
+
     def add_edges(self, edge_set): # add edges
         for edge in edge_set:
             if len(edge) != 2:
@@ -79,17 +85,35 @@ class WeightedDirectedGraph(DirectedGraph):
         DirectedGraph.__init__(self)
         self._weights = {} # a dictionary of weights
 
-    def add_edges(self, edge_set): # override parent's method to allow for edge weights
-        for edge in edge_set:
-            if len(edge) != 3:
-                raise SyntaxError('Each edge must be a 3-tuple of the form (start, end, weight)!') 
-            for node in edge[0:2]:
-                if node not in self._nodes:
-                    self.add_node(node)
-            try: self._edges[edge[0]].add(edge[1])
-            except KeyError:
-                self._edges[edge[0]] = {edge[1]}
-            self._weights[(edge[0], edge[1])] = edge[2] # add weight
+    def add_edges(self, edge_set, use_euclidean_weight = True): # override parent's method to allow for edge weights
+        '''
+        Use this function to add edges to the directed graph. When 'use_euclidean_weight' is False, each edge must be a 3-tuple of the form (start, end, weight), otherwise the weight will be automatically computed as the euclidean distances between the nodes (which are assumed to be points in a 2D plane)
+
+        '''
+        if use_euclidean_weight:
+            for edge in edge_set:
+                if len(edge) != 2:
+                    raise SyntaxError('Each edge must be a 2-tuple of the form (start, end) where start and end contain coordinates of points in a 2D plane!') 
+                for node in edge[0:2]:
+                    if node not in self._nodes:
+                        self.add_node(node)
+                try: self._edges[edge[0]].add(edge[1])
+                except KeyError:
+                    self._edges[edge[0]] = {edge[1]}
+                x = np.array(edge[-2])
+                y = np.array(edge[-1])
+                self._weights[(edge[0], edge[1])] = np.linalg.norm(x-y)  # add Euclidean distance as weight
+        else:
+            for edge in edge_set:
+                if len(edge) != 3:
+                    raise SyntaxError('Each edge must be a 3-tuple of the form (start, end, weight)!') 
+                for node in edge[0:2]:
+                    if node not in self._nodes:
+                        self.add_node(node)
+                try: self._edges[edge[0]].add(edge[1])
+                except KeyError:
+                    self._edges[edge[0]] = {edge[1]}
+                self._weights[(edge[0], edge[1])] = edge[2] # add weight
 
     def print_graph(self):
         print('The directed graph has ' + str(len(self._nodes)) + ' nodes: ')
