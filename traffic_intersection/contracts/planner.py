@@ -1,11 +1,13 @@
 # Path Planner
 # Tung M. Phan
-# May 16th, 2018
+# May 15th, 2018
 # California Institute of Technology
 
+import os, sys
+sys.path.append("..")
 import time, random
 import prepare.queue as queue
-import prepare.waypoint_graph as waypoint_graph
+import prepare.car_waypoint_graph as waypoint_graph
 
 def dijkstra(start, end, graph):
     '''
@@ -170,7 +172,7 @@ def is_safe(path):
 
 def print_state():
     print('The current request queue state is')
-    request_queue.print()
+    request_queue.print_queue()
 
 def process_request():
     '''

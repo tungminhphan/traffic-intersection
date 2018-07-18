@@ -5,7 +5,7 @@
 # July 17, 2018
 
 import sys, os
-sys.path.append("..")
+sys.path.append('..')
 import traffic_intersection.components.car as car
 import traffic_intersection.components.pedestrian as pedestrian
 import traffic_intersection.components.traffic_signals as traffic_signals
@@ -58,16 +58,8 @@ for prim_id in range(0, num_of_prims):
 
     if (from_x, from_y) in car_graph.G._sources:
         G.add_source(from_node)
-        print('source added!!')
     if (to_x, to_y) in car_graph.G._sinks:
-        print('sink added!!')
         G.add_sink(to_node)
-
-
-
-
-
-
 
 intersection_fig = dir_path + "/components/imglib/intersection_states/intersection_"
 car_scale_factor = 0.1 # scale for when L = 50
