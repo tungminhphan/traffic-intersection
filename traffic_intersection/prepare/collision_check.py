@@ -58,22 +58,35 @@ def overlap(s1, s2):
     else:
         return False
 
+#if distances of centers are greater than sum of radii then no collision
+def radius_check(x, y, width, x2, y2, width2):
+    return ((x - x2) ** 2 + (y - y2) ** 2) ** 0.5 > (width + width2)
+
 #takes two objects and checks if they are colliding
 def collision_check(object1, object2, car_scale_factor, pedestrian_scale_factor):
     if type(object1) == Pedestrian:
         x, y, theta, gait = object1.state
         vertices_a = vertices_pedestrian(x, y, pedestrian_scale_factor)
+        radius = 67 * pedestrian_scale_factor
     else:
-        vee, theta, x, y = oject1.state
+        vee, theta, x, y = object1.state
         vertices_a = vertices_car(x, y, car_scale_factor)
-    object1_vertices = [rotate_vertex(x, y, theta, vertex) for vertex in vertices_a]
+        radius = 788 * car_scale_factor
     
     if type(object2) == Pedestrian:
         x2, y2, theta2, gait2 = object2.state
         vertices_b = vertices_pedestrian(x2, y2, pedestrian_scale_factor)
+        radius2 = 67 * pedestrian_scale_factor
     else:
-        vee2, theta2, x2, y2 = oject2.state
+        vee2, theta2, x2, y2 = object2.state
         vertices_b = vertices_car(x2, y2, car_scale_factor)
+        radius2 = 788 * car_scale_factor
+
+    #if distance of centers are greater than sum of radii then no collision
+    if radius_check(x, y, radius, x2, y2, radius2):
+        return False
+
+    object1_vertices = [rotate_vertex(x, y, theta, vertex) for vertex in vertices_a]
     object2_vertices = [rotate_vertex(x2, y2, theta2, vertex) for vertex in vertices_b]
 
     edges_a = vectors_of_edges(object1_vertices) #list of the vectors of the edges/sides  

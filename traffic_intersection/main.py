@@ -254,11 +254,13 @@ def animate(i): # update animation by dt
             draw_car(vehicle)
     stage = plt.imshow(background, origin="lower") # this origin option flips the y-axis
 
-    #collision check, work in progress
-    for i in range(len(pedestrians)):
-        for j in range(i + 1, len(pedestrians)):
-            if collision_check(pedestrians[i], pedestrians[j], car_scale_factor, pedestrian_scale_factor):
-                print("Collision, pedestrian index:")
+    #collision check, pedestrian with pedestrian
+    all_components = controlled_cars + enemy_cars + delayed_enemy_cars + waiting_enemy_cars + pedestrians
+
+    for i in range(len(all_components)):
+        for j in range(i + 1, len(all_components)):
+            if collision_check(all_components[i], all_components[j], car_scale_factor, pedestrian_scale_factor):
+                print("Collision, object indices:")
                 print(i)
                 print(j)
             else:
