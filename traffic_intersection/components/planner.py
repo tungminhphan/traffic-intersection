@@ -63,41 +63,25 @@ def dijkstra(start, end, graph):
             shortest_path = []
     return score[end], shortest_path
 
-def get_scheduled_times(path, start_time, primitive_graph):
+def get_scheduled_times(path, current_time, primitive_graph):
     '''
     this function takes in a path and computes the scheduled times of arrival at the nodes on this path
     input: path - the path whose nodes the user would like to compute the scheduled times of arrival for
     output: a tuple of scheduled times (of arrival) at each node
     '''
-    now = get_now(start_time)
+    now = current_time
     scheduled_times = [now]
     for prev, curr in zip(path[0::1], path[1::1]):
         scheduled_times.append(scheduled_times[-1] + primitive_graph._weights[(prev, curr)])
     return scheduled_times
 
-def time_stamp(path):
-    '''
-    given a weighted path, this function updates the (node) time_stamps set according to the given path.
-    input:   path - weighted path
-    output:  modifies time_stamps
-    '''
-    global time_stamps, start_time, primitive_graph
-    scheduled_times = get_scheduled_times(path)
-    for k in range(0,len(path)):
-        left = max(0, k-1)
-        right = min(len(path)-1, k+1)
-        stamp = (scheduled_times[left], scheduled_times[right]) # interval stamp
-        try: time_stamps[path[k]].add(stamp)
-        except KeyError:
-            time_stamps[path[k]] = {stamp}
-
-def time_stamp_edge(path, edge_time_stamps, start_time, primitive_graph):
+def time_stamp_edge(path, edge_time_stamps, current_time, primitive_graph):
     '''
     given a weighted path, this function updates the edge_time_stamps set according to the given path.
     input:   path - weighted path
     output:  modifies edge_time_stamps
     '''
-    scheduled_times = get_scheduled_times(path=path, start_time=start_time, primitive_graph=primitive_graph)
+    scheduled_times = get_scheduled_times(path=path, current_time=current_time, primitive_graph=primitive_graph)
     for k in range(0,len(path)-1):
         left = k
         right = k+1
@@ -108,15 +92,6 @@ def time_stamp_edge(path, edge_time_stamps, start_time, primitive_graph):
             edge_time_stamps[edge] = {stamp}
     return edge_time_stamps
 
-def get_now(start_time):
-    '''
-    get the current time
-    input: None
-    output: the current time
-    '''
-    now = time.time() - start_time
-    return now
-
 def is_overlapping(interval_A, interval_B):
     '''
     this subroutine checks if two intervals intersect with each other; it returns True if
@@ -125,40 +100,13 @@ def is_overlapping(interval_A, interval_B):
             interval_B - second interval
     output: is_intersecting - True if interval_A intersects interval_B, False otherwise
     '''
-    is_intersecting = interval_A[1] >= interval_B[0] and interval_A[0] <= interval_B[1] or interval_B[1] >= interval_A[0] and interval_B[0] <= interval_A[1]
-    return is_intersecting
+    is_disjoint = (interval_A[0] > interval_B[1]) or (interval_B[0] > interval_A[1])
+    return not is_disjoint
 
-def nodes_are_safe(path):
-    now = get_now(start_time)
+def is_safe(path, current_time, primitive_graph, edge_time_stamps):
+    now = current_time
     scheduled_times = [now]
-    k = 0
-    for curr, nxt in zip(path[0::1], path[1::1]):
-        scheduled_times.append(scheduled_times[-1] + primitive_graph._weights[(curr, nxt)])
-        left = max(0, k-1)
-        right = -1
-        curr_interval = (scheduled_times[left], scheduled_times[right]) # next interval to check
-        if curr in time_stamps: # if current loc is already stamped
-            for interval in time_stamps[curr]:
-                if is_overlapping(curr_interval, interval):
-                    # if the two intervals overlap
-                    return curr # return node with conflict
-        k += 1
-    # now check last node
-    left = max(0, k-1)
-    right = -1
-    curr_interval = (scheduled_times[left], scheduled_times[right]) # last interval
-    curr = path[-1]
-    if curr in time_stamps: # if current loc is already stamped
-        for interval in time_stamps[curr]:
-            if is_overlapping(curr_interval, interval):
-                # if the two intervals overlap
-                return curr # return node with conflict
-    return True
-
-def is_safe(path):
-    now = get_now(start_time)
-    scheduled_times = [now]
-    current_edge_idx = 0 
+    current_edge_idx = 0
     for left_node, right_node in zip(path[0::1], path[1::1]):
         edge = (left_node, right_node)
         scheduled_times.append(scheduled_times[-1] + primitive_graph._weights[edge])
@@ -167,8 +115,7 @@ def is_safe(path):
         curr_interval = (left_time, right_time) # next interval to check
         if edge in edge_time_stamps: # if current loc is already stamped
             for interval in edge_time_stamps[edge]:
-                if is_overlapping(curr_interval, interval):
-                    # if the two intervals overlap
+                if is_overlapping(curr_interval, interval): # if the two intervals overlap
                     return current_edge_idx # return node with conflict
         current_edge_idx += 1
     return True
@@ -177,30 +124,6 @@ def print_state():
     print('The current request queue state is')
     request_queue.print_queue()
 
-def process_request():
-    '''
-    TODO: write comments
-    '''
-    global request_queue
-    if request_queue.len() == 0: # if request queue is empty, do nothing
-        pass
-    else: # else start processing next item in queue
-        request = request_queue.pop() # take the next request in line
-        path_score, shortest_path = dijkstra(request['start'], request['end'], primitive_graph) # find the shortest path for it
-        if path_score == float('inf'): # if there is no path between start and end
-            print('the request to go from', request['start'], 'to', request['end'], 'was rejected due to the start and end nodes being unreachable')
-        else:
-            safety_check = is_safe(shortest_path) # check if shortest_path is safe
-            if safety_check == True: # if it is, honor request
-                time_stamp_edge(path = shortest_path, time_stamps = time_stamps, start_time = time_stamp, primitive_graph = primitive_graph) # timestamp request
-                print('the request to go from', request['start'],  'to', request['end'], '(with license plate ' + str(request['license_plate']) + ') was fully processed at time',round(time.time()-start_time,2))
-            else:
-                    service_path = shortest_path[0:safety_check]
-                    time_stamp_edge(service_path)
-                    print('the request to go from', request['start'], 'to', request['end'],'along the path', shortest_path, 'was only granted up to ' + str(shortest_path[safety_check]))
-                    request['start']= shortest_path[safety_check]
-                    request_queue.enqueue(request)
-
 def generate_license_plate():
     import string
     choices = string.digits + string.ascii_uppercase
@@ -208,41 +131,3 @@ def generate_license_plate():
     for i in range(0,7):
         plate_number = plate_number + random.choice(choices)
     return plate_number
-
-def planner_update():
-    process_request()
-    if random.random() >= arrival_chance:
-        start = random.choice(list(primitive_graph._sources))
-        end = random.choice(list(primitive_graph._sinks))
-        car_id = generate_license_plate()
-        request = {'start': start, 'end': end, 'license_plate': car_id}
-        print('the car with license plate number', request['license_plate'], 'requests to go from', request['start'], 'to', request['end'])
-        request_queue.enqueue(request)
-    print_state()
-    time.sleep(random.random())
-
-                   ######################################################
-                   ######################################################
-                   ###                                                ###
-                   ###                    SIMULATION                  ###
-                   ###                                                ###
-                   ######################################################
-                   ######################################################
-
-
-if visualize:
-    # define primitive_graph
-    primitive_graph = waypoint_graph.G
-    # time_stamps a dictionary with nodes as keys containing reserved intervals
-    time_stamps = {}
-    # edge_time_stamps a dictionary with edges as keys containing reserved intervals
-    edge_time_stamps = {}
-    # start_time is the start time of the simulation
-    start_time = time.time()
-    # request queue
-    request_queue = queue.Queue()
-    # probability of new arrival
-    arrival_chance = 0.7
-
-    while True:
-        planner_update()

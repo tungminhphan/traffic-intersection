@@ -14,6 +14,7 @@ import traffic_intersection.components.traffic_signals as traffic_signals
 from traffic_intersection.prepare.collision_check import collision_check
 import traffic_intersection.prepare.car_waypoint_graph as car_graph
 import traffic_intersection.prepare.graph as graph
+import traffic_intersection.prepare.queue as queue
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 from numpy import cos, sin, tan
@@ -25,7 +26,8 @@ import scipy.io
 # set dir_path to current directory
 dir_path = os.path.dirname(os.path.realpath(__file__))
 intersection_fig = dir_path + "/components/imglib/intersection_states/intersection_"
-car_scale_factor = 0.1 # scale for when L = 50
+car_scale_factor = 0.01 # scale for when L = 50
+#car_scale_factor = 0.1 # scale for when L = 50
 pedestrian_scale_factor = 0.32
 # load primitive data
 primitive_data = dir_path + '/primitives/MA3.mat'
@@ -52,12 +54,13 @@ for prim_id in range(0, num_of_prims):
     if get_prim_data(prim_id, 'controller_found')[0] == 1:
         from_node = tuple(get_prim_data(prim_id, 'x0'))
         to_node = tuple(get_prim_data(prim_id, 'x_f'))
-        new_edge = (from_node, to_node)
-        edge_to_prim_id[new_edge] = prim_id
+        time_weight = get_prim_data(prim_id, 't_end')[0]
+        new_edge = (from_node, to_node, time_weight)
+        edge_to_prim_id[(from_node, to_node)] = prim_id
         prim_id_to_edge[prim_id] = new_edge
 
         new_edge_set = [new_edge] # convert to tuple otherwise, not hashable (can't check set membership)
-        G.add_edges(new_edge_set)
+        G.add_edges(new_edge_set, use_euclidean_weight=False)
 
         from_x = from_node[2]
         from_y = from_node[3]
@@ -141,17 +144,17 @@ def spawn_car():
     rand_num = np.random.choice(10)
     start_node = random.sample(G._sources, 1)[0]
     end_node = random.sample(G._sinks, 1)[0]
-    shortest_path_length, shortest_path = planner.dijkstra(start_node, end_node, G)
-
     color = np.random.choice(['gray','blue'])
     the_car = car.KinematicCar(init_state=start_node, color=color)
-    for node_s, node_e  in zip(shortest_path[:-1], shortest_path[1:]):
-            next_prim_id = edge_to_prim_id[(node_s, node_e)]
-            the_car.prim_queue.enqueue((next_prim_id, 0))
+    return plate_number, start_node, end_node, the_car
 
-    out = planner.time_stamp_edge(path=shortest_path, edge_time_stamps = edge_time_stamps, start_time = start_time, primitive_graph = G)
-    print(out)
-    return plate_number, the_car
+def path_to_primitives(path):
+    primitives = []
+    for node_s, node_e  in zip(path[:-1], path[1:]):
+            next_prim_id = edge_to_prim_id[(node_s, node_e)]
+            primitives.append(next_prim_id)
+    return primitives
+
 
 # create traffic lights
 traffic_lights = traffic_signals.TrafficLights(3, 23, random_start = False)
@@ -165,17 +168,26 @@ def init():
 pedestrian_2 = pedestrian.Pedestrian(init_state=[500,500, np.pi/2, 2], pedestrian_type='2')
 pedestrians = [pedestrian_2]
 cars = dict()
-start_time = time.time()
-edge_time_stamps = {}
-time_stamps = {}
+edge_time_stamps = dict()
+time_stamps = dict()
+request_queue = queue.Queue()
 
 def animate(i): # update animation by dt
-    print(planner.get_now(start_time))
+    current_time = i * dt
     """ online frame update """
     global background
-    if np.random.uniform() <= 0.02:
-        plate_number, the_car = spawn_car()
-        cars[plate_number] = the_car
+    if np.random.uniform() <= 1:
+        plate_number, start_node, end_node, the_car = spawn_car()
+        shortest_path_length, shortest_path = planner.dijkstra(start_node, end_node, G)
+        if planner.is_safe(path = shortest_path, current_time=current_time, primitive_graph=G, edge_time_stamps=edge_time_stamps):
+            planner.time_stamp_edge(path=shortest_path, edge_time_stamps = edge_time_stamps, current_time = current_time, primitive_graph = G)
+            cars[plate_number] = the_car # add the car
+            path_prims = path_to_primitives(path=shortest_path) # add primitives
+            for prim_id in path_prims:
+                cars[plate_number].prim_queue.enqueue((prim_id, 0))
+            print('SAFE!')
+        else:
+            print('NOT SAFE!!')
     # update traffic lights
     traffic_lights.update(dt)
     horizontal_light = traffic_lights.get_states('horizontal', 'color')
@@ -213,14 +225,13 @@ t0 = time.time()
 animate(0)
 t1 = time.time()
 interval = (t1 - t0)
-show_waypoint_graph = False
-save_video = False
-num_frames = 1000 # number of the first frames to save in video
+save_video = True
+num_frames = 300 # number of the first frames to save in video
 ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval, blit=True,
         init_func = init, repeat=False) # by default the animation function loops, we set repeat to False in order to limit the number of frames generated to num_frames
 
 if save_video:
     Writer = animation.writers['ffmpeg']
     writer = Writer(fps=30, metadata=dict(artist='Me'), bitrate=1800)
-    ani.save('movies/hi_quality.avi', writer=writer, dpi=200)
+    ani.save('movies/mini.avi', writer=writer, dpi=150)
 plt.show()
