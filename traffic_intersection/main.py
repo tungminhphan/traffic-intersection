@@ -58,7 +58,6 @@ def draw_car(vehicle):
     vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size) # disable antialiasing for better performance
     # at (full scale) the relative coordinates of the center of the rear axle w.r.t. the
     # center of the figure is -185
-    print(vehicle_fig.size)
     x_corner, y_corner = find_corner_coordinates(-car_scale_factor * (w_orig/2-185), 0, x, y, theta, vehicle_fig)
     background.paste(vehicle_fig, (x_corner, y_corner), vehicle_fig)
 
@@ -197,7 +196,6 @@ def init():
     return stage, # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
 
 def animate(i): # update animation by dt
-    print(i)
     """ online frame update """
     global background
     # update traffic lights
@@ -261,10 +259,9 @@ def animate(i): # update animation by dt
         for j in range(i + 1, len(all_components)):
             if collision_check(all_components[i], all_components[j], car_scale_factor, pedestrian_scale_factor):
                 print("Collision, object indices:")
-                print(i)
-                print(j)
+                print(i, j)
             else:
-                print("No Collision")
+                pass
 
 #        dots = plt.axes().plot(240,300,'ro')
 #        return stage, dots  # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
