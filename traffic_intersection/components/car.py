@@ -42,6 +42,7 @@ class KinematicCar:
                  nu_max = 0.5, # maximum steering input in radians/sec
                  nu_min = -0.5, # minimum steering input in radians/sec)
                  vee_max = 100, # maximum velocity
+                 is_honking = False, # the car is honking
                  color = 'blue', # color of the car
                  prim_queue = None, # queue of primitives, each item in the queue has the form (prim_id, prim_progress) where prim_id is the primitive ID and prim_progress is the progress of the primitive)
                  fuel_level = float('inf')): # TODO: fuel level of the car - FUTURE FEATURE)
@@ -52,6 +53,7 @@ class KinematicCar:
                      self.state = np.array(init_state, dtype='float')
                      self.color = color
                      self.extended_state = None # extended state required for Bastian's primitive computation
+                     self.is_honking = is_honking
                      if prim_queue == None:
                          self.prim_queue = Queue()
                      else:

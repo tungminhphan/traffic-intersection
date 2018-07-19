@@ -4,7 +4,7 @@
 # California Institute of Technology
 # July 17, 2018
 
-import sys, os
+import sys, os, platform
 sys.path.append('..')
 import time
 import traffic_intersection.components.planner as planner
@@ -15,18 +15,24 @@ from traffic_intersection.prepare.collision_check import collision_check
 import traffic_intersection.prepare.car_waypoint_graph as car_graph
 import traffic_intersection.prepare.graph as graph
 import traffic_intersection.prepare.queue as queue
+import matplotlib
+if platform.system() == 'Darwin': # if the operating system is MacOS
+    matplotlib.use('macosx')
+else: # if the operating system is Linux or Windows
+    matplotlib.use('Qt5Agg') # or TkAgg (which may be slower)
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
-from numpy import cos, sin, tan
 import numpy as np
+from numpy import cos, sin, tan
 from PIL import Image
 import random
 import scipy.io
 
+
 # set dir_path to current directory
 dir_path = os.path.dirname(os.path.realpath(__file__))
 intersection_fig = dir_path + "/components/imglib/intersection_states/intersection_"
-car_scale_factor = 0.01 # scale for when L = 50
+car_scale_factor = 0.1 # scale for when L = 50
 #car_scale_factor = 0.1 # scale for when L = 50
 pedestrian_scale_factor = 0.32
 # load primitive data
@@ -88,44 +94,46 @@ def find_corner_coordinates(x_rel_i, y_rel_i, x_des, y_des, theta, square_fig):
     # xy_unknown - xy_corner + xy_rel_f = xy_des
     return int(x_des - x_rel_f + x_corner_rel), int(y_des - y_rel_f + y_corner_rel)
 
-def draw_car(vehicle):
-    vee, theta, x, y = vehicle.state
-    # convert angle to degrees and positive counter-clockwise
-    theta_d = -theta/np.pi * 180
-    vehicle_fig = vehicle.fig
-    w_orig, h_orig = vehicle_fig.size
-    # set expand=True so as to disable cropping of output image
-    vehicle_fig = vehicle_fig.rotate(theta_d, expand = False)
-    scaled_vehicle_fig_size  =  tuple([int(car_scale_factor * i) for i in vehicle_fig.size])
-    # rescale car 
-    #vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size, Image.ANTIALIAS)
-    vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size) # disable antialiasing for better performance
-    # at (full scale) the relative coordinates of the center of the rear axle w.r.t. the
-    # center of the figure is -185
-    x_corner, y_corner = find_corner_coordinates(-car_scale_factor * (w_orig/2-185), 0, x, y, theta, vehicle_fig)
-    background.paste(vehicle_fig, (x_corner, y_corner), vehicle_fig)
+def draw_pedestrians(pedestrians):
+    for pedestrian in pedestrians:
+        x, y, theta, current_gait = pedestrian.state
+        i = current_gait % pedestrian.film_dim[1]
+        j = current_gait // pedestrian.film_dim[1]
+        film_fig = Image.open(pedestrian.fig)
+        scaled_film_fig_size  =  tuple([int(pedestrian_scale_factor * i) for i in film_fig.size])
+        film_fig = film_fig.resize( scaled_film_fig_size)
+        width, height = film_fig.size
+        sub_width = width/pedestrian.film_dim[1]
+        sub_height = height/pedestrian.film_dim[0]
+        lower = (i*sub_width,j*sub_height)
+        upper = ((i+1)*sub_width, (j+1)*sub_height)
+        area = (int(lower[0]), int(lower[1]), int(upper[0]), int(upper[1]))
+        person_fig = film_fig.crop(area)
+        person_fig = person_fig.rotate(180-theta/np.pi * 180 + 90, expand = False)
+        x_corner, y_corner = find_corner_coordinates(0., 0, x, y, theta,  person_fig)
+        background.paste(person_fig, (int(x_corner), int(y_corner)), person_fig)
 
-def draw_pedestrian(pedestrian):
-    x, y, theta, current_gait = pedestrian.state
-    i = current_gait % pedestrian.film_dim[1]
-    j = current_gait // pedestrian.film_dim[1]
-    film_fig = Image.open(pedestrian.fig)
-    scaled_film_fig_size  =  tuple([int(pedestrian_scale_factor * i) for i in film_fig.size])
-    film_fig = film_fig.resize( scaled_film_fig_size)
-    width, height = film_fig.size
-    sub_width = width/pedestrian.film_dim[1]
-    sub_height = height/pedestrian.film_dim[0]
-    lower = (i*sub_width,j*sub_height)
-    upper = ((i+1)*sub_width, (j+1)*sub_height)
-    area = (int(lower[0]), int(lower[1]), int(upper[0]), int(upper[1]))
-    person_fig = film_fig.crop(area)
-    person_fig = person_fig.rotate(180-theta/np.pi * 180 + 90, expand = False)
-    x_corner, y_corner = find_corner_coordinates(0., 0, x, y, theta,  person_fig)
-    background.paste(person_fig, (int(x_corner), int(y_corner)), person_fig)
+def draw_cars(vehicles):
+    for vehicle in vehicles:
+        vee, theta, x, y = vehicle.state
+        # convert angle to degrees and positive counter-clockwise
+        theta_d = -theta/np.pi * 180
+        vehicle_fig = vehicle.fig
+        w_orig, h_orig = vehicle_fig.size
+        # set expand=True so as to disable cropping of output image
+        vehicle_fig = vehicle_fig.rotate(theta_d, expand = False)
+        scaled_vehicle_fig_size  =  tuple([int(car_scale_factor * i) for i in vehicle_fig.size])
+        # rescale car 
+        #vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size, Image.ANTIALIAS)
+        vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size) # disable antialiasing for better performance
+        # at (full scale) the relative coordinates of the center of the rear axle w.r.t. the
+        # center of the figure is -185
+        x_corner, y_corner = find_corner_coordinates(-car_scale_factor * (w_orig/2-185), 0, x, y, theta, vehicle_fig)
+        background.paste(vehicle_fig, (x_corner, y_corner), vehicle_fig)
 
 # creates figure
 fig = plt.figure()
-fig.add_axes([0,0,1,1]) # get rid of white border
+ax = fig.add_axes([0,0,1,1]) # get rid of white border
 
 # turn on/off axes
 plt.axis('off')
@@ -155,28 +163,24 @@ def path_to_primitives(path):
             primitives.append(next_prim_id)
     return primitives
 
-
 # create traffic lights
 traffic_lights = traffic_signals.TrafficLights(3, 23, random_start = False)
 horizontal_light = traffic_lights.get_states('horizontal', 'color')
 vertical_light = traffic_lights.get_states('vertical', 'color')
 background = Image.open(intersection_fig + horizontal_light + '_' + vertical_light + '.png')
-def init():
-    stage = plt.imshow(background, origin="lower",zorder=0) # this origin option flips the y-axis
-    return stage, # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
 
-pedestrian_2 = pedestrian.Pedestrian(init_state=[500,500, np.pi/2, 2], pedestrian_type='2')
-pedestrians = [pedestrian_2]
+pedestrians = []
 cars = dict()
 edge_time_stamps = dict()
 time_stamps = dict()
 request_queue = queue.Queue()
 
-def animate(i): # update animation by dt
-    current_time = i * dt
+def animate(frame_idx): # update animation by dt
+    current_time = frame_idx * dt
+    print(current_time)
     """ online frame update """
     global background
-    if np.random.uniform() <= 1:
+    if np.random.uniform() <= 1/(5+0.5*frame_idx):
         plate_number, start_node, end_node, the_car = spawn_car()
         shortest_path_length, shortest_path = planner.dijkstra(start_node, end_node, G)
         if planner.is_safe(path = shortest_path, current_time=current_time, primitive_graph=G, edge_time_stamps=edge_time_stamps):
@@ -197,10 +201,13 @@ def animate(i): # update animation by dt
     x_lim, y_lim = background.size
 
     # update pedestrians
+    pedestrians_to_keep = []
     if len(pedestrians) > 0:
         for person in pedestrians:
             if (person.state[0] <= x_lim and person.state[0] >= 0 and person.state[1] >= 0 and person.state[1] <= y_lim):
-                draw_pedestrian(person)
+                pedestrians.append(person)
+
+    # checking collision among pedestrians
         for i in range(len(pedestrians)):
             for j in range(i + 1, len(pedestrians)):
                 if collision_check(pedestrians[i], pedestrians[j], car_scale_factor, pedestrian_scale_factor):
@@ -209,29 +216,40 @@ def animate(i): # update animation by dt
                     print("No Collision")
 
     # update cars with primitives
+    cars_to_keep = []
     cars_to_remove = set()
     for plate_number in cars.keys():
         if cars[plate_number].prim_queue.len() > 0: # TODO: update this
             cars[plate_number].prim_next(dt)
-            draw_car(cars[plate_number])
+            cars_to_keep.append(cars[plate_number])
         else:
             cars_to_remove.add(plate_number)
     for plate_number in cars_to_remove:
         del cars[plate_number]
-    stage = plt.imshow(background, origin="lower") # update the stage; the origin option flips the y-axis
-    return stage,   # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
+
+    honk_waves = ax.scatter([300, 400, 500],[300, 300, 100], s = frame_idx * 20, lw=1, facecolors='none', edgecolor='w', alpha= 100/(100+ 50*frame_idx))
+
+    draw_pedestrians(pedestrians_to_keep) # draw pedestrians to background
+    draw_cars(cars_to_keep)
+    if frame_idx == 0:
+        global stage # set up a global stage
+        stage = ax.imshow(background, origin="lower") # show the stage in the initial step
+    else:
+        stage.set_data(background) # update the stage;
+    return  stage, honk_waves   # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
 
 t0 = time.time()
 animate(0)
 t1 = time.time()
 interval = (t1 - t0)
-save_video = True
+save_video = False
 num_frames = 300 # number of the first frames to save in video
-ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval, blit=True,
-        init_func = init, repeat=False) # by default the animation function loops, we set repeat to False in order to limit the number of frames generated to num_frames
+ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval, blit=True, repeat=False) # by default the animation function loops, we set repeat to False in order to limit the number of frames generated to num_frames
 
 if save_video:
     Writer = animation.writers['ffmpeg']
     writer = Writer(fps=30, metadata=dict(artist='Me'), bitrate=1800)
     ani.save('movies/mini.avi', writer=writer, dpi=150)
 plt.show()
+t2 = time.time()
+print(t2-t0)
