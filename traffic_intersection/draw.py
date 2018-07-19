@@ -9,6 +9,7 @@ sys.path.append('..')
 import time
 import traffic_intersection.components.planner as planner
 import traffic_intersection.components.car as car
+import traffic_intersection.components.aux.honk_wavefront as wavefront
 import traffic_intersection.components.pedestrian as pedestrian
 import traffic_intersection.components.traffic_signals as traffic_signals
 from traffic_intersection.prepare.collision_check import collision_check
@@ -94,6 +95,9 @@ def find_corner_coordinates(x_rel_i, y_rel_i, x_des, y_des, theta, square_fig):
     # xy_unknown - xy_corner + xy_rel_f = xy_des
     return int(x_des - x_rel_f + x_corner_rel), int(y_des - y_rel_f + y_corner_rel)
 
+def with_probability():
+    return np.random.uniform()
+
 def draw_pedestrians(pedestrians):
     for pedestrian in pedestrians:
         x, y, theta, current_gait = pedestrian.state
@@ -174,13 +178,17 @@ cars = dict()
 edge_time_stamps = dict()
 time_stamps = dict()
 request_queue = queue.Queue()
+honk_x = []
+honk_y = []
+honk_t = []
+all_wavefronts = set()
 
 def animate(frame_idx): # update animation by dt
     current_time = frame_idx * dt
     print(current_time)
     """ online frame update """
     global background
-    if np.random.uniform() <= 1/(5+0.5*frame_idx):
+    if with_probability() <= 0.01:
         plate_number, start_node, end_node, the_car = spawn_car()
         shortest_path_length, shortest_path = planner.dijkstra(start_node, end_node, G)
         if planner.is_safe(path = shortest_path, current_time=current_time, primitive_graph=G, edge_time_stamps=edge_time_stamps):
@@ -214,28 +222,65 @@ def animate(frame_idx): # update animation by dt
                     print('Collision between pedestrian' + str(i) + 'and '+  str(j))
                 else:
                     print("No Collision")
-
-    # update cars with primitives
     cars_to_keep = []
     cars_to_remove = set()
+
+    # determine which cars to keep
     for plate_number in cars.keys():
-        if cars[plate_number].prim_queue.len() > 0: # TODO: update this
+        car = cars[plate_number]
+#        if (car.state[2] <= x_lim and car.state[2] >= 0 and car.state[3] >= 0 and car.state[3] <= y_lim): TODO: implement this
+        if car.prim_queue.len() > 0:
+            # update cars with primitives
             cars[plate_number].prim_next(dt)
+            # add cars to keep list
             cars_to_keep.append(cars[plate_number])
         else:
             cars_to_remove.add(plate_number)
+    # determine which cars to remove
     for plate_number in cars_to_remove:
         del cars[plate_number]
 
-    honk_waves = ax.scatter([300, 400, 500],[300, 300, 100], s = frame_idx * 20, lw=1, facecolors='none', edgecolor='w', alpha= 100/(100+ 50*frame_idx))
+
+    ax.cla() # clear Axes before plotting
+    ## STAGE UPDATE HAPPENS AFTER THIS COMMENT
+    honk_waves = ax.scatter(0,0)
+    honk_xs = []
+    honk_ys = []
+    radii = []
+    intensities = []
+    for wave in all_wavefronts:
+        wave.next(dt)
+        honk_x, honk_y, radius, intensity = wave.get_data()
+        if intensity > 0:
+            honk_xs.append(honk_x)
+            honk_ys.append(honk_y)
+            radii.append(radius)
+            intensities.append(intensity)
+        else:
+            all_wavefronts.remove(wave)
+
+    rgba_colors = np.zeros((len(intensities),4))
+    # for red the first column needs to be one
+    rgba_colors[:,0] = 1.0
+    # the fourth column needs to be your alphas
+    rgba_colors[:, 3] = intensities
+    honk_waves = ax.scatter(honk_xs, honk_ys, s = radii, lw=1, facecolors='none', color=rgba_colors)
+
+
+    for car in cars_to_keep:
+        if with_probability() <= 0.02 and not car.is_honking:
+            car.toggle_honk()
+            wave = wavefront.HonkWavefront([car.state[2] + 60*np.cos(car.state[1]), car.state[3] + 60*np.sin(car.state[1]), 0, 0], init_energy=100000)
+            all_wavefronts.add(wave)
+        elif with_probability() <= 0.8 and car.is_honking:
+            car.toggle_honk()
+
+    # plot honking 
 
     draw_pedestrians(pedestrians_to_keep) # draw pedestrians to background
     draw_cars(cars_to_keep)
-    if frame_idx == 0:
-        global stage # set up a global stage
-        stage = ax.imshow(background, origin="lower") # show the stage in the initial step
-    else:
-        stage.set_data(background) # update the stage;
+    global stage # set up a global stage
+    stage = ax.imshow(background, origin="lower") # update the stage
     return  stage, honk_waves   # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
 
 t0 = time.time()
@@ -243,13 +288,13 @@ animate(0)
 t1 = time.time()
 interval = (t1 - t0)
 save_video = False
-num_frames = 300 # number of the first frames to save in video
+num_frames = 100 # number of the first frames to save in video
 ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval, blit=True, repeat=False) # by default the animation function loops, we set repeat to False in order to limit the number of frames generated to num_frames
 
 if save_video:
     Writer = animation.writers['ffmpeg']
-    writer = Writer(fps=30, metadata=dict(artist='Me'), bitrate=1800)
-    ani.save('movies/mini.avi', writer=writer, dpi=150)
+    writer = Writer(fps= 30, metadata=dict(artist='Me'), bitrate=-1)
+    ani.save('movies/honk.avi', writer=writer, dpi=300)
 plt.show()
 t2 = time.time()
-print(t2-t0)
+print('Total elapsed time: ' + str(t2-t0))

@@ -4,7 +4,7 @@
 # July 19, 2018
 
 import numpy as np
-speed_of_sound = 500 # speed of sound constant for wave propagation calculation
+speed_of_sound = 50000 # speed of sound constant for wave propagation calculation
 
 class HonkWavefront:
     """HonkWavefront Class
@@ -12,7 +12,7 @@ class HonkWavefront:
     init_state is [x, y, r, I], where x, y, r, I are the positions, radius, and intensity of the wavefront
     init_energy is the initial energy of the burst
     """
-    def __init__(self, init_state = [0, 0, 0, 1], init_energy = 1000): # x, y, radius, intensity
+    def __init__(self, init_state = [0, 0, 0, 1], init_energy = 10000): # x, y, radius, intensity
                      self.state = np.array(init_state, dtype='float')
                      self.energy = init_energy
 

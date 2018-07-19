@@ -91,6 +91,9 @@ class KinematicCar:
        dstate_dt[3] = state[0] * sin(state[1])
        return dstate_dt
 
+    def toggle_honk(self):
+        self.is_honking = not self.is_honking
+
     def next(self, inputs, dt):
        """
        next is a function that updates the current position of the car when inputs are applied for a duration of dt
