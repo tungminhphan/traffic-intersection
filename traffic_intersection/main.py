@@ -253,7 +253,7 @@ def animate(i): # update animation by dt
     stage = plt.imshow(background, origin="lower") # this origin option flips the y-axis
 
     #collision check
-    if i > delay_time:
+    if i > (delay_time + 1):
         all_components = controlled_cars + enemy_cars + delayed_enemy_cars + waiting_enemy_cars + pedestrians
     else:
         all_components = controlled_cars + enemy_cars + waiting_enemy_cars + pedestrians

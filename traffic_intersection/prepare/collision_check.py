@@ -45,18 +45,26 @@ def projection(vertices, axis):
     projections = [dot(vertex, axis) for vertex in vertices]
     return [min(projections), max(projections)]
 
+#checks if there's overlap
+def helper(s1, s2):
+    a = s2[0]
+    b = s2[1]
+    if b < a:
+        a = s2[1]
+        b = s2[0]
+    return (s1 >= a) and (s1 <= b)
+
 #all cases must be true/overlap for collision, (min, max)
 def overlap(s1, s2):
-    if (s1[0] >= s2[0]) and (s1[0] <= s2[1]):
+    if helper(s1[0], s2):
+        return True;
+    if helper(s1[1], s2):
+        return True;
+    if helper(s2[0], s1):
+        return True;
+    if helper(s2[1], s1):
         return True
-    elif (s1[1] >= s2[0]) and (s1[1] <= s2[1]):
-        return True
-    elif (s2[0] >= s1[0]) and (s2[0] <= s1[1]):
-        return True
-    elif (s2[1] >= s1[0]) and (s2[1] <= s1[1]):
-        return True
-    else:
-        return False
+    return False
 
 #if distances of centers are greater than sum of radii then no collision
 def radius_check(x, y, width, x2, y2, width2):
