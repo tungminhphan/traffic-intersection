@@ -34,7 +34,7 @@ def edge_vector(vertex1, vertex2):
 
 #takes the vectors of the edges returns them in list
 def vectors_of_edges(vertices):
-    return [edge_vector(vertices[i], vertices[(i + 1)]) for i in range(len(vertices))]
+    return [edge_vector(vertices[i], vertices[(i + 1) % len(vertices)]) for i in range(len(vertices))]
 
 #gets the normal of surface/edges
 def get_axis(v):
