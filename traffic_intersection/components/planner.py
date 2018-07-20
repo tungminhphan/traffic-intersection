@@ -85,7 +85,7 @@ def time_stamp_edge(path, edge_time_stamps, current_time, primitive_graph):
     for k in range(0,len(path)-1):
         left = k
         right = k+1
-        edge = (path[left], path[right])
+        edge = (path[left][2:4], path[right][2:4]) # only get topographical information, ignoring velocity and orientation
         stamp = (scheduled_times[left], scheduled_times[right]) # interval stamp
         try: edge_time_stamps[edge].add(stamp)
         except KeyError:
@@ -108,13 +108,14 @@ def is_safe(path, current_time, primitive_graph, edge_time_stamps):
     scheduled_times = [now]
     current_edge_idx = 0
     for left_node, right_node in zip(path[0::1], path[1::1]):
-        edge = (left_node, right_node)
-        scheduled_times.append(scheduled_times[-1] + primitive_graph._weights[edge])
+        curr_edge = (left_node, right_node)
+        curr_edge_topo = (left_node[2:4], right_node[2:4])
+        scheduled_times.append(scheduled_times[-1] + primitive_graph._weights[curr_edge])
         left_time = scheduled_times[-2]
         right_time = scheduled_times[-1]
         curr_interval = (left_time, right_time) # next interval to check
-        if edge in edge_time_stamps: # if current loc is already stamped
-            for interval in edge_time_stamps[edge]:
+        if curr_edge_topo in edge_time_stamps: # if current loc is already stamped
+            for interval in edge_time_stamps[curr_edge_topo]:
                 if is_overlapping(curr_interval, interval): # if the two intervals overlap
                     return current_edge_idx # return node with conflict
         current_edge_idx += 1

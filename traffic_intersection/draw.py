@@ -40,7 +40,6 @@ import scipy.io
 dir_path = os.path.dirname(os.path.realpath(__file__))
 intersection_fig = dir_path + "/components/imglib/intersection_states/intersection_"
 car_scale_factor = 0.1 # scale for when L = 50
-#car_scale_factor = 0.1 # scale for when L = 50
 pedestrian_scale_factor = 0.32
 # load primitive data
 primitive_data = dir_path + '/primitives/MA3.mat'
@@ -60,7 +59,6 @@ def get_prim_data(prim_id, data_field):
 
 
 G = graph.WeightedDirectedGraph() # primitive graph
-G_topo = graph.WeightedDirectedGraph() # induced (from primitive graph) topography
 edge_to_prim_id = dict() # dictionary to convert primitive move to primitive ID
 prim_id_to_edge = dict() # dictionary to convert primitive ID to edge
 
@@ -70,16 +68,12 @@ for prim_id in range(0, num_of_prims):
         to_node = tuple(get_prim_data(prim_id, 'x_f'))
         time_weight = get_prim_data(prim_id, 't_end')[0]
         new_edge = (from_node, to_node, time_weight)
-        new_edge_topo = (from_node[2:4], to_node[2:4], time_weight)
         edge_to_prim_id[(from_node, to_node)] = prim_id
         prim_id_to_edge[prim_id] = new_edge
 
         new_edge_set = [new_edge] # convert to tuple otherwise, not hashable (can't check set membership)
-        new_edge_set_topo = [new_edge] # convert to tuple otherwise, not hashable (can't check set membership)
         G.add_edges(new_edge_set, use_euclidean_weight=False)
         G.add_edges(new_edge_set, use_euclidean_weight=False)
-        G_topo.add_edges(new_edge_set_topo, use_euclidean_weight=False)
-        G_topo.add_edges(new_edge_set_topo, use_euclidean_weight=False)
 
         from_x = from_node[2]
         from_y = from_node[3]
@@ -89,10 +83,8 @@ for prim_id in range(0, num_of_prims):
 
         if (from_x, from_y) in car_graph.G._sources:
             G.add_source(from_node)
-            G_topo.add_source(from_node)
         if (to_x, to_y) in car_graph.G._sinks:
             G.add_sink(to_node)
-            G_topo.add_sink(to_node)
 
 def find_corner_coordinates(x_rel_i, y_rel_i, x_des, y_des, theta, square_fig):
     """
@@ -205,7 +197,7 @@ def animate(frame_idx): # update animation by dt
     if with_probability(0.1):
         plate_number, start_node, end_node, the_car = spawn_car()
         shortest_path_length, shortest_path = planner.dijkstra(start_node, end_node, G)
-        if planner.is_safe(path = shortest_path, current_time=current_time, primitive_graph=G_topo, edge_time_stamps=edge_time_stamps):
+        if planner.is_safe(path = shortest_path, current_time=current_time, primitive_graph=G, edge_time_stamps=edge_time_stamps): # not that the topograph is used here
             planner.time_stamp_edge(path=shortest_path, edge_time_stamps = edge_time_stamps, current_time = current_time, primitive_graph = G)
             cars[plate_number] = the_car # add the car
             path_prims = path_to_primitives(path=shortest_path) # add primitives
@@ -307,7 +299,7 @@ ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval
 if save_video:
     Writer = animation.writers['ffmpeg']
     writer = Writer(fps= 24, metadata=dict(artist='Me'), bitrate=-1)
-    ani.save('movies/honk5.avi', writer=writer, dpi=300)
+    ani.save('movies/test_planner.avi', writer=writer, dpi=300)
 plt.show()
 t2 = time.time()
 print('Total elapsed time: ' + str(t2-t0))
