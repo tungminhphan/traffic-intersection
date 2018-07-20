@@ -7,6 +7,7 @@
 import sys, os, platform
 sys.path.append('..')
 import time
+import warnings
 import traffic_intersection.components.planner as planner
 import traffic_intersection.components.car as car
 import traffic_intersection.components.aux.honk_wavefront as wavefront
@@ -20,7 +21,12 @@ import matplotlib
 if platform.system() == 'Darwin': # if the operating system is MacOS
     matplotlib.use('macosx')
 else: # if the operating system is Linux or Windows
-    matplotlib.use('Qt5Agg') # or TkAgg (which may be slower)
+    try: 
+        import pyside2 # if pyside2 is installed
+        matplotlib.use('Qt5Agg') 
+    except ImportError:
+        warnings.warn('Using the TkAgg backend, this may affect performance. Consider installing pyside2 for Qt5Agg backend')
+        matplotlib.use('TkAgg') # this may be slower
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import numpy as np
@@ -239,7 +245,6 @@ def animate(frame_idx): # update animation by dt
     # determine which cars to remove
     for plate_number in cars_to_remove:
         del cars[plate_number]
-
 
     ax.cla() # clear Axes before plotting
     ## STAGE UPDATE HAPPENS AFTER THIS COMMENT
