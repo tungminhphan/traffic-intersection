@@ -95,8 +95,8 @@ def find_corner_coordinates(x_rel_i, y_rel_i, x_des, y_des, theta, square_fig):
     # xy_unknown - xy_corner + xy_rel_f = xy_des
     return int(x_des - x_rel_f + x_corner_rel), int(y_des - y_rel_f + y_corner_rel)
 
-def with_probability():
-    return np.random.uniform()
+def with_probability(P=1):
+    return np.random.uniform() <= P
 
 def draw_pedestrians(pedestrians):
     for pedestrian in pedestrians:
@@ -128,7 +128,7 @@ def draw_cars(vehicles):
         vehicle_fig = vehicle_fig.rotate(theta_d, expand = False)
         scaled_vehicle_fig_size  =  tuple([int(car_scale_factor * i) for i in vehicle_fig.size])
         # rescale car 
-        #vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size, Image.ANTIALIAS)
+#        vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size, Image.ANTIALIAS)
         vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size) # disable antialiasing for better performance
         # at (full scale) the relative coordinates of the center of the rear axle w.r.t. the
         # center of the figure is -185
@@ -188,7 +188,7 @@ def animate(frame_idx): # update animation by dt
     print(current_time)
     """ online frame update """
     global background
-    if with_probability() <= 0.01:
+    if with_probability(0.1):
         plate_number, start_node, end_node, the_car = spawn_car()
         shortest_path_length, shortest_path = planner.dijkstra(start_node, end_node, G)
         if planner.is_safe(path = shortest_path, current_time=current_time, primitive_graph=G, edge_time_stamps=edge_time_stamps):
@@ -243,7 +243,7 @@ def animate(frame_idx): # update animation by dt
 
     ax.cla() # clear Axes before plotting
     ## STAGE UPDATE HAPPENS AFTER THIS COMMENT
-    honk_waves = ax.scatter(0,0)
+    honk_waves = ax.scatter(None,None)
     honk_xs = []
     honk_ys = []
     radii = []
@@ -268,11 +268,11 @@ def animate(frame_idx): # update animation by dt
 
 
     for car in cars_to_keep:
-        if with_probability() <= 0.02 and not car.is_honking:
+        if with_probability(0.02) and not car.is_honking:
             car.toggle_honk()
             wave = wavefront.HonkWavefront([car.state[2] + 60*np.cos(car.state[1]), car.state[3] + 60*np.sin(car.state[1]), 0, 0], init_energy=100000)
             all_wavefronts.add(wave)
-        elif with_probability() <= 0.8 and car.is_honking:
+        elif with_probability(0.4) and car.is_honking:
             car.toggle_honk()
 
     # plot honking 
@@ -288,13 +288,13 @@ animate(0)
 t1 = time.time()
 interval = (t1 - t0)
 save_video = False
-num_frames = 100 # number of the first frames to save in video
+num_frames = 300 # number of the first frames to save in video
 ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval, blit=True, repeat=False) # by default the animation function loops, we set repeat to False in order to limit the number of frames generated to num_frames
 
 if save_video:
     Writer = animation.writers['ffmpeg']
-    writer = Writer(fps= 30, metadata=dict(artist='Me'), bitrate=-1)
-    ani.save('movies/honk.avi', writer=writer, dpi=300)
+    writer = Writer(fps= 24, metadata=dict(artist='Me'), bitrate=-1)
+    ani.save('movies/honk5.avi', writer=writer, dpi=300)
 plt.show()
 t2 = time.time()
 print('Total elapsed time: ' + str(t2-t0))
