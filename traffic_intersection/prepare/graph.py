@@ -14,6 +14,12 @@ class DirectedGraph():
     def add_node(self, node): # add a node
             self._nodes.add(node)
 
+    def add_source(self, source): # add a source node
+            self._sources.add(source)
+
+    def add_sink(self, sink): # add a source node
+            self._sinks.add(sink)
+
     def add_edges(self, edge_set): # add edges
         for edge in edge_set:
             if len(edge) != 2:
@@ -94,8 +100,8 @@ class WeightedDirectedGraph(DirectedGraph):
                 try: self._edges[edge[0]].add(edge[1])
                 except KeyError:
                     self._edges[edge[0]] = {edge[1]}
-                x = np.array(edge[0])
-                y = np.array(edge[1])
+                x = np.array([edge[0][-2], edge[0][-1]], float) # need to cast to float, otherwise numerical precision errors may occur
+                y = np.array([edge[1][-2], edge[1][-1]], float) # same as above
                 self._weights[(edge[0], edge[1])] = np.linalg.norm(x-y)  # add Euclidean distance as weight
         else:
             for edge in edge_set:

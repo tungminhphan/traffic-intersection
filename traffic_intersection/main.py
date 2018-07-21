@@ -18,6 +18,7 @@ import numpy as np
 from PIL import Image
 import random
 import scipy.io
+from traffic_intersection.prepare.collision_check import collision_check
 
 #TODO: clean up this section
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -57,8 +58,7 @@ def draw_car(vehicle):
     vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size) # disable antialiasing for better performance
     # at (full scale) the relative coordinates of the center of the rear axle w.r.t. the
     # center of the figure is -185
-    print(vehicle_fig.size)
-    x_corner, y_corner = find_corner_coordinates(-car_scale_factor * (w_orig/2-180), 0, x, y, theta, vehicle_fig)
+    x_corner, y_corner = find_corner_coordinates(-car_scale_factor * (w_orig/2-185), 0, x, y, theta, vehicle_fig)
     background.paste(vehicle_fig, (x_corner, y_corner), vehicle_fig)
 
 def draw_pedestrian(pedestrian):
@@ -78,6 +78,7 @@ def draw_pedestrian(pedestrian):
     person_fig = person_fig.rotate(180-theta/np.pi * 180 + 90, expand = False)
     x_corner, y_corner = find_corner_coordinates(0., 0, x, y, theta,  person_fig)
     background.paste(person_fig, (int(x_corner), int(y_corner)), person_fig)
+    print(person_fig.size)
 
 # creates figure
 fig = plt.figure()
@@ -196,7 +197,6 @@ def init():
     return stage, # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
 
 def animate(i): # update animation by dt
-    print(i)
     """ online frame update """
     global background
     # update traffic lights
@@ -252,6 +252,17 @@ def animate(i): # update animation by dt
         if vehicle.prim_queue.len() > 0:
             draw_car(vehicle)
     stage = plt.imshow(background, origin="lower") # this origin option flips the y-axis
+
+    #collision check
+    all_components = controlled_cars + enemy_cars + waiting_enemy_cars + pedestrians
+
+    for i in range(len(all_components)):
+        for j in range(i + 1, len(all_components)):
+            if collision_check(all_components[i], all_components[j], car_scale_factor, pedestrian_scale_factor):
+                print("Collision, object indices:")
+                print(i, j)
+            else:
+                pass
 
 #        dots = plt.axes().plot(240,300,'ro')
 #        return stage, dots  # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
