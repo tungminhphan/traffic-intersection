@@ -13,11 +13,13 @@ def vertices_car(x, y, car_scale_factor):
     h = 399 * car_scale_factor / 2
     return [(x - w, y - h), (x - w, y + h), (x + w, y + h), (x + w, y - h)]
 
-#***********GET THE DIMENSIONS OF PEDESTRIAN**********
+#diamond-like vertices
 def vertices_pedestrian(x, y, pedestrian_scale_factor):
-    w = 67 * pedestrian_scale_factor / 2 
-    h = 50 * pedestrian_scale_factor / 2
-    return [(x - w, y - h), (x - w, y + h), (x + w, y + h), (x + w, y - h)]
+    w1 = 16 * pedestrian_scale_factor 
+    w2 = 27 * pedestrian_scale_factor
+    h1 = 35 * pedestrian_scale_factor
+    h2 = 35 * pedestrian_scale_factor
+    return [(x - w1, y), (x, y + h1), (x + w2, y), (x, y - h2)]
 
 #get the rotated vertices based on car/pedestrian orientation
 def rotate_vertex(x, y, theta, v): 
@@ -75,20 +77,20 @@ def collision_check(object1, object2, car_scale_factor, pedestrian_scale_factor)
     if type(object1) == Pedestrian:
         x, y, theta, gait = object1.state
         vertices_a = vertices_pedestrian(x, y, pedestrian_scale_factor)
-        radius = 67 * pedestrian_scale_factor
+        radius = 40 * pedestrian_scale_factor
     else:
         vee, theta, x, y = object1.state
         vertices_a = vertices_car(x, y, car_scale_factor)
-        radius = 788 * car_scale_factor
+        radius = ((788 * car_scale_factor / 2) ** 2 + (399 * car_scale_factor / 2) ** 2) ** 0.5
     
     if type(object2) == Pedestrian:
         x2, y2, theta2, gait2 = object2.state
         vertices_b = vertices_pedestrian(x2, y2, pedestrian_scale_factor)
-        radius2 = 67 * pedestrian_scale_factor
+        radius2 = 40 * pedestrian_scale_factor
     else:
         vee2, theta2, x2, y2 = object2.state
         vertices_b = vertices_car(x2, y2, car_scale_factor)
-        radius2 = 788 * car_scale_factor
+        radius2 = ((788 * car_scale_factor / 2) ** 2 + (399 * car_scale_factor / 2) ** 2) ** 0.5
 
     #if distance of centers are greater than sum of radii then no collision
     if radius_check(x, y, radius, x2, y2, radius2):
@@ -97,9 +99,8 @@ def collision_check(object1, object2, car_scale_factor, pedestrian_scale_factor)
     object1_vertices = [rotate_vertex(x, y, theta, vertex) for vertex in vertices_a]
     object2_vertices = [rotate_vertex(x2, y2, theta2, vertex) for vertex in vertices_b]
 
-    edges_a = vectors_of_edges(object1_vertices) #list of the vectors of the edges/sides  
-    edges_b = vectors_of_edges(object2_vertices)
-    edges = edges_a + edges_b
+    #list of the vectors of the edges/sides
+    edges = vectors_of_edges(object1_vertices) + vectors_of_edges(object2_vertices)
 
     axes = [get_axis(edge) for edge in edges]
     
@@ -110,4 +111,3 @@ def collision_check(object1, object2, car_scale_factor, pedestrian_scale_factor)
         if not overlapping:
             return False 
     return True
-
