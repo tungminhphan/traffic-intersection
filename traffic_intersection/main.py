@@ -78,6 +78,7 @@ def draw_pedestrian(pedestrian):
     person_fig = person_fig.rotate(180-theta/np.pi * 180 + 90, expand = False)
     x_corner, y_corner = find_corner_coordinates(0., 0, x, y, theta,  person_fig)
     background.paste(person_fig, (int(x_corner), int(y_corner)), person_fig)
+    print(person_fig.size)
 
 # creates figure
 fig = plt.figure()
