@@ -14,6 +14,7 @@ main_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 primitive_data = main_dir + '/primitives/MA3.mat'
 from prepare.queue import Queue
 from PIL import Image
+from assumes.disturbance import get_disturbance
 
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -41,6 +42,7 @@ class KinematicCar:
                  nu_max = 0.5, # maximum steering input in radians/sec
                  nu_min = -0.5, # minimum steering input in radians/sec)
                  vee_max = 100, # maximum velocity
+                 is_honking = False, # the car is honking
                  color = 'blue', # color of the car
                  prim_queue = None, # queue of primitives, each item in the queue has the form (prim_id, prim_progress) where prim_id is the primitive ID and prim_progress is the progress of the primitive)
                  fuel_level = float('inf')): # TODO: fuel level of the car - FUTURE FEATURE)
@@ -51,6 +53,7 @@ class KinematicCar:
                      self.state = np.array(init_state, dtype='float')
                      self.color = color
                      self.extended_state = None # extended state required for Bastian's primitive computation
+                     self.is_honking = is_honking
                      if prim_queue == None:
                          self.prim_queue = Queue()
                      else:
@@ -87,6 +90,9 @@ class KinematicCar:
        dstate_dt[2] = state[0] * cos(state[1])
        dstate_dt[3] = state[0] * sin(state[1])
        return dstate_dt
+
+    def toggle_honk(self):
+        self.is_honking = not self.is_honking
 
     def next(self, inputs, dt):
        """
@@ -157,8 +163,7 @@ class KinematicCar:
                self.extended_state = (np.vstack((x1,x2,x3,x4)))[:,0] # initial state, consisting of actual state and virtual states for the controller
            k = int(prim_progress * N) # calculate primitive waypoint
 
-           #dist = np.array([[8*(2*np.random.rand())], [0.065*(2*np.random.rand()-1)]]) # random constant disturbance for this time step, disturbance can vary freely. Constant implementation only for easier simulation. TODO: move this outside of this file
-           dist = np.array([[0], [0]])
+           dist = get_disturbance()
            q1 = prim['K'][0,0][k,0].reshape((-1, 1), order='F')
            q2 = 0.5 * (prim['x_ref'][0,0][:,k+1] + prim['x_ref'][0,0][:,k]).reshape(-1,1)
            q3 = prim['u_ref'][0,0][:,k].reshape(-1,1)
