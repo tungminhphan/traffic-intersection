@@ -188,9 +188,60 @@ def compose_components(component_1, component_2):
     new_component.alphabet = newalphabet
     return new_component
 
-# Add this later to make testing easier
-def convert_digraph_to_automaton(Digraph x):
-    return True
+# # Add this later to make testing easier
+# currently only works if the guard text is a single inequality
+def construct_automaton(statelist, translist, start, ends):
+    new_component = ComponentAutomaton()
+    stringstatedict = {}
+    # statelist is a list of strings representing state names
+    for state in statelist:
+        newstate = State(state)
+        new_component.add_state(newstate)
+        stringstatedict[state] = newstate
+
+    new_component.set_start_state(stringstatedict[start])
+
+    for end in ends:
+        new_component.endStates.add(stringstatedict[end])
+
+    # translist is a dictionary; the key is a tuple of strings representing the states of the transition, and the value is a tuple:
+    # (guardtext, inputs, outputs, internal actions)
+    # inputs, outputs, internal action are sets of strings
+    for key in translist:
+        state1 = stringstatedict[key[0]]
+        state2 = stringstatedict[key[1]]
+
+        words = translist[key][0].split()
+        inp = translist[key][1]
+        out = translist[key][2]
+        inter = translist[key][3]
+
+        if words[0] == 'True':
+            guard = True
+
+        else:
+            if len(words) > 3 and words[1] == '≤' and words[3] == '≤':
+                lwrbnd = float(words[0])
+                var = words[2]
+                uprbnd = float(words[4])
+            elif words[1] == '≥':
+                var = words[0]
+                lwrbnd = float(words[2])
+                uprbnd = np.inf
+            elif words[1] == '≤':
+                var = words[0]
+                uprbnd = float(words[2])
+                lwrbnd = -np.inf
+
+            guard = iq.dictionarize(iq.Inequality(var, lwrbnd, uprbnd))
+
+        new_component.add_transition(guardTransition(state1, state2, guard, inp, out, inter))
+
+    return new_component
+
+
+
+    
 
 
 
