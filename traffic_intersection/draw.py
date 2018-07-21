@@ -46,6 +46,7 @@ primitive_data = dir_path + '/primitives/MA3.mat'
 mat = scipy.io.loadmat(primitive_data)
 num_of_prims = mat['MA3'].shape[0]
 
+print(mat)
 def get_prim_data(prim_id, data_field):
     '''
     This function simplifies the process of extracting data from the .mat file
