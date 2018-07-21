@@ -21,16 +21,16 @@ def vertices_pedestrian(x, y, pedestrian_scale_factor):
     h2 = 35 * pedestrian_scale_factor
     return [(x - w1, y), (x, y + h1), (x + w2, y), (x, y - h2)]
 
-#get the rotated vertices based on car/pedestrian orientation
+#rotates the vertices based on car/pedestrian orientation
 def rotate_vertex(x, y, theta, v): 
     return ((v[0] - x) * cos(theta) - (v[1] - y) * sin(theta) + x, \
 (v[0] - x) * sin(theta) + (v[1] - y) * cos(theta) + y)
 
-
+#used for projection of axes and vertices
 def dot(v1, v2):
 	return v1[0] * v2[0] + v1[1] * v2[1]
 
-#gets the vector between two points (the edges)  
+#gets the vector between two vertices (the edge)  
 def edge_vector(vertex1, vertex2):
 	return (vertex2[0] - vertex1[0], vertex2[1] - vertex1[1])
 
@@ -38,23 +38,25 @@ def edge_vector(vertex1, vertex2):
 def vectors_of_edges(vertices):
     return [edge_vector(vertices[i], vertices[(i + 1) % len(vertices)]) for i in range(len(vertices))]
 
-#gets the normal of surface/edges
+#gets the perpendicular/normal of the edges
 def get_axis(v):
     return (v[1], -v[0])
 
-#dots all of shape's vertices with axis then returns the min and max respectively in a list
+#dots all of shape's vertices with one of the separating axis then returns the min and max value respectively
 def projection(vertices, axis):
     projections = [dot(vertex, axis) for vertex in vertices]
     return [min(projections), max(projections)]
 
 #checks if there's overlap
+#s1 is the min or max value of the object
+#s2 holds (min, max)
 def helper(s1, s2):
-    a = s2[0]
-    b = s2[1]
+    a = s2[0] #min of s2
+    b = s2[1] #max of s2
     if b < a:
         a = s2[1]
         b = s2[0]
-    return (s1 >= a) and (s1 <= b)
+    return (s1 >= a) and (s1 <= b) #if s1 is in [a,b] then there is an overlap 
 
 #all cases must be true/overlap for collision, (min, max)
 def overlap(s1, s2):
@@ -74,10 +76,11 @@ def radius_check(x, y, width, x2, y2, width2):
 
 #takes two objects and checks if they are colliding
 def collision_check(object1, object2, car_scale_factor, pedestrian_scale_factor):
+    #the if else statements determines whether the object is pedestrian or not so it can unpack its coordinates and angle orientation, and determines if it should get the vertices of a car or pedestrian
     if type(object1) == Pedestrian:
         x, y, theta, gait = object1.state
         vertices_a = vertices_pedestrian(x, y, pedestrian_scale_factor)
-        radius = 40 * pedestrian_scale_factor
+        radius = 40 * pedestrian_scale_factor #the longest distance used for quick circular binding box
     else:
         vee, theta, x, y = object1.state
         vertices_a = vertices_car(x, y, car_scale_factor)
@@ -92,22 +95,24 @@ def collision_check(object1, object2, car_scale_factor, pedestrian_scale_factor)
         vertices_b = vertices_car(x2, y2, car_scale_factor)
         radius2 = ((788 * car_scale_factor / 2) ** 2 + (399 * car_scale_factor / 2) ** 2) ** 0.5
 
-    #if distance of centers are greater than sum of radii then no collision
+    #takes the distance of the centers and compares it to the sum of radius, if the distance is greater then collision not possible
     if radius_check(x, y, radius, x2, y2, radius2):
         return False
 
+    #rotates the vertices of the object based on the orientation of the init state
     object1_vertices = [rotate_vertex(x, y, theta, vertex) for vertex in vertices_a]
     object2_vertices = [rotate_vertex(x2, y2, theta2, vertex) for vertex in vertices_b]
 
     #list of the vectors of the edges/sides
     edges = vectors_of_edges(object1_vertices) + vectors_of_edges(object2_vertices)
 
+    #gets the vector perpendicular to the edge 
     axes = [get_axis(edge) for edge in edges]
     
     for i in range(len(axes)):
-        projection_a = projection(object1_vertices, axes[i]) # (min, max)
+        projection_a = projection(object1_vertices, axes[i])#dots all of the vertices with one of the separating axis and returns the (min, max) projections 
         projection_b = projection(object2_vertices, axes[i])
-        overlapping = overlap(projection_a, projection_b)
+        overlapping = overlap(projection_a, projection_b) # (min,max) of both objects are compared for overlap
         if not overlapping:
             return False 
     return True
