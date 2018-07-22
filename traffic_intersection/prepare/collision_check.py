@@ -2,24 +2,27 @@
 # Anhminh Nguyen, Tung M. Phan
 # July 10, 2018
 
+import os, sys
+sys.path.append("..")
 from math import cos, sin
-from traffic_intersection.components.pedestrian import Pedestrian
-from traffic_intersection.components.car import KinematicCar
+from components.pedestrian import Pedestrian
+from components.car import KinematicCar
+import assumes.params as params
 
 # input center coords of car to get its unrotated vertices
-def vertices_car(x, y, car_scale_factor):
+def vertices_car(x, y):
     # x, y are the coordinates of the center
     # half the width and height of scaled car
-    w = 788 * car_scale_factor / 2
-    h = 399 * car_scale_factor / 2
+    w = 788 * params.car_scale_factor / 2
+    h = 399 * params.car_scale_factor / 2
     return [(x - w, y - h), (x - w, y + h), (x + w, y + h), (x + w, y - h)]
 
 # diamond-like vertices
-def vertices_pedestrian(x, y, pedestrian_scale_factor):
-    w1 = 16 * pedestrian_scale_factor
-    w2 = 27 * pedestrian_scale_factor
-    h1 = 35 * pedestrian_scale_factor
-    h2 = 35 * pedestrian_scale_factor
+def vertices_pedestrian(x, y):
+    w1 = 16 * params.pedestrian_scale_factor
+    w2 = 27 * params.pedestrian_scale_factor
+    h1 = 35 * params.pedestrian_scale_factor
+    h2 = 35 * params.pedestrian_scale_factor
     return [(x - w1, y), (x, y + h1), (x + w2, y), (x, y - h2)]
 
 # rotates the vertices based on car/pedestrian orientation
@@ -59,28 +62,27 @@ def no_collision_by_radius_check(x1, y1, r1, x2, y2, r2):
     return ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5 > (r1 + r2)
 
 #takes two objects and checks if they are colliding
-def get_bounding_box(thing, car_scale_factor, pedestrian_scale_factor):
+def get_bounding_box(thing):
     if type(thing) is Pedestrian:
         x, y, theta, gait = thing.state
-        vertices = vertices_pedestrian(x, y, pedestrian_scale_factor)
-        radius = 40 * pedestrian_scale_factor #the longest distance used for quick circular bounding box
+        vertices = vertices_pedestrian(x, y)
+        radius = 40 * params.pedestrian_scale_factor #the longest distance used for quick circular bounding box
     elif type(thing) is KinematicCar:
         vee, theta, x, y = thing.state
-        r = 185*car_scale_factor
+        r = params.center_to_axle_dist*params.car_scale_factor
         x, y = x+r*cos(theta), y + r*sin(theta)
-        vertices = vertices_car(x, y, car_scale_factor)
-        radius = ((788 * car_scale_factor / 2) ** 2 + (399 * car_scale_factor / 2) ** 2) ** 0.5
+        vertices = vertices_car(x, y)
+        radius = ((788 * params.car_scale_factor / 2) ** 2 + (399 * params.car_scale_factor / 2) ** 2) ** 0.5
     else:
         TypeError('Not sure what this object is')
 
     rotated_vertices = [rotate_vertex(x, y, theta, vertex) for vertex in vertices]
     return rotated_vertices, x, y, radius
 
-def collision_free(object1, object2, car_scale_factor, pedestrian_scale_factor):
-    #the if else statements determines whether the object is pedestrian or not so it can unpack its coordinates and angle orientation, and determines if it should get the vertices of a car or pedestrian
-    #it returns True if no collision has happened, False otherwise 
-    object1_vertices, x, y, radius = get_bounding_box(object1, car_scale_factor, pedestrian_scale_factor)
-    object2_vertices, x2, y2, radius2 = get_bounding_box(object2, car_scale_factor, pedestrian_scale_factor)
+def collision_free(object1, object2):
+    #this function returns True if no collision has happened, False otherwise 
+    object1_vertices, x, y, radius = get_bounding_box(object1)
+    object2_vertices, x2, y2, radius2 = get_bounding_box(object2)
 
     #takes the distance of the centers and compares it to the sum of radius, if the distance is greater then collision not possible
     if no_collision_by_radius_check(x, y, radius, x2, y2, radius2):

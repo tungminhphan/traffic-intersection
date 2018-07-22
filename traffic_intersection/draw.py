@@ -4,18 +4,18 @@
 # California Institute of Technology
 # July 17, 2018
 
-import sys, os, platform
-sys.path.append('..')
+import os, platform
 import time
 import warnings
-import traffic_intersection.components.planner as planner
-import traffic_intersection.components.car as car
-import traffic_intersection.components.aux.honk_wavefront as wavefront
-import traffic_intersection.components.pedestrian as pedestrian
-import traffic_intersection.components.traffic_signals as traffic_signals
-import traffic_intersection.prepare.car_waypoint_graph as car_graph
-import traffic_intersection.prepare.graph as graph
-import traffic_intersection.prepare.queue as queue
+import components.planner as planner
+import components.car as car
+import components.aux.honk_wavefront as wavefront
+import components.pedestrian as pedestrian
+import components.traffic_signals as traffic_signals
+import prepare.car_waypoint_graph as car_graph
+import prepare.graph as graph
+import prepare.queue as queue
+import assumes.params as params
 import matplotlib
 if platform.system() == 'Darwin': # if the operating system is MacOS
     matplotlib.use('macosx')
@@ -38,8 +38,6 @@ import scipy.io
 # set dir_path to current directory
 dir_path = os.path.dirname(os.path.realpath(__file__))
 intersection_fig = dir_path + "/components/imglib/intersection_states/intersection_"
-car_scale_factor = 0.1 # scale for when L = 50
-pedestrian_scale_factor = 0.32
 # load primitive data
 primitive_data = dir_path + '/primitives/MA3.mat'
 mat = scipy.io.loadmat(primitive_data)
@@ -109,7 +107,7 @@ def draw_pedestrians(pedestrians):
         i = current_gait % pedestrian.film_dim[1]
         j = current_gait // pedestrian.film_dim[1]
         film_fig = Image.open(pedestrian.fig)
-        scaled_film_fig_size  =  tuple([int(pedestrian_scale_factor * i) for i in film_fig.size])
+        scaled_film_fig_size  =  tuple([int(params.pedestrian_scale_factor * i) for i in film_fig.size])
         film_fig = film_fig.resize( scaled_film_fig_size)
         width, height = film_fig.size
         sub_width = width/pedestrian.film_dim[1]
@@ -132,14 +130,14 @@ def draw_cars(vehicles):
         w_orig, h_orig = vehicle_fig.size
         # set expand=True so as to disable cropping of output image
         vehicle_fig = vehicle_fig.rotate(theta_d, expand = False)
-        scaled_vehicle_fig_size  =  tuple([int(car_scale_factor * i) for i in vehicle_fig.size])
+        scaled_vehicle_fig_size  =  tuple([int(params.car_scale_factor * i) for i in vehicle_fig.size])
         # rescale car 
         if antialias_enabled:
             vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size, Image.ANTIALIAS)
         else:
             vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size) # disable antialiasing for better performance
-        # at (full scale) the relative coordinates of the center of the rear axle w.r.t. the center of the figure is -185
-        x_corner, y_corner = find_corner_coordinates(-car_scale_factor * (w_orig/2-185), 0, x, y, theta, vehicle_fig)
+        # at (full scale) the relative coordinates of the center of the rear axle w.r.t. the center of the figure is center_to_axle_dist
+        x_corner, y_corner = find_corner_coordinates(-params.car_scale_factor * (w_orig/2-params.center_to_axle_dist), 0, x, y, theta, vehicle_fig)
         background.paste(vehicle_fig, (x_corner, y_corner), vehicle_fig)
 
 # creates figure
@@ -225,7 +223,7 @@ def animate(frame_idx): # update animation by dt
     # checking collision among pedestrians
         for i in range(len(pedestrians)):
             for j in range(i + 1, len(pedestrians)):
-                if collision_check(pedestrians[i], pedestrians[j], car_scale_factor, pedestrian_scale_factor):
+                if collision_check(pedestrians[i], pedestrians[j], params.car_scale_factor, params.pedestrian_scale_factor):
                     print('Collision between pedestrian' + str(i) + 'and '+  str(j))
                 else:
                     print("No Collision")
@@ -272,12 +270,11 @@ def animate(frame_idx): # update animation by dt
     rgba_colors[:, 3] = intensities
     honk_waves = ax.scatter(honk_xs, honk_ys, s = radii, lw=1, facecolors='none', color=rgba_colors)
 
-
     for car in cars_to_keep:
         if with_probability(0.02) and not car.is_honking:
             car.toggle_honk()
             # offset is 600 before scaling
-            wave = wavefront.HonkWavefront([car.state[2] + 600*car_scale_factor*np.cos(car.state[1]), car.state[3] + 600*car_scale_factor*np.sin(car.state[1]), 0, 0], init_energy=100000)
+            wave = wavefront.HonkWavefront([car.state[2] + 600*params.car_scale_factor*np.cos(car.state[1]), car.state[3] + 600*params.car_scale_factor*np.sin(car.state[1]), 0, 0], init_energy=100000)
             all_wavefronts.add(wave)
         elif with_probability(0.4) and car.is_honking:
             car.toggle_honk()

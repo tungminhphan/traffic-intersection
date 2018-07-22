@@ -5,13 +5,12 @@
 # May 2, 2018
 
 import os
-import sys
-sys.path.append("..")
-import traffic_intersection.components.car as car
-import traffic_intersection.components.pedestrian as pedestrian
-import traffic_intersection.components.traffic_signals as traffic_signals
+import components.car as car
+import components.pedestrian as pedestrian
+import components.traffic_signals as traffic_signals
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
+import assumes.params as params
 from time import time
 from numpy import cos, sin, tan
 import numpy as np
@@ -26,8 +25,6 @@ primitive_data = dir_path + '/primitives/MA3.mat'
 mat = scipy.io.loadmat(primitive_data)
 
 intersection_fig = dir_path + "/components/imglib/intersection_states/intersection_"
-car_scale_factor = 0.1 # scale for when L = 50
-pedestrian_scale_factor = 0.32
 
 def find_corner_coordinates(x_rel_i, y_rel_i, x_des, y_des, theta, square_fig):
     """
@@ -52,13 +49,13 @@ def draw_car(vehicle):
     w_orig, h_orig = vehicle_fig.size
     # set expand=True so as to disable cropping of output image
     vehicle_fig = vehicle_fig.rotate(theta_d, expand = False)
-    scaled_vehicle_fig_size  =  tuple([int(car_scale_factor * i) for i in vehicle_fig.size])
+    scaled_vehicle_fig_size  =  tuple([int(params.car_scale_factor * i) for i in vehicle_fig.size])
     # rescale car 
-    #vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size, Image.ANTIALIAS)
-    vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size) # disable antialiasing for better performance
+    vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size, Image.ANTIALIAS)
+    #vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size) # disable antialiasing for better performance
     # at (full scale) the relative coordinates of the center of the rear axle w.r.t. the
-    # center of the figure is -185
-    x_corner, y_corner = find_corner_coordinates(-car_scale_factor * (w_orig/2-185), 0, x, y, theta, vehicle_fig)
+    # center of the figure is center_to_axle_dist
+    x_corner, y_corner = find_corner_coordinates(-params.car_scale_factor * (w_orig/2-params.center_to_axle_dist), 0, x, y, theta, vehicle_fig)
     background.paste(vehicle_fig, (x_corner, y_corner), vehicle_fig)
 
 def draw_pedestrian(pedestrian):
@@ -66,7 +63,7 @@ def draw_pedestrian(pedestrian):
     i = current_gait % pedestrian.film_dim[1]
     j = current_gait // pedestrian.film_dim[1]
     film_fig = Image.open(pedestrian.fig)
-    scaled_film_fig_size  =  tuple([int(pedestrian_scale_factor * i) for i in film_fig.size])
+    scaled_film_fig_size  =  tuple([int(params.pedestrian_scale_factor * i) for i in film_fig.size])
     film_fig = film_fig.resize( scaled_film_fig_size)
     width, height = film_fig.size
     sub_width = width/pedestrian.film_dim[1]
@@ -86,7 +83,7 @@ ax = fig.add_axes([0,0,1,1]) # get rid of white border
 # turn on/off axes
 plt.axis('off')
 # sampling time
-dt = 0.1
+dt = 0.05
 # creates cars
 prim_id = 0 # first primitive
 prim = mat['MA3'][prim_id,0]
@@ -255,14 +252,14 @@ def animate(frame_idx): # update animation by dt
 
     for i in range(len(all_components)):
         curr_comp = all_components[i]
-        vertex_set,_,_,_ = get_bounding_box(curr_comp, car_scale_factor, pedestrian_scale_factor)
+        vertex_set,_,_,_ = get_bounding_box(curr_comp)
         xs = [vertex[0] for vertex in vertex_set]
         ys = [vertex[1] for vertex in vertex_set]
         xs.append(vertex_set[0][0])
         ys.append(vertex_set[0][1])
         boxes[i].set_data(xs,ys)
         for j in range(i + 1, len(all_components)):
-            if not collision_free(all_components[i], all_components[j], car_scale_factor, pedestrian_scale_factor):
+            if not collision_free(all_components[i], all_components[j]):
                 print("Collision, object indices:")
                 print(i, j)
                 boxes[j].set_color('r')
@@ -278,11 +275,11 @@ animate(0)
 t1 = time()
 interval = (t1 - t0)
 save_video = False
-num_frames = 550 # number of the first frames to save in video
+num_frames = 600 # number of the first frames to save in video
 ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval, blit=True, repeat=False) # by default the animation function loops, we set repeat to False in order to limit the number of frames generated to num_frames
 
 if save_video:
     Writer = animation.writers['ffmpeg']
-    writer = Writer(fps=30, metadata=dict(artist='Me'), bitrate=1800)
-    ani.save('movies/performance_test.avi', writer=writer, dpi=200)
+    writer = Writer(fps=60, metadata=dict(artist='Me'), bitrate=1800)
+    ani.save('movies/boxes_better.avi', writer=writer, dpi=300)
 plt.show()

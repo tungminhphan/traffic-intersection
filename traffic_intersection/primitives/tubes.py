@@ -4,7 +4,11 @@
 # Author: Tùng M. Phan
 # California Institute of Technology
 # July 20, 2018
+
+import os, sys
+sys.path.append("..")
 import numpy as np
+import prepare.collision_check
 
 def tubes_overlapped(tube_1, tube_2):
     return tube_1 == tube_2
@@ -37,7 +41,7 @@ import os
 import scipy.io
 # set dir_path to current directory
 dir_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-intersection_fig = dir_path + "/components/imglib/intersection_states/intersection_"
+
 car_scale_factor = 0.01 # scale for when L = 50
 pedestrian_scale_factor = 0.32
 # load primitive data
