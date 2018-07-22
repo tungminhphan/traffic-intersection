@@ -22,7 +22,7 @@ if platform.system() == 'Darwin': # if the operating system is MacOS
 else: # if the operating system is Linux or Windows
     try:
         import pyside2 # if pyside2 is installed
-        matplotlib.use('Qt5Agg')
+        matplotlib.use('pyside2')
     except ImportError:
         warnings.warn('Using the TkAgg backend, this may affect performance. Consider installing pyside2 for Qt5Agg backend')
         matplotlib.use('TkAgg') # this may be slower
@@ -266,9 +266,9 @@ def animate(frame_idx): # update animation by dt
             all_wavefronts.remove(wave)
 
     rgba_colors = np.zeros((len(intensities),4))
-    # for red the first column needs to be one
+    # red color
     rgba_colors[:,0] = 1.0
-    # the fourth column needs to be your alphas
+    # intensities
     rgba_colors[:, 3] = intensities
     honk_waves = ax.scatter(honk_xs, honk_ys, s = radii, lw=1, facecolors='none', color=rgba_colors)
 

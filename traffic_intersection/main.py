@@ -205,8 +205,6 @@ def animate(frame_idx): # update animation by dt
     background = Image.open(intersection_fig + horizontal_light + '_' + vertical_light + '.png')
     x_lim, y_lim = background.size
 
-
-    bounding_boxes = ax.plot()
     # update pedestrians
     for person in pedestrians:
         if (person.state[0] <= x_lim and person.state[0] >= 0 and person.state[1] >= 0 and person.state[1] <= y_lim):
@@ -250,24 +248,25 @@ def animate(frame_idx): # update animation by dt
             draw_car(vehicle)
 
     #collision check
-    xs=[]
-    ys= []
+    boxes = []
     all_components = controlled_cars + enemy_cars + waiting_enemy_cars + pedestrians
+    # initialize boxes
+    boxes = [ax.plot([], [], 'r')[0] for _ in range(len(all_components))]
+
     for i in range(len(all_components)):
         curr_comp = all_components[i]
-        curr_comp = all_components[0]
         vertex_set,_,_,_ = get_bounding_box(curr_comp, car_scale_factor, pedestrian_scale_factor)
         xs = [vertex[0] for vertex in vertex_set]
         ys = [vertex[1] for vertex in vertex_set]
         xs.append(vertex_set[0][0])
         ys.append(vertex_set[0][1])
-        bounding_boxes = ax.plot(xs,ys,'r')
+        boxes[i].set_data(xs,ys)
         for j in range(i + 1, len(all_components)):
             if collision_free(all_components[i], all_components[j], car_scale_factor, pedestrian_scale_factor):
                 print("Collision, object indices:")
                 print(i, j)
     stage = ax.imshow(background, origin="lower") # this origin option flips the y-axis
-    return bounding_boxes  # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
+    return  [stage] + boxes  # returned object must be iterable, a requirement of FuncAnimation
 ##
 ## OBSERVER GOES HERE 
 ## TAKES IN CONTRACTS, CARS AND TRAFFIC LIGHT
