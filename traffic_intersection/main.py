@@ -18,7 +18,7 @@ import numpy as np
 from PIL import Image
 import random
 import scipy.io
-from traffic_intersection.prepare.collision_check import collision_check
+from traffic_intersection.prepare.collision_check import collision_free, get_bounding_box
 
 #TODO: clean up this section
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -78,11 +78,10 @@ def draw_pedestrian(pedestrian):
     person_fig = person_fig.rotate(180-theta/np.pi * 180 + 90, expand = False)
     x_corner, y_corner = find_corner_coordinates(0., 0, x, y, theta,  person_fig)
     background.paste(person_fig, (int(x_corner), int(y_corner)), person_fig)
-    print(person_fig.size)
 
 # creates figure
 fig = plt.figure()
-fig.add_axes([0,0,1,1]) # get rid of white border
+ax = fig.add_axes([0,0,1,1]) # get rid of white border
 
 # turn on/off axes
 plt.axis('off')
@@ -191,12 +190,10 @@ pedestrians = [pedestrian_1, pedestrian_2, pedestrian_3, pedestrian_4]
 traffic_lights = traffic_signals.TrafficLights(3, 23, random_start = False)
 horizontal_light = traffic_lights.get_states('horizontal', 'color')
 vertical_light = traffic_lights.get_states('vertical', 'color')
-background = Image.open(intersection_fig + horizontal_light + '_' + vertical_light + '.png')
-def init():
-    stage = plt.imshow(background, origin="lower",zorder=0) # this origin option flips the y-axis
-    return stage, # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
 
-def animate(i): # update animation by dt
+def animate(frame_idx): # update animation by dt
+    ax.cla() # clear Axes before plotting
+    print(frame_idx)
     """ online frame update """
     global background
     # update traffic lights
@@ -207,6 +204,9 @@ def animate(i): # update animation by dt
     # TODO: implement option to lay waypoint graph over background
     background = Image.open(intersection_fig + horizontal_light + '_' + vertical_light + '.png')
     x_lim, y_lim = background.size
+
+
+    bounding_boxes = ax.plot()
     # update pedestrians
     for person in pedestrians:
         if (person.state[0] <= x_lim and person.state[0] >= 0 and person.state[1] >= 0 and person.state[1] <= y_lim):
@@ -224,9 +224,8 @@ def animate(i): # update animation by dt
             acc = random.uniform(-5,10)
             vehicle.next((acc, nu),dt)
             draw_car(vehicle)
-    stage = plt.imshow(background, origin="lower") # this origin option flips the y-axis
 
-    if i > delay_time:
+    if frame_idx > delay_time:
         for vehicle in delayed_enemy_cars:
             nu = 0
             acc = 0
@@ -236,37 +235,39 @@ def animate(i): # update animation by dt
                 acc = random.uniform(-5,10)
                 vehicle.next((acc, nu),dt)
                 draw_car(vehicle)
-        stage = plt.imshow(background, origin="lower") # this origin option flips the y-axis
 
-    if i <= delay_time:
+    if frame_idx <= delay_time:
         for vehicle in waiting_enemy_cars:
             nu = 0
             acc = 0
             vehicle.next((acc, nu),dt)
             draw_car(vehicle)
-        stage = plt.imshow(background, origin="lower") # this origin option flips the y-axis
 
     ## update controlled cars with primitives
     for vehicle in controlled_cars:
         vehicle.prim_next(dt = dt)
         if vehicle.prim_queue.len() > 0:
             draw_car(vehicle)
-    stage = plt.imshow(background, origin="lower") # this origin option flips the y-axis
 
     #collision check
+    xs=[]
+    ys= []
     all_components = controlled_cars + enemy_cars + waiting_enemy_cars + pedestrians
-
     for i in range(len(all_components)):
+        curr_comp = all_components[i]
+        curr_comp = all_components[0]
+        vertex_set,_,_,_ = get_bounding_box(curr_comp, car_scale_factor, pedestrian_scale_factor)
+        xs = [vertex[0] for vertex in vertex_set]
+        ys = [vertex[1] for vertex in vertex_set]
+        xs.append(vertex_set[0][0])
+        ys.append(vertex_set[0][1])
+        bounding_boxes = ax.plot(xs,ys,'r')
         for j in range(i + 1, len(all_components)):
-            if collision_check(all_components[i], all_components[j], car_scale_factor, pedestrian_scale_factor):
+            if collision_free(all_components[i], all_components[j], car_scale_factor, pedestrian_scale_factor):
                 print("Collision, object indices:")
                 print(i, j)
-            else:
-                pass
-
-#        dots = plt.axes().plot(240,300,'ro')
-#        return stage, dots  # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
-    return stage,   # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
+    stage = ax.imshow(background, origin="lower") # this origin option flips the y-axis
+    return bounding_boxes  # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
 ##
 ## OBSERVER GOES HERE 
 ## TAKES IN CONTRACTS, CARS AND TRAFFIC LIGHT
@@ -275,14 +276,12 @@ t0 = time()
 animate(0)
 t1 = time()
 interval = (t1 - t0)
-show_waypoint_graph = False
 save_video = False
 num_frames = 550 # number of the first frames to save in video
-ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval, blit=True,
-        init_func = init, repeat=False) # by default the animation function loops, we set repeat to False in order to limit the number of frames generated to num_frames
+ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval, blit=True, repeat=False) # by default the animation function loops, we set repeat to False in order to limit the number of frames generated to num_frames
 
 if save_video:
     Writer = animation.writers['ffmpeg']
     writer = Writer(fps=30, metadata=dict(artist='Me'), bitrate=1800)
-    ani.save('movies/hi_quality.avi', writer=writer, dpi=200)
+    ani.save('movies/performance_test.avi', writer=writer, dpi=200)
 plt.show()

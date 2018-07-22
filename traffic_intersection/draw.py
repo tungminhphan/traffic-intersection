@@ -13,7 +13,6 @@ import traffic_intersection.components.car as car
 import traffic_intersection.components.aux.honk_wavefront as wavefront
 import traffic_intersection.components.pedestrian as pedestrian
 import traffic_intersection.components.traffic_signals as traffic_signals
-from traffic_intersection.prepare.collision_check import collision_check
 import traffic_intersection.prepare.car_waypoint_graph as car_graph
 import traffic_intersection.prepare.graph as graph
 import traffic_intersection.prepare.queue as queue
@@ -21,9 +20,9 @@ import matplotlib
 if platform.system() == 'Darwin': # if the operating system is MacOS
     matplotlib.use('macosx')
 else: # if the operating system is Linux or Windows
-    try: 
+    try:
         import pyside2 # if pyside2 is installed
-        matplotlib.use('Qt5Agg') 
+        matplotlib.use('Qt5Agg')
     except ImportError:
         warnings.warn('Using the TkAgg backend, this may affect performance. Consider installing pyside2 for Qt5Agg backend')
         matplotlib.use('TkAgg') # this may be slower
@@ -46,7 +45,6 @@ primitive_data = dir_path + '/primitives/MA3.mat'
 mat = scipy.io.loadmat(primitive_data)
 num_of_prims = mat['MA3'].shape[0]
 
-print(mat)
 def get_prim_data(prim_id, data_field):
     '''
     This function simplifies the process of extracting data from the .mat file
@@ -90,7 +88,7 @@ for prim_id in range(0, num_of_prims):
 def find_corner_coordinates(x_rel_i, y_rel_i, x_des, y_des, theta, square_fig):
     """
     This function takes an image and an angle then computes
-    the coordinates of the corner (observe that vertical axis here is flipped)
+    the coordinates of the lower-left corner (observe that vertical axis here is flipped)
     """
     w, h = square_fig.size
     theta = -theta
@@ -124,6 +122,7 @@ def draw_pedestrians(pedestrians):
         x_corner, y_corner = find_corner_coordinates(0., 0, x, y, theta,  person_fig)
         background.paste(person_fig, (int(x_corner), int(y_corner)), person_fig)
 
+antialias_enabled = False
 def draw_cars(vehicles):
     for vehicle in vehicles:
         vee, theta, x, y = vehicle.state
@@ -135,10 +134,11 @@ def draw_cars(vehicles):
         vehicle_fig = vehicle_fig.rotate(theta_d, expand = False)
         scaled_vehicle_fig_size  =  tuple([int(car_scale_factor * i) for i in vehicle_fig.size])
         # rescale car 
-#        vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size, Image.ANTIALIAS)
-        vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size) # disable antialiasing for better performance
-        # at (full scale) the relative coordinates of the center of the rear axle w.r.t. the
-        # center of the figure is -185
+        if antialias_enabled:
+            vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size, Image.ANTIALIAS)
+        else:
+            vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size) # disable antialiasing for better performance
+        # at (full scale) the relative coordinates of the center of the rear axle w.r.t. the center of the figure is -185
         x_corner, y_corner = find_corner_coordinates(-car_scale_factor * (w_orig/2-185), 0, x, y, theta, vehicle_fig)
         background.paste(vehicle_fig, (x_corner, y_corner), vehicle_fig)
 
@@ -276,7 +276,8 @@ def animate(frame_idx): # update animation by dt
     for car in cars_to_keep:
         if with_probability(0.02) and not car.is_honking:
             car.toggle_honk()
-            wave = wavefront.HonkWavefront([car.state[2] + 60*np.cos(car.state[1]), car.state[3] + 60*np.sin(car.state[1]), 0, 0], init_energy=100000)
+            # offset is 600 before scaling
+            wave = wavefront.HonkWavefront([car.state[2] + 600*car_scale_factor*np.cos(car.state[1]), car.state[3] + 600*car_scale_factor*np.sin(car.state[1]), 0, 0], init_energy=100000)
             all_wavefronts.add(wave)
         elif with_probability(0.4) and car.is_honking:
             car.toggle_honk()
