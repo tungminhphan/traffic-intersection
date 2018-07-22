@@ -85,18 +85,20 @@ def collision_free(object1, object2, car_scale_factor, pedestrian_scale_factor):
     #takes the distance of the centers and compares it to the sum of radius, if the distance is greater then collision not possible
     if no_collision_by_radius_check(x, y, radius, x2, y2, radius2):
         return True
+    else: # deep collision check
+        #concatenate lists of the vectors of the edges/sides
+        edges = vectors_of_edges(object1_vertices) + vectors_of_edges(object2_vertices)
 
-    #concatenate lists of the vectors of the edges/sides
-    edges = vectors_of_edges(object1_vertices) + vectors_of_edges(object2_vertices)
+        #gets the vectors perpendicular to the edges
+        axes = [get_axis(edge) for edge in edges]
 
-    #gets the vectors perpendicular to the edges
-    axes = [get_axis(edge) for edge in edges]
-
-    # look for overlapping in projections to each axis
-    for i in range(len(axes)):
-        projection_a = projection(object1_vertices, axes[i])#dots all of the vertices with one of the separating axis and returns the (min, max) projections 
-        projection_b = projection(object2_vertices, axes[i])
-        overlapping = overlap(projection_a, projection_b) # (min,max) of both objects are compared for overlap
-        if overlapping:
-            return False
-    return True
+        all_overlapping = True # assume this is True initially, we will check if this is actually the case
+        # look for overlapping in projections to each axis
+        for i in range(len(axes)):
+            projection_a = projection(object1_vertices, axes[i])#dots all of the vertices with one of the separating axis and returns the (min, max) projections 
+            projection_b = projection(object2_vertices, axes[i])
+            overlapping = overlap(projection_a, projection_b) # (min,max) of both objects are compared for overlap
+            all_overlapping = all_overlapping and overlapping # check if all_overlapping is still True
+            if all_overlapping == False: # if the assumption that all intervals are overlapping turns out to be False, there is no collision since a separating hyperplane exists
+                return True
+        return False
