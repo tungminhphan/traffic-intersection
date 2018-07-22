@@ -66,6 +66,8 @@ def get_bounding_box(thing, car_scale_factor, pedestrian_scale_factor):
         radius = 40 * pedestrian_scale_factor #the longest distance used for quick circular bounding box
     elif type(thing) is KinematicCar:
         vee, theta, x, y = thing.state
+        r = 185*car_scale_factor
+        x, y = x+r*cos(theta), y + r*sin(theta)
         vertices = vertices_car(x, y, car_scale_factor)
         radius = ((788 * car_scale_factor / 2) ** 2 + (399 * car_scale_factor / 2) ** 2) ** 0.5
     else:
