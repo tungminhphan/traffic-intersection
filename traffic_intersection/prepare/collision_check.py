@@ -78,7 +78,7 @@ def collision_free(object1, object2, car_scale_factor, pedestrian_scale_factor):
     #the if else statements determines whether the object is pedestrian or not so it can unpack its coordinates and angle orientation, and determines if it should get the vertices of a car or pedestrian
     #it returns True if no collision has happened, False otherwise 
     object1_vertices, x, y, radius = get_bounding_box(object1, car_scale_factor, pedestrian_scale_factor)
-    object2_vertices, x2, y2, radius2 = get_bounding_box(object1, car_scale_factor, pedestrian_scale_factor)
+    object2_vertices, x2, y2, radius2 = get_bounding_box(object2, car_scale_factor, pedestrian_scale_factor)
 
     #takes the distance of the centers and compares it to the sum of radius, if the distance is greater then collision not possible
     if no_collision_by_radius_check(x, y, radius, x2, y2, radius2):

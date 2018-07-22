@@ -251,7 +251,7 @@ def animate(frame_idx): # update animation by dt
     boxes = []
     all_components = controlled_cars + enemy_cars + waiting_enemy_cars + pedestrians
     # initialize boxes
-    boxes = [ax.plot([], [], 'r')[0] for _ in range(len(all_components))]
+    boxes = [ax.plot([], [], 'g')[0] for _ in range(len(all_components))]
 
     for i in range(len(all_components)):
         curr_comp = all_components[i]
@@ -262,9 +262,11 @@ def animate(frame_idx): # update animation by dt
         ys.append(vertex_set[0][1])
         boxes[i].set_data(xs,ys)
         for j in range(i + 1, len(all_components)):
-            if collision_free(all_components[i], all_components[j], car_scale_factor, pedestrian_scale_factor):
+            if not collision_free(all_components[i], all_components[j], car_scale_factor, pedestrian_scale_factor):
                 print("Collision, object indices:")
                 print(i, j)
+                boxes[j].set_color('r')
+                boxes[i].set_color('r')
     stage = ax.imshow(background, origin="lower") # this origin option flips the y-axis
     return  [stage] + boxes  # returned object must be iterable, a requirement of FuncAnimation
 ##
