@@ -193,7 +193,7 @@ def animate(frame_idx): # update animation by dt
     print(current_time)
     """ online frame update """
     global background
-    if with_probability(0.1):
+    if with_probability(1):
         plate_number, start_node, end_node, the_car = spawn_car()
         shortest_path_length, shortest_path = planner.dijkstra(start_node, end_node, G)
         if planner.is_safe(path = shortest_path, current_time=current_time, primitive_graph=G, edge_time_stamps=edge_time_stamps): # not that the topograph is used here

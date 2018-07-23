@@ -60,7 +60,7 @@ def nonoverlapping_tubes(prim1_id, prim2_id):
     return nonoverlapping
 
 def compute_collision_dictionary(primitive_id_set):
-    colsn_dict = {prim_id: set() for prim_id in primitive_id_set}
+    colsn_dict = {prim_id: {prim_id} for prim_id in primitive_id_set}
     for i in range(len(primitive_id_set)):
         for j in range(i, len(primitive_id_set)):
             if not nonoverlapping_tubes(primitive_id_set[i], primitive_id_set[j]): # if they don't collide
@@ -70,7 +70,13 @@ def compute_collision_dictionary(primitive_id_set):
 
 # computes collision_dictionary
 prim_id_set = [idx for idx in range(num_of_prims) if get_prim_data(idx, 'controller_found') ]
+edge_to_prim_id = dict() # dictionary to convert primitive move to primitive ID
+for prim_id in prim_id_set:
+        from_node = tuple(get_prim_data(prim_id, 'x0'))
+        to_node = tuple(get_prim_data(prim_id, 'x_f'))
+        edge_to_prim_id[(from_node, to_node)] = prim_id
 collision_dictionary = compute_collision_dictionary(prim_id_set)
+
 #########################################################################################
 #                                                                                       #
 #                                   TESTING                                             #
