@@ -26,20 +26,31 @@ mat = scipy.io.loadmat(primitive_data)
 
 intersection_fig = dir_path + "/components/imglib/intersection_states/intersection_"
 
-def find_corner_coordinates(x_rel_i, y_rel_i, x_des, y_des, theta, square_fig):
+def find_corner_coordinates(x_state_center_before, y_state_center_before, x_desired, y_desired, theta, square_fig):
     """
     This function takes an image and an angle then computes
-    the coordinates of the corner (observe that vertical axis here is flipped)
+    the coordinates of the corner (observe that vertical axis here is flipped).
+    If we'd like to put the point specfied by (x_state_center_before, y_state_center_before) at (x_desired, y_desired),
+    this answers the question of where we should place the lower left corner of the image
     """
     w, h = square_fig.size
     theta = -theta
-    if abs(w- h)>1:
-        print("Warning: Figure has to be square!")
-    x_corner_rel, y_corner_rel = -w/2, -h/2
+    if abs(w-h)>1:
+        print("Warning: Figure has to be square! Otherwise, clipping or unexpected behavior may occur")
     R = np.array([[cos(theta), sin(theta)], [-sin(theta), cos(theta)]])
-    x_rel_f, y_rel_f = R.dot(np.array([[x_rel_i], [y_rel_i]]))
-    # xy_unknown - xy_corner + xy_rel_f = xy_des
-    return int(x_des - x_rel_f + x_corner_rel), int(y_des - y_rel_f + y_corner_rel)
+    x_corner_center_before, y_corner_center_before = -w/2., -h/2. # lower left corner before rotation
+    x_corner_center_after, y_corner_center_after = -w/2., -h/2. # doesn't change since figure size remains unchanged
+
+    x_state_center_after, y_state_center_after = R.dot(np.array([[x_state_center_before], [y_state_center_before]])) # relative coordinates after rotation by theta
+
+    x_state_corner_after = x_state_center_after - x_corner_center_after
+    y_state_corner_after = y_state_center_after - y_corner_center_after
+
+    # x_corner_unknown + x_state_corner_after = x_desired
+    # y_corner_unknown + y_state_corner_after = y_desired
+    x_corner_unknown = int(x_desired - x_state_center_after + x_corner_center_after)
+    y_corner_unknown = int(y_desired - y_state_center_after + y_corner_center_after)
+    return x_corner_unknown, y_corner_unknown
 
 def draw_car(vehicle):
     vee, theta, x, y = vehicle.state
@@ -55,8 +66,9 @@ def draw_car(vehicle):
     #vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size) # disable antialiasing for better performance
     # at (full scale) the relative coordinates of the center of the rear axle w.r.t. the
     # center of the figure is center_to_axle_dist
-    x_corner, y_corner = find_corner_coordinates(-params.car_scale_factor * (w_orig/2-params.center_to_axle_dist), 0, x, y, theta, vehicle_fig)
+    x_corner, y_corner = find_corner_coordinates(-params.car_scale_factor * params.center_to_axle_dist, 0, x, y, theta, vehicle_fig)
     background.paste(vehicle_fig, (x_corner, y_corner), vehicle_fig)
+    return x_corner, y_corner
 
 def draw_pedestrian(pedestrian):
     x, y, theta, current_gait = pedestrian.state
@@ -210,6 +222,7 @@ def animate(frame_idx): # update animation by dt
     # update planner
     # TODO: integrate planner
     # update enemy cars
+    corners = []
     for vehicle in enemy_cars:
         nu = 0
         acc = 0
@@ -218,7 +231,9 @@ def animate(frame_idx): # update animation by dt
                 nu = random.uniform(-0.02,0.02)
             acc = random.uniform(-5,10)
             vehicle.next((acc, nu),dt)
-            draw_car(vehicle)
+            xc, yc = draw_car(vehicle)
+            if np.random.uniform() < 0.5:
+                corners = ax.plot(xc, yc, 'ro')
 
     if frame_idx > delay_time:
         for vehicle in delayed_enemy_cars:
@@ -266,7 +281,7 @@ def animate(frame_idx): # update animation by dt
                 boxes[j].set_color('r')
                 boxes[i].set_color('r')
     stage = ax.imshow(background, origin="lower") # this origin option flips the y-axis
-    return  [stage] + boxes  # returned object must be iterable, a requirement of FuncAnimation
+    return  [stage] + boxes + corners  # returned object must be iterable, a requirement of FuncAnimation
 ##
 ## OBSERVER GOES HERE 
 ## TAKES IN CONTRACTS, CARS AND TRAFFIC LIGHT

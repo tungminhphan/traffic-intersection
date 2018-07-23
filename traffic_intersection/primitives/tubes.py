@@ -33,10 +33,14 @@ def get_prim_data(prim_id, data_field):
     return mat['MA3'][prim_id,0][data_field][0,0][:,0]
 
 def vertices_rect(center1, center2, theta, size_x, size_y):
+    eps_x_back = params.car_scale_factor * params.axle_to_back #TODO: analyze these constants
+    eps_x_front = params.car_scale_factor * params.front_to_axle #TODO: analyze these constants
+    eps_y = params.car_scale_factor * 0
     x, y = (center1 + center2) / 2.
-    w = (float(np.linalg.norm(center1-center2)) + size_x) / 2.
-    h = size_y / 2.
-    unrotated_rects = [(x - w, y - h), (x - w, y + h), (x + w, y + h), (x + w, y - h)]
+    w_back = (float(np.linalg.norm(center1-center2)) + size_x) / 2. + eps_x_back
+    w_front = (float(np.linalg.norm(center1-center2)) + size_x) / 2. + eps_x_front
+    h = size_y / 2. + eps_y
+    unrotated_rects = [(x - w_back, y - h), (x - w_back, y + h), (x + w_front, y + h), (x + w_front, y - h)]
     vertices = [collision.rotate_vertex(x, y, theta, vertex) for vertex in unrotated_rects]
     return vertices
 
