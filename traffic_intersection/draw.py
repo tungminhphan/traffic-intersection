@@ -21,8 +21,8 @@ if platform.system() == 'Darwin': # if the operating system is MacOS
     matplotlib.use('macosx')
 else: # if the operating system is Linux or Windows
     try:
-        import pyside2 # if pyside2 is installed
-        matplotlib.use('pyside2')
+        import PySide2 # if pyside2 is installed
+        matplotlib.use('Qt5Agg')
     except ImportError:
         warnings.warn('Using the TkAgg backend, this may affect performance. Consider installing pyside2 for Qt5Agg backend')
         matplotlib.use('TkAgg') # this may be slower
@@ -83,20 +83,31 @@ for prim_id in range(0, num_of_prims):
         if (to_x, to_y) in car_graph.G._sinks:
             G.add_sink(to_node)
 
-def find_corner_coordinates(x_rel_i, y_rel_i, x_des, y_des, theta, square_fig):
+def find_corner_coordinates(x_state_center_before, y_state_center_before, x_desired, y_desired, theta, square_fig):
     """
     This function takes an image and an angle then computes
-    the coordinates of the lower-left corner (observe that vertical axis here is flipped)
+    the coordinates of the corner (observe that vertical axis here is flipped).
+    If we'd like to put the point specfied by (x_state_center_before, y_state_center_before) at (x_desired, y_desired),
+    this answers the question of where we should place the lower left corner of the image
     """
     w, h = square_fig.size
     theta = -theta
-    if abs(w- h)>1:
-        print("Warning: Figure has to be square!")
-    x_corner_rel, y_corner_rel = -w/2, -h/2
+    if abs(w-h)>1:
+        print("Warning: Figure has to be square! Otherwise, clipping or unexpected behavior may occur")
     R = np.array([[cos(theta), sin(theta)], [-sin(theta), cos(theta)]])
-    x_rel_f, y_rel_f = R.dot(np.array([[x_rel_i], [y_rel_i]]))
-    # xy_unknown - xy_corner + xy_rel_f = xy_des
-    return int(x_des - x_rel_f + x_corner_rel), int(y_des - y_rel_f + y_corner_rel)
+    x_corner_center_before, y_corner_center_before = -w/2., -h/2. # lower left corner before rotation
+    x_corner_center_after, y_corner_center_after = -w/2., -h/2. # doesn't change since figure size remains unchanged
+
+    x_state_center_after, y_state_center_after = R.dot(np.array([[x_state_center_before], [y_state_center_before]])) # relative coordinates after rotation by theta
+
+    x_state_corner_after = x_state_center_after - x_corner_center_after
+    y_state_corner_after = y_state_center_after - y_corner_center_after
+
+    # x_corner_unknown + x_state_corner_after = x_desired
+    # y_corner_unknown + y_state_corner_after = y_desired
+    x_corner_unknown = int(x_desired - x_state_center_after + x_corner_center_after)
+    y_corner_unknown = int(y_desired - y_state_center_after + y_corner_center_after)
+    return x_corner_unknown, y_corner_unknown
 
 def with_probability(P=1):
     return np.random.uniform() <= P
@@ -137,7 +148,7 @@ def draw_cars(vehicles):
         else:
             vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size) # disable antialiasing for better performance
         # at (full scale) the relative coordinates of the center of the rear axle w.r.t. the center of the figure is center_to_axle_dist
-        x_corner, y_corner = find_corner_coordinates(-params.car_scale_factor * (w_orig/2-params.center_to_axle_dist), 0, x, y, theta, vehicle_fig)
+        x_corner, y_corner = find_corner_coordinates(-params.car_scale_factor * params.center_to_axle_dist), 0, x, y, theta, vehicle_fig)
         background.paste(vehicle_fig, (x_corner, y_corner), vehicle_fig)
 
 # creates figure
@@ -189,22 +200,22 @@ honk_t = []
 all_wavefronts = set()
 
 def animate(frame_idx): # update animation by dt
-    current_time = frame_idx * dt
-    print(current_time)
+    current_time = frame_idx * dt # compute current time from frame index and dt
+    print('{:.2f}'.format(current_time)) # print out current time to 2 decimal places
+
     """ online frame update """
     global background
     if with_probability(1):
         plate_number, start_node, end_node, the_car = spawn_car()
         shortest_path_length, shortest_path = planner.dijkstra(start_node, end_node, G)
-        if planner.is_safe(path = shortest_path, current_time=current_time, primitive_graph=G, edge_time_stamps=edge_time_stamps): # not that the topograph is used here
-            planner.time_stamp_edge(path=shortest_path, edge_time_stamps = edge_time_stamps, current_time = current_time, primitive_graph = G)
+        if planner.is_safe(path = shortest_path, current_time = current_time, primitive_graph = G, edge_time_stamps = edge_time_stamps): # not that the topograph is used here
+            planner.time_stamp_edge(path = shortest_path, edge_time_stamps = edge_time_stamps, current_time = current_time, primitive_graph = G)
             cars[plate_number] = the_car # add the car
             path_prims = path_to_primitives(path=shortest_path) # add primitives
             for prim_id in path_prims:
                 cars[plate_number].prim_queue.enqueue((prim_id, 0))
-            print('SAFE!')
         else:
-            print('NOT SAFE!!')
+            pass
     # update traffic lights
     traffic_lights.update(dt)
     horizontal_light = traffic_lights.get_states('horizontal', 'color')
@@ -271,7 +282,7 @@ def animate(frame_idx): # update animation by dt
     honk_waves = ax.scatter(honk_xs, honk_ys, s = radii, lw=1, facecolors='none', color=rgba_colors)
 
     for car in cars_to_keep:
-        if with_probability(0.02) and not car.is_honking:
+        if with_probability(0.005) and not car.is_honking:
             car.toggle_honk()
             # offset is 600 before scaling
             wave = wavefront.HonkWavefront([car.state[2] + 600*params.car_scale_factor*np.cos(car.state[1]), car.state[3] + 600*params.car_scale_factor*np.sin(car.state[1]), 0, 0], init_energy=100000)
@@ -291,14 +302,14 @@ t0 = time.time()
 animate(0)
 t1 = time.time()
 interval = (t1 - t0)
-save_video = True
+save_video = False
 num_frames = 1500 # number of the first frames to save in video
 ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval, blit=True, repeat=False) # by default the animation function loops, we set repeat to False in order to limit the number of frames generated to num_frames
 
 if save_video:
     Writer = animation.writers['ffmpeg']
     writer = Writer(fps = 24, metadata=dict(artist='Me'), bitrate=-1)
-    ani.save('movies/no_collision_4.avi', writer=writer, dpi=300)
+    ani.save('movies/no_collision_5.avi', writer=writer, dpi=300)
 plt.show()
 t2 = time.time()
 print('Total elapsed time: ' + str(t2-t0))

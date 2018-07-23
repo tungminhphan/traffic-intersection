@@ -13,8 +13,8 @@ import assumes.params as params
 def vertices_car(x, y):
     # x, y are the coordinates of the center
     # half the width and height of scaled car
-    w = 788 * params.car_scale_factor / 2
-    h = 399 * params.car_scale_factor / 2
+    w = 788 * params.car_scale_factor / 2.
+    h = 399 * params.car_scale_factor / 2.
     return [(x - w, y - h), (x - w, y + h), (x + w, y + h), (x + w, y - h)]
 
 # diamond-like vertices
@@ -69,8 +69,8 @@ def get_bounding_box(thing):
         radius = 40 * params.pedestrian_scale_factor #the longest distance used for quick circular bounding box
     elif type(thing) is KinematicCar:
         vee, theta, x, y = thing.state
-        r = params.center_to_axle_dist*params.car_scale_factor
-        x, y = x+r*cos(theta), y + r*sin(theta)
+        r = params.center_to_axle_dist * params.car_scale_factor
+        x, y = x + r*cos(theta), y + r*sin(theta)
         vertices = vertices_car(x, y)
         radius = ((788 * params.car_scale_factor / 2) ** 2 + (399 * params.car_scale_factor / 2) ** 2) ** 0.5
     else:
