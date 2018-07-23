@@ -79,6 +79,24 @@ def get_bounding_box(thing):
     rotated_vertices = [rotate_vertex(x, y, theta, vertex) for vertex in vertices]
     return rotated_vertices, x, y, radius
 
+def nonoverlapping_polygons(polygon1_vertices, polygon2_vertices): # SAT algorithm
+    #concatenate lists of the vectors of the edges/sides
+    edges = vectors_of_edges(polygon1_vertices) + vectors_of_edges(polygon2_vertices)
+
+    #gets the vectors perpendicular to the edges
+    axes = [get_axis(edge) for edge in edges]
+
+    all_overlapping = True # assume this is True initially, we will check if this is actually the case
+    # look for overlapping in projections to each axis
+    for i in range(len(axes)):
+        projection_a = projection(polygon1_vertices, axes[i])#dots all of the vertices with one of the separating axis and returns the (min, max) projections 
+        projection_b = projection(polygon2_vertices, axes[i])
+        overlapping = overlap(projection_a, projection_b) # (min,max) of both polygons are compared for overlap
+        all_overlapping = all_overlapping and overlapping # check if all_overlapping is still True
+        if all_overlapping == False: # if the assumption that all intervals are overlapping turns out to be False, there is no collision since a separating hyperplane exists
+            return True
+    return False
+
 def collision_free(object1, object2):
     #this function returns True if no collision has happened, False otherwise 
     object1_vertices, x, y, radius = get_bounding_box(object1)
@@ -88,19 +106,4 @@ def collision_free(object1, object2):
     if no_collision_by_radius_check(x, y, radius, x2, y2, radius2):
         return True
     else: # deep collision check
-        #concatenate lists of the vectors of the edges/sides
-        edges = vectors_of_edges(object1_vertices) + vectors_of_edges(object2_vertices)
-
-        #gets the vectors perpendicular to the edges
-        axes = [get_axis(edge) for edge in edges]
-
-        all_overlapping = True # assume this is True initially, we will check if this is actually the case
-        # look for overlapping in projections to each axis
-        for i in range(len(axes)):
-            projection_a = projection(object1_vertices, axes[i])#dots all of the vertices with one of the separating axis and returns the (min, max) projections 
-            projection_b = projection(object2_vertices, axes[i])
-            overlapping = overlap(projection_a, projection_b) # (min,max) of both objects are compared for overlap
-            all_overlapping = all_overlapping and overlapping # check if all_overlapping is still True
-            if all_overlapping == False: # if the assumption that all intervals are overlapping turns out to be False, there is no collision since a separating hyperplane exists
-                return True
-        return False
+        return nonoverlapping_polygons(object1_vertices, object2_vertices)

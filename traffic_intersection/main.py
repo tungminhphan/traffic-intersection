@@ -83,7 +83,7 @@ ax = fig.add_axes([0,0,1,1]) # get rid of white border
 # turn on/off axes
 plt.axis('off')
 # sampling time
-dt = 0.05
+dt = 0.1
 # creates cars
 prim_id = 0 # first primitive
 prim = mat['MA3'][prim_id,0]
@@ -280,6 +280,6 @@ ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval
 
 if save_video:
     Writer = animation.writers['ffmpeg']
-    writer = Writer(fps=60, metadata=dict(artist='Me'), bitrate=1800)
+    writer = Writer(fps=20, metadata=dict(artist='Me'), bitrate=1800)
     ani.save('movies/boxes_better.avi', writer=writer, dpi=300)
 plt.show()
