@@ -120,7 +120,7 @@ def draw_pedestrians(pedestrians):
         x_corner, y_corner = find_corner_coordinates(0., 0, x, y, theta,  person_fig)
         background.paste(person_fig, (int(x_corner), int(y_corner)), person_fig)
 
-antialias_enabled = False
+antialias_enabled = True
 def draw_cars(vehicles):
     for vehicle in vehicles:
         vee, theta, x, y = vehicle.state
@@ -291,14 +291,14 @@ t0 = time.time()
 animate(0)
 t1 = time.time()
 interval = (t1 - t0)
-save_video = False
-num_frames = 300 # number of the first frames to save in video
+save_video = True
+num_frames = 1500 # number of the first frames to save in video
 ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval, blit=True, repeat=False) # by default the animation function loops, we set repeat to False in order to limit the number of frames generated to num_frames
 
 if save_video:
     Writer = animation.writers['ffmpeg']
-    writer = Writer(fps= 24, metadata=dict(artist='Me'), bitrate=-1)
-    ani.save('movies/test_planner.avi', writer=writer, dpi=300)
+    writer = Writer(fps = 24, metadata=dict(artist='Me'), bitrate=-1)
+    ani.save('movies/no_collision_4.avi', writer=writer, dpi=300)
 plt.show()
 t2 = time.time()
 print('Total elapsed time: ' + str(t2-t0))
