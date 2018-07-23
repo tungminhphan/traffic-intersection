@@ -16,6 +16,7 @@ import prepare.car_waypoint_graph as car_graph
 import prepare.graph as graph
 import prepare.queue as queue
 import assumes.params as params
+from  prepare.collision_check import collision_free, get_bounding_box
 import matplotlib
 if platform.system() == 'Darwin': # if the operating system is MacOS
     matplotlib.use('macosx')
@@ -148,7 +149,7 @@ def draw_cars(vehicles):
         else:
             vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size) # disable antialiasing for better performance
         # at (full scale) the relative coordinates of the center of the rear axle w.r.t. the center of the figure is center_to_axle_dist
-        x_corner, y_corner = find_corner_coordinates(-params.car_scale_factor * params.center_to_axle_dist), 0, x, y, theta, vehicle_fig)
+        x_corner, y_corner = find_corner_coordinates(-params.car_scale_factor * params.center_to_axle_dist, 0, x, y, theta, vehicle_fig)
         background.paste(vehicle_fig, (x_corner, y_corner), vehicle_fig)
 
 # creates figure
@@ -290,26 +291,45 @@ def animate(frame_idx): # update animation by dt
         elif with_probability(0.4) and car.is_honking:
             car.toggle_honk()
 
-    # plot honking 
+    # plot collision boxes
 
+    boxes = []
+    # initialize boxes
+    boxes = [ax.plot([], [], 'g')[0] for _ in range(len(cars_to_keep))]
+
+    for i in range(len(cars_to_keep)):
+        curr_car = cars_to_keep[i]
+        vertex_set,_,_,_ = get_bounding_box(curr_car)
+        xs = [vertex[0] for vertex in vertex_set]
+        ys = [vertex[1] for vertex in vertex_set]
+        xs.append(vertex_set[0][0])
+        ys.append(vertex_set[0][1])
+        if with_probability(0.1):
+           boxes[i].set_data(xs,ys)
+        for j in range(i + 1, len(cars_to_keep)):
+           if not collision_free(curr_car, cars_to_keep[j]):
+                boxes[j].set_color('r')
+                boxes[i].set_color('r')
+
+    # plot honking 
     draw_pedestrians(pedestrians_to_keep) # draw pedestrians to background
     draw_cars(cars_to_keep)
     global stage # set up a global stage
     stage = ax.imshow(background, origin="lower") # update the stage
-    return  stage, honk_waves   # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
+    return  [stage] + [honk_waves] + boxes   # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
 
 t0 = time.time()
 animate(0)
 t1 = time.time()
 interval = (t1 - t0)
-save_video = False
-num_frames = 1500 # number of the first frames to save in video
+save_video = True
+num_frames = 2000 # number of the first frames to save in video
 ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval, blit=True, repeat=False) # by default the animation function loops, we set repeat to False in order to limit the number of frames generated to num_frames
 
 if save_video:
     Writer = animation.writers['ffmpeg']
     writer = Writer(fps = 24, metadata=dict(artist='Me'), bitrate=-1)
-    ani.save('movies/no_collision_5.avi', writer=writer, dpi=300)
+    ani.save('movies/no_collision_6.avi', writer=writer, dpi=300)
 plt.show()
 t2 = time.time()
 print('Total elapsed time: ' + str(t2-t0))
