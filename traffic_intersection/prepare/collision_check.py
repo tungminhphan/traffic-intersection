@@ -53,8 +53,15 @@ def projection(vertices, axis):
 #checks if there's overlap of two invervals s1 and s2
 #s1 holds (min, max) of object 1
 #s2 holds (min, max) of object 2
-def overlap(s1, s2):
-    return not (s1[1] < s2[0] or s2[1] < s1[0])
+#axis is the separating axis
+def overlap(s1, s2, axis):
+    if (s1[1] < s2[0] or s2[1] < s1[0]):
+        return False, None
+    else: #return true and the vector needed to separate the objects along the axis
+        d = min(s2[1] - s1[0], s1[1] - s2[0]) #(max2 - min1, max1 - min2) distance of of penetration
+        factor = d / dot(axis, axis) #removes the factor of axis from projection between vertex and axis
+        sv = (axis[0] * factor, axis[1] * factor) #separation vector
+        return True, sv
 
 # if distances of centers are greater than sum of radii then for sure no collision
 # this function returns False is there may be a collision, True when collision can't possibly happen
@@ -86,24 +93,30 @@ def nonoverlapping_polygons(polygon1_vertices, polygon2_vertices): # SAT algorit
     #gets the vectors perpendicular to the edges
     axes = [get_axis(edge) for edge in edges]
 
+    #stores the separation vectors if there's an overlap
+    separation_vectors = []
+
     all_overlapping = True # assume this is True initially, we will check if this is actually the case
     # look for overlapping in projections to each axis
     for i in range(len(axes)):
         projection_a = projection(polygon1_vertices, axes[i])#dots all of the vertices with one of the separating axis and returns the (min, max) projections 
         projection_b = projection(polygon2_vertices, axes[i])
-        overlapping = overlap(projection_a, projection_b) # (min,max) of both polygons are compared for overlap
+        overlapping, sv = overlap(projection_a, projection_b, axes[i]) # (min,max) of both polygons are compared for overlap
+        separation_vectors.append(sv)
         all_overlapping = all_overlapping and overlapping # check if all_overlapping is still True
         if all_overlapping == False: # if the assumption that all intervals are overlapping turns out to be False, there is no collision since a separating hyperplane exists
-            return True
-    return False
+            return True, None
+
+    min_sep_vector = min(separation_vectors, key = (lambda v: dot(v,v))) # gets the smallest vector needed to separate the objects
+    return False, min_sep_vector
 
 def collision_free(object1, object2):
-    #this function returns True if no collision has happened, False otherwise 
+    #this function returns True if no collision has happened, False otherwise along with the min vector needed to separate the objects
     object1_vertices, x, y, radius = get_bounding_box(object1)
     object2_vertices, x2, y2, radius2 = get_bounding_box(object2)
 
     #takes the distance of the centers and compares it to the sum of radius, if the distance is greater then collision not possible
     if no_collision_by_radius_check(x, y, radius, x2, y2, radius2):
-        return True
+        return True, None
     else: # deep collision check
         return nonoverlapping_polygons(object1_vertices, object2_vertices)

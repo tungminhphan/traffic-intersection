@@ -259,7 +259,8 @@ def animate(frame_idx): # update animation by dt
         ys.append(vertex_set[0][1])
         boxes[i].set_data(xs,ys)
         for j in range(i + 1, len(all_components)):
-            if not collision_free(all_components[i], all_components[j]):
+            collision_free1, min_sep_vector = collision_free(all_components[i], all_components[j])# returns True if collision free and an empty vector, else returns False and the min vector needed to separate the objects
+            if not collision_free1: # had to change variable name from the function to remove error
                 print("Collision, object indices:")
                 print(i, j)
                 boxes[j].set_color('r')
