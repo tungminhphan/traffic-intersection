@@ -50,7 +50,7 @@ def projection(vertices, axis):
     projections = [dot(vertex, axis) for vertex in vertices]
     return [min(projections), max(projections)]
 
-#checks if there's overlap of two invervals s1 and s2, returns the vector needed to separate the object
+#checks if there's overlap of two invervals s1 and s2, returns the vector needed to separate the object along the specific axis
 #s1 holds (min, max) of object 1
 #s2 holds (min, max) of object 2
 #axis is the separating axis
@@ -86,7 +86,7 @@ def get_bounding_box(thing):
     rotated_vertices = [rotate_vertex(x, y, theta, vertex) for vertex in vertices]
     return rotated_vertices, x, y, radius
 
-def nonoverlapping_polygons(polygon1_vertices, polygon2_vertices, x, y, x2, y2): # SAT algorithm, takes the centers in order to invert min_sep_vector in opposite direction of 
+def nonoverlapping_polygons(polygon1_vertices, polygon2_vertices, vector_of_centers): # SAT algorithm, returns smallest vector needed to separate polygons
     #concatenate lists of the vectors of the edges/sides
     edges = vectors_of_edges(polygon1_vertices) + vectors_of_edges(polygon2_vertices)
 
@@ -102,14 +102,12 @@ def nonoverlapping_polygons(polygon1_vertices, polygon2_vertices, x, y, x2, y2):
         projection_a = projection(polygon1_vertices, axes[i])#dots all of the vertices with one of the separating axis and returns the (min, max) projections 
         projection_b = projection(polygon2_vertices, axes[i])
         overlapping, sv = overlap(projection_a, projection_b, axes[i]) # (min,max) of both polygons are compared for overlap
-        separation_vectors.append(sv)
+        separation_vectors.append(sv) # adds the vector needed to separate the polygons along the axis
         all_overlapping = all_overlapping and overlapping # check if all_overlapping is still True
         if all_overlapping == False: # if the assumption that all intervals are overlapping turns out to be False, there is no collision since a separating hyperplane exists
-            return True, None
+            return True, None # if no collision, no separation vector
 
     min_sep_vector = min(separation_vectors, key = (lambda v: dot(v,v))) # gets the smallest vector needed to separate the objects
-
-    vector_of_centers = (x2 - x, y2 - y) # gets direction from object1 to object2
     if dot(min_sep_vector, vector_of_centers) > 0: # if vectors are the same direction, invert min_sep_vector, this is for consistency in finding contact points later
         min_sep_vector = (min_sep_vector[0] * -1, min_sep_vector[1] * -1) 
 
@@ -120,8 +118,10 @@ def collision_free(object1, object2):
     object1_vertices, x, y, radius = get_bounding_box(object1)
     object2_vertices, x2, y2, radius2 = get_bounding_box(object2)
 
+    vector_of_centers = (x2 - x, y2 - y) # gets direction from object1 to object2, used to adjust direction of min_sep_vector
+
     #takes the distance of the centers and compares it to the sum of radius, if the distance is greater then collision not possible
     if no_collision_by_radius_check(x, y, radius, x2, y2, radius2):
         return True, None
     else: # deep collision check
-        return nonoverlapping_polygons(object1_vertices, object2_vertices, x, y, x2, y2)
+        return nonoverlapping_polygons(object1_vertices, object2_vertices, vector_of_centers)
