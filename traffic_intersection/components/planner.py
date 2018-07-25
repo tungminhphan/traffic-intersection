@@ -10,6 +10,7 @@ import prepare.queue as queue
 import prepare.car_waypoint_graph as waypoint_graph
 import primitives.tubes
 import numpy as np
+import assumes.params as params
 if __name__ == '__main__':
     visualize = True
 else:
@@ -90,11 +91,16 @@ def time_stamp_edge(path, edge_time_stamps, current_time, primitive_graph):
     for k in range(0,len(path)-1):
         left = k
         right = k+1
-        stamp = (scheduled_times[left], scheduled_times[right]) # interval stamp
         edge = (path[left], path[right]) # only get topographical information, ignoring velocity and orientation
-        try: edge_time_stamps[edge_to_prim_id[edge]].add(stamp)
-        except KeyError:
-            edge_time_stamps[(edge_to_prim_id[edge])] = {stamp}
+        start_time = scheduled_times[left]
+        end_time = scheduled_times[right]
+        delta_t = end_time - start_time # TODO: make this more efficient, get t_end directly?
+        for segment_id in range(params.num_subprims):
+            stamp = (start_time + segment_id / delta_t, start_time + (segment_id + 1) / delta_t) # stamp for subedge
+            try: 
+                edge_time_stamps[(edge_to_prim_id[edge], segment_id)].add(stamp)
+            except KeyError:
+                edge_time_stamps[(edge_to_prim_id[edge], segment_id)] = {stamp}
     return edge_time_stamps
 
 def is_overlapping(interval_A, interval_B):
@@ -119,12 +125,13 @@ def is_safe(path, current_time, primitive_graph, edge_time_stamps):
         left_time = scheduled_times[-2]
         right_time = scheduled_times[-1]
         curr_interval = (left_time, right_time) # next interval to check
-        for colliding_id in collision_dictionary[curr_prim_id]:
-            if colliding_id in edge_time_stamps: # if current loc is already stamped
-                for interval in edge_time_stamps[colliding_id]:
-                    if is_overlapping(curr_interval, interval): # if the two intervals overlap
-                        return False
-                        return current_edge_idx # return node with conflict
+        for ii in range(params.num_subprims):
+            for colliding_id, jj in collision_dictionary[(curr_prim_id, ii)]:
+                if (colliding_id, jj) in edge_time_stamps: # if current loc is already stamped
+                    for interval in edge_time_stamps[(colliding_id, jj)]:
+                        if is_overlapping(curr_interval, interval): # if the two intervals overlap
+                            return False
+                            return current_edge_idx # return node with conflict
         current_edge_idx += 1
     return True
 

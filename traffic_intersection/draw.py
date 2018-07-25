@@ -316,20 +316,20 @@ def animate(frame_idx): # update animation by dt
     # plot primitive tubes
     curr_tubes = []
     # initialize tubes
-    curr_tubes = [ax.plot([], [],'b')[0] for _ in range(5*len(cars_to_keep))]
+    curr_tubes = [ax.plot([], [],'b')[0] for _ in range(len(cars_to_keep))]
 
     for i in range(len(cars_to_keep)):
         curr_car = cars_to_keep[i]
         if curr_car.prim_queue.len() > 0:
-            curr_prim_id = curr_car.prim_queue.top()[0]
-            vertex_set = tubes.make_tube(curr_prim_id)
-            for j in range(5):
-                xs = [vertex[0][0] for vertex in vertex_set[j]]
-                ys = [vertex[1][0] for vertex in vertex_set[j]]
+            if curr_car.prim_queue.top()[1] < 1:
+                curr_prim_id = curr_car.prim_queue.top()[0]
+                curr_prim_progress = curr_car.prim_queue.top()[1]
+                vertex_set = tubes.make_tube(curr_prim_id)
+                xs = [vertex[0][0] for vertex in vertex_set[int(curr_prim_progress * params.num_subprims )]]
+                ys = [vertex[1][0] for vertex in vertex_set[int(curr_prim_progress * params.num_subprims )]]
                 xs.append(xs[0])
                 ys.append(ys[0])
-                if with_probability(0.9):
-                    curr_tubes[i*5+j].set_data(xs,ys)
+                curr_tubes[i].set_data(xs,ys)
 
     # plot honking 
     draw_pedestrians(pedestrians_to_keep) # draw pedestrians to background
@@ -342,7 +342,7 @@ t0 = time.time()
 animate(0)
 t1 = time.time()
 interval = (t1 - t0)
-save_video = False
+save_video = True
 num_frames = 2000 # number of the first frames to save in video
 ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval, blit=True, repeat=False) # by default the animation function loops, we set repeat to False in order to limit the number of frames generated to num_frames
 
