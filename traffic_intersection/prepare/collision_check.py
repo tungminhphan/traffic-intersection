@@ -19,7 +19,7 @@ def vertices_car(x, y):
 
 # diamond-like vertices
 def vertices_pedestrian(x, y):
-    w1 = 16 * params.pedestrian_scale_factor
+    w1 = 27 * params.pedestrian_scale_factor
     w2 = 27 * params.pedestrian_scale_factor
     h1 = 35 * params.pedestrian_scale_factor
     h2 = 35 * params.pedestrian_scale_factor
@@ -49,6 +49,13 @@ def get_axis(v):
 def projection(vertices, axis):
     projections = [dot(vertex, axis) for vertex in vertices]
     return [min(projections), max(projections)]
+
+#returns centroid of polygon
+def center_of_polygon(polygon_vertices):
+    x = [v[0] for v in polygon_vertices]
+    y = [v[1] for v in polygon_vertices]
+    center = (sum(x) / len(polygon_vertices), sum(y) / len(polygon_vertices))
+    return center
 
 #checks if there's overlap of two invervals s1 and s2, returns the vector needed to separate the object along the specific axis
 #s1 holds (min, max) of object 1
@@ -86,7 +93,7 @@ def get_bounding_box(thing):
     rotated_vertices = [rotate_vertex(x, y, theta, vertex) for vertex in vertices]
     return rotated_vertices, x, y, radius
 
-def nonoverlapping_polygons(polygon1_vertices, polygon2_vertices, vector_of_centers): # SAT algorithm, returns smallest vector needed to separate convex polygons
+def nonoverlapping_polygons(polygon1_vertices, polygon2_vertices): # SAT algorithm, returns smallest vector needed to separate polygons
     #concatenate lists of the vectors of the edges/sides
     edges = vectors_of_edges(polygon1_vertices) + vectors_of_edges(polygon2_vertices)
 
@@ -95,6 +102,10 @@ def nonoverlapping_polygons(polygon1_vertices, polygon2_vertices, vector_of_cent
 
     #stores the separation vectors if there's an overlap
     separation_vectors = []
+
+    center1 = center_of_polygon(polygon1_vertices)
+    center2 = center_of_polygon(polygon2_vertices)
+    vector_of_centers = (center2[0] - center1[0], center2[1] - center1[1])
 
     all_overlapping = True # assume this is True initially, we will check if this is actually the case
     # look for overlapping in projections to each axis
@@ -118,10 +129,22 @@ def collision_free(object1, object2):
     object1_vertices, x, y, radius = get_bounding_box(object1)
     object2_vertices, x2, y2, radius2 = get_bounding_box(object2)
 
-    vector_of_centers = (x2 - x, y2 - y) # gets direction from object1 to object2, used to adjust direction of min_sep_vector
-
     #takes the distance of the centers and compares it to the sum of radius, if the distance is greater then collision not possible
     if no_collision_by_radius_check(x, y, radius, x2, y2, radius2):
         return True, None
     else: # deep collision check
-        return nonoverlapping_polygons(object1_vertices, object2_vertices, vector_of_centers)
+        return nonoverlapping_polygons(object1_vertices, object2_vertices)
+
+
+################################ CONTACT POINTS ################################
+'''
+def closest_edge(polygon_vertices, separation_normal): # the closest edge is the edge most perpendicular to the separation normal
+    max_idx, max_value = max(enumerate(polygon_vertices), key = lambda v: dot(v[1],separation_normal))
+    if max_index == 0:
+        next_idx 
+        prev_idx 
+    v = polygon_vertices[max_idx]
+    v1 = 
+
+def contact_points(object1, object2, separation_normal):
+'''
