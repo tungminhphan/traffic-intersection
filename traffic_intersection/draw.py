@@ -322,7 +322,7 @@ t0 = time.time()
 animate(0)
 t1 = time.time()
 interval = (t1 - t0)
-save_video = True
+save_video = False
 num_frames = 2000 # number of the first frames to save in video
 ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval, blit=True, repeat=False) # by default the animation function loops, we set repeat to False in order to limit the number of frames generated to num_frames
 

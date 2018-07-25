@@ -189,7 +189,7 @@ def refines_contracts(unrefined_c, refined_c):
         return False
     elif unrefined_c.startState != refined_c.startState:
         return False
-    else: 
+    else:
         for key in unrefined_c.transitions_dict:
             if (key not in refined_c[key]):
                 return False

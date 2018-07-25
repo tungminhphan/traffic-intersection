@@ -86,7 +86,7 @@ def get_bounding_box(thing):
     rotated_vertices = [rotate_vertex(x, y, theta, vertex) for vertex in vertices]
     return rotated_vertices, x, y, radius
 
-def nonoverlapping_polygons(polygon1_vertices, polygon2_vertices, vector_of_centers): # SAT algorithm, returns smallest vector needed to separate polygons
+def nonoverlapping_polygons(polygon1_vertices, polygon2_vertices, vector_of_centers): # SAT algorithm, returns smallest vector needed to separate convex polygons
     #concatenate lists of the vectors of the edges/sides
     edges = vectors_of_edges(polygon1_vertices) + vectors_of_edges(polygon2_vertices)
 
@@ -109,7 +109,7 @@ def nonoverlapping_polygons(polygon1_vertices, polygon2_vertices, vector_of_cent
 
     min_sep_vector = min(separation_vectors, key = (lambda v: dot(v,v))) # gets the smallest vector needed to separate the objects
     if dot(min_sep_vector, vector_of_centers) > 0: # if vectors are the same direction, invert min_sep_vector, this is for consistency in finding contact points later
-        min_sep_vector = (min_sep_vector[0] * -1, min_sep_vector[1] * -1) 
+        min_sep_vector = (min_sep_vector[0] * -1, min_sep_vector[1] * -1)
 
     return False, min_sep_vector # min_sep_vector is always opposite the direction of the vector from the center of object 1 to the center of object 2
 
