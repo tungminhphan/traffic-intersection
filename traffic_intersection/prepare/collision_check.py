@@ -54,7 +54,7 @@ def projection(vertices, axis):
 def center_of_polygon(polygon_vertices):
     x = [v[0] for v in polygon_vertices]
     y = [v[1] for v in polygon_vertices]
-    center = (sum(x) / len(polygon_vertices), sum(x) / len(polygon_vertices))
+    center = (sum(x) / len(polygon_vertices), sum(y) / len(polygon_vertices))
     return center
 
 #checks if there's overlap of two invervals s1 and s2, returns the vector needed to separate the object along the specific axis
@@ -147,16 +147,4 @@ def closest_edge(polygon_vertices, separation_normal): # the closest edge is the
     v1 = 
 
 def contact_points(object1, object2, separation_normal):
-
-'''    
-
-
-
-
-
-
-
-
-
-
-
+'''
