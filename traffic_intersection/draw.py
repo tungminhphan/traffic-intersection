@@ -4,9 +4,7 @@
 # California Institute of Technology
 # July 17, 2018
 
-import os, platform
-import time
-import warnings
+import os, platform, time, warnings, matplotlib, random
 import components.planner as planner
 import components.car as car
 import components.aux.honk_wavefront as wavefront
@@ -16,8 +14,8 @@ import prepare.car_waypoint_graph as car_graph
 import prepare.graph as graph
 import prepare.queue as queue
 import assumes.params as params
+import primitives.tubes as tubes
 from  prepare.collision_check import collision_free, get_bounding_box
-import matplotlib
 if platform.system() == 'Darwin': # if the operating system is MacOS
     matplotlib.use('macosx')
 else: # if the operating system is Linux or Windows
@@ -32,7 +30,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from numpy import cos, sin, tan
 from PIL import Image
-import random
 import scipy.io
 
 
@@ -57,32 +54,33 @@ def get_prim_data(prim_id, data_field):
 
 
 G = graph.WeightedDirectedGraph() # primitive graph
-edge_to_prim_id = dict() # dictionary to convert primitive move to primitive ID
-prim_id_to_edge = dict() # dictionary to convert primitive ID to edge
+edge_to_prim_id = np.load('prepare/edge_to_prim_id.npy').item()
 
 for prim_id in range(0, num_of_prims):
-    if get_prim_data(prim_id, 'controller_found')[0] == 1:
-        from_node = tuple(get_prim_data(prim_id, 'x0'))
-        to_node = tuple(get_prim_data(prim_id, 'x_f'))
-        time_weight = get_prim_data(prim_id, 't_end')[0]
-        new_edge = (from_node, to_node, time_weight)
-        edge_to_prim_id[(from_node, to_node)] = prim_id
-        prim_id_to_edge[prim_id] = new_edge
+    try:
+        controller_found = get_prim_data(prim_id, 'controller_found')[0]
+        if controller_found:
+            from_node = tuple(get_prim_data(prim_id, 'x0'))
+            to_node = tuple(get_prim_data(prim_id, 'x_f'))
+            time_weight = get_prim_data(prim_id, 't_end')[0]
+            new_edge = (from_node, to_node, time_weight)
+            new_edge_set = [new_edge] # convert to tuple otherwise, not hashable (can't check set membership)
 
-        new_edge_set = [new_edge] # convert to tuple otherwise, not hashable (can't check set membership)
-        G.add_edges(new_edge_set, use_euclidean_weight=False)
-        G.add_edges(new_edge_set, use_euclidean_weight=False)
+            G.add_edges(new_edge_set, use_euclidean_weight=False)
+            G.add_edges(new_edge_set, use_euclidean_weight=False)
 
-        from_x = from_node[2]
-        from_y = from_node[3]
+            from_x = from_node[2]
+            from_y = from_node[3]
 
-        to_x = to_node[2]
-        to_y = to_node[3]
+            to_x = to_node[2]
+            to_y = to_node[3]
 
-        if (from_x, from_y) in car_graph.G._sources:
-            G.add_source(from_node)
-        if (to_x, to_y) in car_graph.G._sinks:
-            G.add_sink(to_node)
+            if (from_x, from_y) in car_graph.G._sources:
+                G.add_source(from_node)
+            if (to_x, to_y) in car_graph.G._sinks:
+                G.add_sink(to_node)
+    except ValueError:
+        pass
 
 def find_corner_coordinates(x_state_center_before, y_state_center_before, x_desired, y_desired, theta, square_fig):
     """
@@ -93,8 +91,8 @@ def find_corner_coordinates(x_state_center_before, y_state_center_before, x_desi
     """
     w, h = square_fig.size
     theta = -theta
-    if abs(w-h)>1:
-        print("Warning: Figure has to be square! Otherwise, clipping or unexpected behavior may occur")
+    if abs(w - h) > 1:
+        warnings.warn("Warning: Figure has to be square! Otherwise, clipping or unexpected behavior may occur")
     R = np.array([[cos(theta), sin(theta)], [-sin(theta), cos(theta)]])
     x_corner_center_before, y_corner_center_before = -w/2., -h/2. # lower left corner before rotation
     x_corner_center_after, y_corner_center_after = -w/2., -h/2. # doesn't change since figure size remains unchanged
@@ -105,8 +103,8 @@ def find_corner_coordinates(x_state_center_before, y_state_center_before, x_desi
     y_state_corner_after = y_state_center_after - y_corner_center_after
 
     # x_corner_unknown + x_state_corner_after = x_desired
-    # y_corner_unknown + y_state_corner_after = y_desired
     x_corner_unknown = int(x_desired - x_state_center_after + x_corner_center_after)
+    # y_corner_unknown + y_state_corner_after = y_desired
     y_corner_unknown = int(y_desired - y_state_center_after + y_corner_center_after)
     return x_corner_unknown, y_corner_unknown
 
@@ -132,7 +130,8 @@ def draw_pedestrians(pedestrians):
         x_corner, y_corner = find_corner_coordinates(0., 0, x, y, theta,  person_fig)
         background.paste(person_fig, (int(x_corner), int(y_corner)), person_fig)
 
-antialias_enabled = True
+# disable antialiasing for better performance
+antialias_enabled = False
 def draw_cars(vehicles):
     for vehicle in vehicles:
         vee, theta, x, y = vehicle.state
@@ -147,7 +146,7 @@ def draw_cars(vehicles):
         if antialias_enabled:
             vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size, Image.ANTIALIAS)
         else:
-            vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size) # disable antialiasing for better performance
+            vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size)
         # at (full scale) the relative coordinates of the center of the rear axle w.r.t. the center of the figure is center_to_axle_dist
         x_corner, y_corner = find_corner_coordinates(-params.car_scale_factor * params.center_to_axle_dist, 0, x, y, theta, vehicle_fig)
         background.paste(vehicle_fig, (x_corner, y_corner), vehicle_fig)
@@ -157,7 +156,9 @@ fig = plt.figure()
 ax = fig.add_axes([0,0,1,1]) # get rid of white border
 
 # turn on/off axes
-plt.axis('off')
+show_axes = False
+if not show_axes:
+    plt.axis('off')
 # sampling time
 dt = 0.1
 # create car
@@ -216,7 +217,7 @@ def animate(frame_idx): # update animation by dt
             for prim_id in path_prims:
                 cars[plate_number].prim_queue.enqueue((prim_id, 0))
         else:
-            pass
+            print('not safe')
     # update traffic lights
     traffic_lights.update(dt)
     horizontal_light = traffic_lights.get_states('horizontal', 'color')
@@ -258,6 +259,8 @@ def animate(frame_idx): # update animation by dt
         del cars[plate_number]
 
     ax.cla() # clear Axes before plotting
+    if not show_axes:
+        plt.axis('off')
     ## STAGE UPDATE HAPPENS AFTER THIS COMMENT
     honk_waves = ax.scatter(None,None)
     honk_xs = []
@@ -292,7 +295,6 @@ def animate(frame_idx): # update animation by dt
             car.toggle_honk()
 
     # plot collision boxes
-
     boxes = []
     # initialize boxes
     boxes = [ax.plot([], [], 'g')[0] for _ in range(len(cars_to_keep))]
@@ -304,19 +306,37 @@ def animate(frame_idx): # update animation by dt
         ys = [vertex[1] for vertex in vertex_set]
         xs.append(vertex_set[0][0])
         ys.append(vertex_set[0][1])
-        if with_probability(0.1):
+        if with_probability(0.5):
            boxes[i].set_data(xs,ys)
         for j in range(i + 1, len(cars_to_keep)):
            if not collision_free(curr_car, cars_to_keep[j]):
                 boxes[j].set_color('r')
                 boxes[i].set_color('r')
 
+    # plot primitive tubes
+    curr_tubes = []
+    # initialize tubes
+    curr_tubes = [ax.plot([], [],'b')[0] for _ in range(5*len(cars_to_keep))]
+
+    for i in range(len(cars_to_keep)):
+        curr_car = cars_to_keep[i]
+        if curr_car.prim_queue.len() > 0:
+            curr_prim_id = curr_car.prim_queue.top()[0]
+            vertex_set = tubes.make_tube(curr_prim_id)
+            for j in range(5):
+                xs = [vertex[0][0] for vertex in vertex_set[j]]
+                ys = [vertex[1][0] for vertex in vertex_set[j]]
+                xs.append(xs[0])
+                ys.append(ys[0])
+                if with_probability(0.9):
+                    curr_tubes[i*5+j].set_data(xs,ys)
+
     # plot honking 
     draw_pedestrians(pedestrians_to_keep) # draw pedestrians to background
     draw_cars(cars_to_keep)
     global stage # set up a global stage
     stage = ax.imshow(background, origin="lower") # update the stage
-    return  [stage] + [honk_waves] + boxes   # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
+    return  [stage] + [honk_waves] + boxes + curr_tubes  # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
 
 t0 = time.time()
 animate(0)
@@ -329,7 +349,7 @@ ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval
 if save_video:
     Writer = animation.writers['ffmpeg']
     writer = Writer(fps = 24, metadata=dict(artist='Me'), bitrate=-1)
-    ani.save('movies/no_collision_6.avi', writer=writer, dpi=300)
+    ani.save('movies/check_tubes.avi', writer=writer, dpi=200)
 plt.show()
 t2 = time.time()
 print('Total elapsed time: ' + str(t2-t0))
