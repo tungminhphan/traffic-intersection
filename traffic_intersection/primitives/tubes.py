@@ -9,8 +9,10 @@ import os, sys
 sys.path.append("..")
 import numpy as np
 import prepare.collision_check as collision
+import prepare.options as options
 import assumes.params as params
 import scipy.io
+import warnings
 # set dir_path to current directory
 dir_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 car_scale_factor = params.car_scale_factor
@@ -30,12 +32,15 @@ def get_prim_data(prim_id, data_field):
 
     Output: the requested data
     '''
-    return mat['MA3'][prim_id,0][data_field][0,0][:,0]
+    try:
+        return mat['MA3'][prim_id,0][data_field][0,0][:,0]
+    except ValueError:
+        return False
 
 def vertices_rect(center1, center2, theta, size_x, size_y):
     eps_x_back = params.car_scale_factor * params.axle_to_back #TODO: analyze these constants
     eps_x_front = params.car_scale_factor * params.front_to_axle #TODO: analyze these constants
-    eps_y = params.car_scale_factor * 0
+    eps_y = params.car_scale_factor * params.car_width / 2.
     x, y = (center1 + center2) / 2.
     w_back = (float(np.linalg.norm(center1-center2)) + size_x) / 2. + eps_x_back
     w_front = (float(np.linalg.norm(center1-center2)) + size_x) / 2. + eps_x_front
@@ -73,13 +78,20 @@ def compute_collision_dictionary(primitive_id_set):
     return colsn_dict
 
 # computes collision_dictionary
-prim_id_set = [idx for idx in range(num_of_prims) if get_prim_data(idx, 'controller_found') ]
-edge_to_prim_id = dict() # dictionary to convert primitive move to primitive ID
-for prim_id in prim_id_set:
-        from_node = tuple(get_prim_data(prim_id, 'x0'))
-        to_node = tuple(get_prim_data(prim_id, 'x_f'))
-        edge_to_prim_id[(from_node, to_node)] = prim_id
-collision_dictionary = compute_collision_dictionary(prim_id_set)
+if options.create_collision_dictionary:
+    prim_id_set = [idx for idx in range(num_of_prims) if get_prim_data(idx, 'controller_found') ]
+    edge_to_prim_id = dict() # dictionary to convert primitive move to primitive ID
+    for prim_id in prim_id_set:
+            from_node = tuple(get_prim_data(prim_id, 'x0'))
+            to_node = tuple(get_prim_data(prim_id, 'x_f'))
+            edge_to_prim_id[(from_node, to_node)] = prim_id
+    collision_dictionary = compute_collision_dictionary(prim_id_set)
+    edge_to_prim_id[(from_node, to_node)] = prim_id
+    np.save('prepare/collision_dictionary.npy', collision_dictionary)
+    np.save('prepare/edge_to_prim_id.npy', edge_to_prim_id)
+    warnings.warn('New Collision and Primitive ID Dictionaries Created!')
+else:
+    warnings.warn('Warning: Using Last Computed Collision and Primitive ID Dictionaries!')
 
 #########################################################################################
 #                                                                                       #
