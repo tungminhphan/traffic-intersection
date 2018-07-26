@@ -105,7 +105,7 @@ def nonoverlapping_polygons(polygon1_vertices, polygon2_vertices): # SAT algorit
 
     center1 = center_of_polygon(polygon1_vertices)
     center2 = center_of_polygon(polygon2_vertices)
-    vector_of_centers = (center2[0] - center1[0], center2[1] - center1[1])
+    vector_of_centers = (center1[0] - center2[0], center1[1] - center2[1])
 
     all_overlapping = True # assume this is True initially, we will check if this is actually the case
     # look for overlapping in projections to each axis
@@ -137,14 +137,123 @@ def collision_free(object1, object2):
 
 
 ################################ CONTACT POINTS ################################
-'''
-def closest_edge(polygon_vertices, separation_normal): # the closest edge is the edge most perpendicular to the separation normal
-    max_idx, max_value = max(enumerate(polygon_vertices), key = lambda v: dot(v[1],separation_normal))
-    if max_index == 0:
-        next_idx 
-        prev_idx 
-    v = polygon_vertices[max_idx]
-    v1 = 
 
-def contact_points(object1, object2, separation_normal):
-'''
+def normalize(v):
+    norm = (v[0] ** 2 + v[1] ** 2) ** 0.5
+    return (v[0] / norm, v[1] / norm)
+
+def cross(ref, z):
+    return (-1.0 * ref[1] * z, ref[0] * z)
+
+def best_edge(polygon_vertices, separation_normal): # the closest edge is the edge most perpendicular to the separation normal
+    max_proj = 0.0
+    max_idx = 0
+    for idx, v in enumerate(polygon_vertices):
+        projection = dot(v, separation_normal)
+        if (projection > max_proj):
+            maxim = projection
+            max_idx = idx
+    if max_idx == 0:
+        next_idx = max_idx + 1
+        prev_idx = len(polygon_vertices) - 1
+    elif max_idx == (len(polygon_vertices) - 1):
+        next_idx = 0
+        prev_idx = max_idx - 1   
+    else:
+        next_idx = max_idx + 1
+        prev_idx = max_idx - 1
+
+    v = polygon_vertices[max_idx]
+    v1 = polygon_vertices[next_idx]
+    v0 = polygon_vertices[prev_idx]
+
+    left_edge = (v[0] - v1[0], v[1] - v1[1])
+    right_edge = (v[0] - v0[0], v[1] - v0[1])
+    
+    left_edge = normalize(left_edge)
+    right_edge = normalize(right_edge)
+    if (dot(right_edge, separation_normal) <= dot(left_edge, separation_normal)):
+        return right_edge, v, v, v0
+    else: 
+        return left_edge, v, v1, v
+
+def clip_points(v1, v2, n, o):
+    cp = []
+    d1 = dot(n, v1) - o
+    d2 = dot(n, v2) - o
+
+    if d1 >= 0.0:
+        cp.append(v1)
+    if d2 >= 0.0:
+        cp.append(v2)
+
+    if d1 * d2 < 0.0:
+        e = (v2[0] - v1[0], v2[1] - v1[1])
+        u = d1 / (d1 - d2)
+        e = (u * e[0], u * e[1])
+        e = (e[0] + v1[0], e[1] + v1[1])
+        cp.append(e)    
+    return cp
+
+def contact_points(object1_vertices, object2_vertices, separation_normal):
+    #object1_vertices, x, y, radius = get_bounding_box(object1)
+    #object2_vertices, x2, y2, radius2 = get_bounding_box(object2)
+
+    invert_normal = (separation_normal[0] * -1, separation_normal[1] * -1) # keep consistent separation normal from object 2 to object 1
+    edge1, edge1_vmax, edge1_v1, edge1_v2 = best_edge(object1_vertices, separation_normal) 
+    edge2, edge2_vmax, edge2_v1, edge2_v2 = best_edge(object2_vertices, invert_normal) 
+
+    flip = False # flag indicating that incident and reference edge were flipped, this is for final clip
+    if abs(dot(edge1, separation_normal)) <= abs(dot(edge2, separation_normal)):
+        ref_edge = edge1
+        ref_vmax = edge1_vmax
+        ref_v1 = edge1_v1
+        ref_v2 = edge1_v2
+        inc_edge = edge2
+        inc_vmax = edge2_vmax
+        inc_v1 = edge2_v1
+        inc_v2 = edge2_v2
+    else:
+        flip = True 
+        ref_edge = edge2
+        ref_vmax = edge2_vmax
+        ref_v1 = edge2_v1
+        ref_v2 = edge2_v2
+        inc_edge = edge1
+        inc_vmax = edge1_vmax
+        inc_v1 = edge1_v1
+        inc_v2 = edge1_v2
+
+    ref_v = normalize(ref_edge)
+    ref_v_invert = (ref_v[0] * -1, ref_v[1] * -1)
+
+    o1 = dot(ref_edge, ref_v1)
+    cp = clip_points(inc_v1, inc_v2, ref_edge, o1)
+    if len(cp) < 2:
+        return cp
+
+    o2 = dot(ref_edge, ref_v2)
+    cp = clip_points(cp[0], cp[1], ref_v_invert, -o2)
+
+    if len(cp) < 2:
+        return cp
+
+    ref_normal = cross(ref_edge, -1.0)
+    max1 = dot(ref_normal, ref_vmax)
+
+    if (flip): 
+        if dot(ref_normal, cp[1]) > max1:
+            del cp[1] 
+        if dot(ref_normal, cp[0]) > max1:
+            del cp[0]
+    else:
+        if dot(ref_normal, cp[1]) < max1:
+            del cp[1] 
+        if dot(ref_normal, cp[0]) < max1:
+            del cp[0] 
+    
+    return cp
+
+
+
+
