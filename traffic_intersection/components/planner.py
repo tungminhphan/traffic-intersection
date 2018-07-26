@@ -81,7 +81,7 @@ def get_scheduled_times(path, current_time, primitive_graph):
         scheduled_times.append(scheduled_times[-1] + primitive_graph._weights[(prev, curr)])
     return scheduled_times
 
-def time_stamp_edge(path, edge_time_stamps, current_time, primitive_graph):
+def time_stamp_edge(path, edge_time_stamps, current_time, primitive_graph, partial = False):
     '''
     given a weighted path, this function updates the edge_time_stamps set according to the given path.
     input:   path - weighted path
@@ -96,8 +96,11 @@ def time_stamp_edge(path, edge_time_stamps, current_time, primitive_graph):
         end_time = scheduled_times[right]
         delta_t = end_time - start_time # TODO: make this more efficient, get t_end directly?
         for segment_id in range(params.num_subprims):
-            stamp = (start_time + segment_id/5. * delta_t, start_time + (segment_id + 1)/5. * delta_t) # stamp for subedge
-            try: 
+            if partial and k == len(path)-2 and segment_id == params.num_subprims:
+                stamp = (start_time + segment_id/5. * delta_t, np.float('inf')) # stamp for subedge
+            else:
+                stamp = (start_time + segment_id/5. * delta_t, start_time + (segment_id + 1)/5. * delta_t) # stamp for subedge
+            try:
                 edge_time_stamps[(edge_to_prim_id[edge], segment_id)].add(stamp)
             except KeyError:
                 edge_time_stamps[(edge_to_prim_id[edge], segment_id)] = {stamp}
@@ -130,10 +133,9 @@ def is_safe(path, current_time, primitive_graph, edge_time_stamps):
                 if (colliding_id, jj) in edge_time_stamps: # if current loc is already stamped
                     for interval in edge_time_stamps[(colliding_id, jj)]:
                         if is_overlapping( (left_time + (ii)/5. * delta_t, left_time + (ii+1)/5. * delta_t ), interval): # if the two intervals overlap
-                            return False
-                            return current_edge_idx # return node with conflict
+                            return False, current_edge_idx
         current_edge_idx += 1
-    return True
+    return True, None
 
 def print_state():
     print('The current request queue state is')

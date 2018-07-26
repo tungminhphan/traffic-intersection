@@ -148,35 +148,38 @@ class KinematicCar:
        else:
            prim_id, prim_progress = self.extract_primitive()
            # load primitive data TODO: make this portion of the code more automated
-           prim = mat['MA3'][prim_id,0] # the primitive corresponding to the primitive number
-           t_end = prim['t_end'][0,0][0,0] # extract duration of primitive
-           N = prim['K'][0,0].shape[0] # number of subintervals encoded in primitive
-           G_u = np.diag([175, 1.29]) # this diagonal matrix encodes the size of input set (a constraint)
-           nu = 2 # number of inputs
-           nx = 4 # number of states
+           if prim_id > -1:
+               prim = mat['MA3'][prim_id,0] # the primitive corresponding to the primitive number
+               t_end = prim['t_end'][0,0][0,0] # extract duration of primitive
+               N = prim['K'][0,0].shape[0] # number of subintervals encoded in primitive
+               G_u = np.diag([175, 1.29]) # this diagonal matrix encodes the size of input set (a constraint)
+               nu = 2 # number of inputs
+               nx = 4 # number of states
 
-           if prim_progress == 0: # compute initial extended state
-               x1 = self.state.reshape((-1,1))
-               x2 = prim['x0'][0,0]
-               x3 = x1 - prim['x0'][0,0]
-               x4 = np.matmul(np.linalg.inv(np.diag([4, 0.02, 4, 4])), (x1-prim['x0'][0,0]))
-               self.extended_state = (np.vstack((x1,x2,x3,x4)))[:,0] # initial state, consisting of actual state and virtual states for the controller
-           k = int(prim_progress * N) # calculate primitive waypoint
+               if prim_progress == 0: # compute initial extended state
+                   x1 = self.state.reshape((-1,1))
+                   x2 = prim['x0'][0,0]
+                   x3 = x1 - prim['x0'][0,0]
+                   x4 = np.matmul(np.linalg.inv(np.diag([4, 0.02, 4, 4])), (x1-prim['x0'][0,0]))
+                   self.extended_state = (np.vstack((x1,x2,x3,x4)))[:,0] # initial state, consisting of actual state and virtual states for the controller
+               k = int(prim_progress * N) # calculate primitive waypoint
 
-           dist = get_disturbance()
-           q1 = prim['K'][0,0][k,0].reshape((-1, 1), order='F')
-           q2 = 0.5 * (prim['x_ref'][0,0][:,k+1] + prim['x_ref'][0,0][:,k]).reshape(-1,1)
-           q3 = prim['u_ref'][0,0][:,k].reshape(-1,1)
-           q4 = prim['u_ref'][0,0][:,k].reshape(-1,1)
-           q5 = np.matmul(G_u, prim['alpha'][0,0][k*nu:(k+1)*nu]).reshape((-1,1), order='F')
-           q = np.vstack((q1,q2,q3,q4,q5)) # parameters for the controller
-           self.extended_state = odeint(func = prim_state_dot, y0 = self.extended_state, t= [0, dt], args=(dist, q))[-1, :]
-           self.state = self.extended_state[0:4]
-           # update alive time
-           self.alive_time += dt
-           # update progress
-           prim_progress = prim_progress + dt / t_end
-           self.prim_queue.replace_top((prim_id, prim_progress))
+               dist = get_disturbance()
+               q1 = prim['K'][0,0][k,0].reshape((-1, 1), order='F')
+               q2 = 0.5 * (prim['x_ref'][0,0][:,k+1] + prim['x_ref'][0,0][:,k]).reshape(-1,1)
+               q3 = prim['u_ref'][0,0][:,k].reshape(-1,1)
+               q4 = prim['u_ref'][0,0][:,k].reshape(-1,1)
+               q5 = np.matmul(G_u, prim['alpha'][0,0][k*nu:(k+1)*nu]).reshape((-1,1), order='F')
+               q = np.vstack((q1,q2,q3,q4,q5)) # parameters for the controller
+               self.extended_state = odeint(func = prim_state_dot, y0 = self.extended_state, t= [0, dt], args=(dist, q))[-1, :]
+               self.state = self.extended_state[0:4]
+               # update alive time
+               self.alive_time += dt
+               # update progress
+               prim_progress = prim_progress + dt / t_end
+               self.prim_queue.replace_top((prim_id, prim_progress))
+           else: # if is stopping primitive 
+               self.next((0, 0), dt)
 
 # TESTING
 #prim_id = 0
