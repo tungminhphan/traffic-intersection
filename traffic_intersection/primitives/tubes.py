@@ -13,6 +13,10 @@ import prepare.options as options
 import assumes.params as params
 import scipy.io
 import warnings
+if __name__ == '__main__':
+    make_dictionary = True
+else:
+    make_dictionary = options.create_collision_dictionary
 # set dir_path to current directory
 dir_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 car_scale_factor = params.car_scale_factor
@@ -85,7 +89,9 @@ def nonoverlapping_subtubes(prim1, prim2):
     jj = prim2[1]
     rects_1 = make_tube(prim1_id)
     rects_2 = make_tube(prim2_id)
-    nonoverlapping = collision.nonoverlapping_polygons(rects_1[0], rects_2[0])
+    rects_1 = np.squeeze(rects_1[ii])
+    rects_2 = np.squeeze(rects_2[jj])
+    nonoverlapping = collision.nonoverlapping_polygons(rects_1, rects_2)
     return nonoverlapping
 
 def compute_collision_dictionary(primitive_id_set):
@@ -101,7 +107,7 @@ def compute_collision_dictionary(primitive_id_set):
     return colsn_dict
 
 # computes collision_dictionary
-if options.create_collision_dictionary:
+if make_dictionary:
     prim_id_set = [idx for idx in range(num_of_prims) if get_prim_data(idx, 'controller_found') ]
     edge_to_prim_id = dict() # dictionary to convert primitive move to primitive ID
     for prim_id in prim_id_set:
