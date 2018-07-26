@@ -86,7 +86,7 @@ def nonoverlapping_polygons(polygon1_vertices, polygon2_vertices): # SAT algorit
     #gets the vectors perpendicular to the edges
     axes = [get_axis(edge) for edge in edges]
 
-<<<<<<< HEAD
+
     #stores the separation vectors if there's an overlap
     separation_vectors = []
 
@@ -94,8 +94,7 @@ def nonoverlapping_polygons(polygon1_vertices, polygon2_vertices): # SAT algorit
     center2 = center_of_polygon(polygon2_vertices)
     vector_of_centers = (center1[0] - center2[0], center1[1] - center2[1])
 
-=======
->>>>>>> d51767f4e2b487f63d0da6cdb4697a2127082ab5
+
     all_overlapping = True # assume this is True initially, we will check if this is actually the case
     # look for overlapping in projections to each axis
     for i in range(len(axes)):
@@ -117,7 +116,6 @@ def collision_free(object1, object2):
         return True
     else: # deep collision check
         return nonoverlapping_polygons(object1_vertices, object2_vertices)
-<<<<<<< HEAD
 
 
 ################################ CONTACT POINTS ################################
@@ -239,7 +237,3 @@ def contact_points(object1_vertices, object2_vertices, separation_normal):
     return cp
 
 
-
-
-=======
->>>>>>> d51767f4e2b487f63d0da6cdb4697a2127082ab5
