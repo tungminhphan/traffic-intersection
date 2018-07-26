@@ -15,7 +15,7 @@ def vertices_car(x, y):
     # half the width and height of scaled car
     w = 788 * params.car_scale_factor / 2.
     h = 399 * params.car_scale_factor / 2.
-    return [(x - w, y - h), (x - w, y + h), (x + w, y + h), (x + w, y - h)]
+    return [(x - w, y - h), (x + w, y - h), (x + w, y + h), (x - w, y + h)] # counter clockwise
 
 # diamond-like vertices
 def vertices_pedestrian(x, y):
@@ -23,7 +23,7 @@ def vertices_pedestrian(x, y):
     w2 = 27 * params.pedestrian_scale_factor
     h1 = 35 * params.pedestrian_scale_factor
     h2 = 35 * params.pedestrian_scale_factor
-    return [(x - w1, y), (x, y + h1), (x + w2, y), (x, y - h2)]
+    return [(x - w1, y), (x, y - h2), (x + w2, y), (x, y + h1)] #counter clockwise
 
 # rotates the vertices based on car/pedestrian orientation
 def rotate_vertex(x, y, theta, v):
@@ -90,7 +90,10 @@ def get_bounding_box(thing):
         TypeError('Not sure what this object is')
 
     rotated_vertices = [rotate_vertex(x, y, theta, vertex) for vertex in vertices]
-    return rotated_vertices, x, y, radius
+    # takes the rotated vertices and finds the leftmost bottom vertex, orders the vertices in the counter clockwise direction with the leftmost bottom being the first one in the list
+    min_index, min_value = min(enumerate(rotated_vertices), key = lambda v: v[1])
+    ordered_vertices = rotated_vertices[min_index:] + rotated_vertices[:min_index]
+    return ordered_vertices, x, y, radius
 
 def nonoverlapping_polygons(polygon1_vertices, polygon2_vertices): # SAT algorithm
     #concatenate lists of the vectors of the edges/sides
@@ -155,7 +158,7 @@ def best_edge(polygon_vertices, separation_normal): # the closest edge is the ed
     for idx, v in enumerate(polygon_vertices):
         projection = dot(v, separation_normal)
         if (projection > max_proj):
-            maxim = projection
+            max_proj = projection
             max_idx = idx
 # gets the prev and next index w.r.t. max index 
     if max_idx == 0:
