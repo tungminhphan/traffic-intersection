@@ -13,13 +13,13 @@ import assumes.params as params
 def vertices_car(x, y):
     # x, y are the coordinates of the center
     # half the width and height of scaled car
-    w = 788 * params.car_scale_factor / 2
-    h = 399 * params.car_scale_factor / 2
+    w = 788 * params.car_scale_factor / 2.
+    h = 399 * params.car_scale_factor / 2.
     return [(x - w, y - h), (x - w, y + h), (x + w, y + h), (x + w, y - h)]
 
 # diamond-like vertices
 def vertices_pedestrian(x, y):
-    w1 = 16 * params.pedestrian_scale_factor
+    w1 = 27 * params.pedestrian_scale_factor
     w2 = 27 * params.pedestrian_scale_factor
     h1 = 35 * params.pedestrian_scale_factor
     h2 = 35 * params.pedestrian_scale_factor
@@ -50,11 +50,24 @@ def projection(vertices, axis):
     projections = [dot(vertex, axis) for vertex in vertices]
     return [min(projections), max(projections)]
 
-#checks if there's overlap of two invervals s1 and s2
+#returns centroid of polygon
+def center_of_polygon(polygon_vertices):
+    x = [v[0] for v in polygon_vertices]
+    y = [v[1] for v in polygon_vertices]
+    center = (sum(x) / len(polygon_vertices), sum(y) / len(polygon_vertices))
+    return center
+
+#checks if there's overlap of two invervals s1 and s2, returns the vector needed to separate the object along the specific axis 
 #s1 holds (min, max) of object 1
 #s2 holds (min, max) of object 2
-def overlap(s1, s2):
-    return not (s1[1] < s2[0] or s2[1] < s1[0])
+def overlap(s1, s2, axis):
+    if (s1[1] < s2[0] or s2[1] < s1[0]):
+        return False, None
+    else: #return true and the vector needed to separate the objects along the axis
+        d = min(s2[1] - s1[0], s1[1] - s2[0]) #(max2 - min1, max1 - min2) gets the distance of of penetration
+        factor = d / dot(axis, axis) #removes the scalar of axis from earlier projection between vertex and axis
+        sv = (axis[0] * factor, axis[1] * factor) #separation vector
+        return True, sv
 
 # if distances of centers are greater than sum of radii then for sure no collision
 # this function returns False is there may be a collision, True when collision can't possibly happen
@@ -69,8 +82,8 @@ def get_bounding_box(thing):
         radius = 40 * params.pedestrian_scale_factor #the longest distance used for quick circular bounding box
     elif type(thing) is KinematicCar:
         vee, theta, x, y = thing.state
-        r = params.center_to_axle_dist*params.car_scale_factor
-        x, y = x+r*cos(theta), y + r*sin(theta)
+        r = params.center_to_axle_dist * params.car_scale_factor
+        x, y = x + r*cos(theta), y + r*sin(theta)
         vertices = vertices_car(x, y)
         radius = ((788 * params.car_scale_factor / 2) ** 2 + (399 * params.car_scale_factor / 2) ** 2) ** 0.5
     else:
@@ -92,7 +105,7 @@ def nonoverlapping_polygons(polygon1_vertices, polygon2_vertices): # SAT algorit
 
     center1 = center_of_polygon(polygon1_vertices)
     center2 = center_of_polygon(polygon2_vertices)
-    vector_of_centers = (center1[0] - center2[0], center1[1] - center2[1])
+    vector_of_centers = (center1[0] - center2[0], center1[1] - center2[1]) # if min_sep_vector pointing in same direction as this vector, used to invert direction min_sep_vector
 
 
     all_overlapping = True # assume this is True initially, we will check if this is actually the case
@@ -100,11 +113,17 @@ def nonoverlapping_polygons(polygon1_vertices, polygon2_vertices): # SAT algorit
     for i in range(len(axes)):
         projection_a = projection(polygon1_vertices, axes[i])#dots all of the vertices with one of the separating axis and returns the (min, max) projections 
         projection_b = projection(polygon2_vertices, axes[i])
-        overlapping = overlap(projection_a, projection_b) # (min,max) of both polygons are compared for overlap
+        overlapping, sv = overlap(projection_a, projection_b, axes[i]) # (min,max) of both polygons are compared for overlap
+        separation_vectors.append(sv) # adds the vector needed to separate the polygons along the axis 
         all_overlapping = all_overlapping and overlapping # check if all_overlapping is still True
         if all_overlapping == False: # if the assumption that all intervals are overlapping turns out to be False, there is no collision since a separating hyperplane exists
-            return True
-    return False
+            return True, None # if no collision, no separation vector
+
+    min_sep_vector = min(separation_vectors, key = (lambda v: dot(v,v))) # gets the smallest vector needed to separate the objects
+    if dot(min_sep_vector, vector_of_centers) > 0: # if vectors are the same direction, invert min_sep_vector, this is for consistency in finding contact points later
+        min_sep_vector = (min_sep_vector[0] * -1, min_sep_vector[1] * -1) 
+
+    return False, min_sep_vector
 
 def collision_free(object1, object2):
     #this function returns True if no collision has happened, False otherwise 
@@ -113,7 +132,7 @@ def collision_free(object1, object2):
 
     #takes the distance of the centers and compares it to the sum of radius, if the distance is greater then collision not possible
     if no_collision_by_radius_check(x, y, radius, x2, y2, radius2):
-        return True
+        return True, None
     else: # deep collision check
         return nonoverlapping_polygons(object1_vertices, object2_vertices)
 
