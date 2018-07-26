@@ -77,17 +77,18 @@ G._sources = set([(0, 325), (0, 245), (430, 740), (500, 740)])
 G._sinks = set([(430, 30), (500, 30), (1040, 255), (1040, 340), (570, 740), (635, 740)])
 
 # temporary sources and sinks
-G._sources.add((1144, 515))
-G._sources.add((1144, 435))
-G._sources.add((714, 20))
-G._sources.add((644, 20))
-G._sinks.add((714, 730))
-G._sinks.add((644, 730))
-G._sinks.add((104, 505))
-G._sinks.add((104, 420))
+G._sources.add((1144-74, 515+10))
+G._sources.add((1144-74, 435+10))
+G._sources.add((714-74, 20+10))
+G._sources.add((644-74, 20+10))
+G._sinks.add((714-74, 730+10))
+G._sinks.add((644-74, 730+10))
+G._sinks.add((104-74, 505+10))
 
-A = np.array([570, 740])
-B = np.array([644, 730])
+G._sinks.add((104-74, 420+10))
+
+A = np.array([570-74, 740+10])
+B = np.array([644-74, 730+10])
 
 if visualize:
     import matplotlib.pyplot as plt

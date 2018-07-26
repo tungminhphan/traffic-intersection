@@ -15,6 +15,7 @@ import prepare.graph as graph
 import prepare.queue as queue
 import assumes.params as params
 import primitives.tubes as tubes
+import prepare.options as options
 from  prepare.collision_check import collision_free, get_bounding_box
 if platform.system() == 'Darwin': # if the operating system is MacOS
     matplotlib.use('macosx')
@@ -263,27 +264,28 @@ def animate(frame_idx): # update animation by dt
         plt.axis('off')
     ## STAGE UPDATE HAPPENS AFTER THIS COMMENT
     honk_waves = ax.scatter(None,None)
-    honk_xs = []
-    honk_ys = []
-    radii = []
-    intensities = []
-    for wave in all_wavefronts:
-        wave.next(dt)
-        honk_x, honk_y, radius, intensity = wave.get_data()
-        if intensity > 0:
-            honk_xs.append(honk_x)
-            honk_ys.append(honk_y)
-            radii.append(radius)
-            intensities.append(intensity)
-        else:
-            all_wavefronts.remove(wave)
+    if options.show_honks:
+        honk_xs = []
+        honk_ys = []
+        radii = []
+        intensities = []
+        for wave in all_wavefronts:
+            wave.next(dt)
+            honk_x, honk_y, radius, intensity = wave.get_data()
+            if intensity > 0:
+                honk_xs.append(honk_x)
+                honk_ys.append(honk_y)
+                radii.append(radius)
+                intensities.append(intensity)
+            else:
+                all_wavefronts.remove(wave)
 
-    rgba_colors = np.zeros((len(intensities),4))
-    # red color
-    rgba_colors[:,0] = 1.0
-    # intensities
-    rgba_colors[:, 3] = intensities
-    honk_waves = ax.scatter(honk_xs, honk_ys, s = radii, lw=1, facecolors='none', color=rgba_colors)
+        rgba_colors = np.zeros((len(intensities),4))
+        # red color
+        rgba_colors[:,0] = 1.0
+        # intensities
+        rgba_colors[:, 3] = intensities
+        honk_waves = ax.scatter(honk_xs, honk_ys, s = radii, lw=1, facecolors='none', color=rgba_colors)
 
     for car in cars_to_keep:
         if with_probability(0.005) and not car.is_honking:
@@ -299,37 +301,39 @@ def animate(frame_idx): # update animation by dt
     # initialize boxes
     boxes = [ax.plot([], [], 'g')[0] for _ in range(len(cars_to_keep))]
 
-    for i in range(len(cars_to_keep)):
-        curr_car = cars_to_keep[i]
-        vertex_set,_,_,_ = get_bounding_box(curr_car)
-        xs = [vertex[0] for vertex in vertex_set]
-        ys = [vertex[1] for vertex in vertex_set]
-        xs.append(vertex_set[0][0])
-        ys.append(vertex_set[0][1])
-        if with_probability(0.5):
-           boxes[i].set_data(xs,ys)
-        for j in range(i + 1, len(cars_to_keep)):
-           if not collision_free(curr_car, cars_to_keep[j]):
-                boxes[j].set_color('r')
-                boxes[i].set_color('r')
+    if options.show_boxes:
+        for i in range(len(cars_to_keep)):
+            curr_car = cars_to_keep[i]
+            vertex_set,_,_,_ = get_bounding_box(curr_car)
+            xs = [vertex[0] for vertex in vertex_set]
+            ys = [vertex[1] for vertex in vertex_set]
+            xs.append(vertex_set[0][0])
+            ys.append(vertex_set[0][1])
+            if with_probability(0.5):
+               boxes[i].set_data(xs,ys)
+            for j in range(i + 1, len(cars_to_keep)):
+               if not collision_free(curr_car, cars_to_keep[j]):
+                    boxes[j].set_color('r')
+                    boxes[i].set_color('r')
 
     # plot primitive tubes
     curr_tubes = []
     # initialize tubes
-    curr_tubes = [ax.plot([], [],'b')[0] for _ in range(len(cars_to_keep))]
+    if options.show_tubes:
+        curr_tubes = [ax.plot([], [],'b')[0] for _ in range(len(cars_to_keep))]
 
-    for i in range(len(cars_to_keep)):
-        curr_car = cars_to_keep[i]
-        if curr_car.prim_queue.len() > 0:
-            if curr_car.prim_queue.top()[1] < 1:
-                curr_prim_id = curr_car.prim_queue.top()[0]
-                curr_prim_progress = curr_car.prim_queue.top()[1]
-                vertex_set = tubes.make_tube(curr_prim_id)
-                xs = [vertex[0][0] for vertex in vertex_set[int(curr_prim_progress * params.num_subprims )]]
-                ys = [vertex[1][0] for vertex in vertex_set[int(curr_prim_progress * params.num_subprims )]]
-                xs.append(xs[0])
-                ys.append(ys[0])
-                curr_tubes[i].set_data(xs,ys)
+        for i in range(len(cars_to_keep)):
+            curr_car = cars_to_keep[i]
+            if curr_car.prim_queue.len() > 0:
+                if curr_car.prim_queue.top()[1] < 1:
+                    curr_prim_id = curr_car.prim_queue.top()[0]
+                    curr_prim_progress = curr_car.prim_queue.top()[1]
+                    vertex_set = tubes.make_tube(curr_prim_id)
+                    xs = [vertex[0][0] for vertex in vertex_set[int(curr_prim_progress * params.num_subprims )]]
+                    ys = [vertex[1][0] for vertex in vertex_set[int(curr_prim_progress * params.num_subprims )]]
+                    xs.append(xs[0])
+                    ys.append(ys[0])
+                    curr_tubes[i].set_data(xs,ys)
 
     # plot honking 
     draw_pedestrians(pedestrians_to_keep) # draw pedestrians to background
@@ -342,14 +346,13 @@ t0 = time.time()
 animate(0)
 t1 = time.time()
 interval = (t1 - t0)
-save_video = True
 num_frames = 2000 # number of the first frames to save in video
 ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval, blit=True, repeat=False) # by default the animation function loops, we set repeat to False in order to limit the number of frames generated to num_frames
 
-if save_video:
+if options.save_video:
     Writer = animation.writers['ffmpeg']
-    writer = Writer(fps = 24, metadata=dict(artist='Me'), bitrate=-1)
-    ani.save('movies/check_tubes.avi', writer=writer, dpi=200)
+    writer = Writer(fps = 30, metadata=dict(artist='Me'), bitrate=-1)
+    ani.save('movies/newest_prims.avi', writer=writer, dpi=200)
 plt.show()
 t2 = time.time()
 print('Total elapsed time: ' + str(t2-t0))
