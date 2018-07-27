@@ -29,7 +29,7 @@ class TrafficLights():
     def get_counterpart(self, state):
         color = state[0]
         time = state[1]
-        
+
         if color == 'green':
             other_color = 'red'
             other_time = time
@@ -44,7 +44,7 @@ class TrafficLights():
                 other_time = time
                 other_color = 'green'
         return [other_color, other_time]
-        
+
     def successor(self, color):
         if color == 'red':
             return 'green'
@@ -76,8 +76,10 @@ class TrafficLights():
         else:
             color_or_time = 1
         return self._state[which_light][color_or_time]
-################################## SIMULATION ##########################################################
 
+
+################################### SIMULATION ##########################################################
+#
 #import time
 #traffic_lights = TrafficLights(yellow_max = 5, green_max = 30)
 #dt = 1

@@ -359,10 +359,3 @@ def construct_automaton(statelist, translist, start, ends):
         new_component.add_transition(guardTransition(state1, state2, guard, inp, out, inter))
 
     return new_component
-
-
-
-    
-
-
-

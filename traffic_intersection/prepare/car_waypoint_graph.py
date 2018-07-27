@@ -56,8 +56,6 @@ G.add_edges([
              (( 450, 230), ( 500, 30))
              ])
 
-G._sources = set([(0, 325), (0, 245)])
-G._sinks = set([(430, 30), (500, 30), (1040, 255), (1040, 340), (570, 740), (635, 740)])
 
 # vertical direction
 G.add_edges([
@@ -66,7 +64,6 @@ G.add_edges([
              (( 430, 670), ( 430, 120)),
              (( 430, 120), ( 430, 30))
              ])
-G._sources.add((430, 740))
 G.add_edges([
              # inner lane straight
              (( 500, 740), (500, 670)),
@@ -76,7 +73,21 @@ G.add_edges([
              (( 500, 380), (750, 250)),
              (( 500, 120), (500, 30))
              ])
-G._sources.add(( 500, 740))
+G._sources = set([(0, 325), (0, 245), (430, 740), (500, 740)])
+G._sinks = set([(430, 30), (500, 30), (1040, 255), (1040, 340), (570, 740), (635, 740)])
+
+# temporary sources and sinks
+G._sources.add((1144, 515))
+G._sources.add((1144, 435))
+G._sources.add((714, 20))
+G._sources.add((644, 20))
+G._sinks.add((714, 730))
+G._sinks.add((644, 730))
+G._sinks.add((104, 505))
+G._sinks.add((104, 420))
+
+A = np.array([570, 740])
+B = np.array([644, 730])
 
 if visualize:
     import matplotlib.pyplot as plt

@@ -5,20 +5,19 @@
 # May 2, 2018
 
 import os
-import sys
-sys.path.append("..")
-import traffic_intersection.components.car as car
-import traffic_intersection.components.pedestrian as pedestrian
-import traffic_intersection.components.traffic_signals as traffic_signals
+import components.car as car
+import components.pedestrian as pedestrian
+import components.traffic_signals as traffic_signals
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
+import assumes.params as params
 from time import time
 from numpy import cos, sin, tan
 import numpy as np
 from PIL import Image
 import random
 import scipy.io
-from traffic_intersection.prepare.collision_check import collision_check
+from traffic_intersection.prepare.collision_check import collision_free, get_bounding_box, contact_points
 
 #TODO: clean up this section
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -26,23 +25,32 @@ primitive_data = dir_path + '/primitives/MA3.mat'
 mat = scipy.io.loadmat(primitive_data)
 
 intersection_fig = dir_path + "/components/imglib/intersection_states/intersection_"
-car_scale_factor = 0.1 # scale for when L = 50
-pedestrian_scale_factor = 0.32
 
-def find_corner_coordinates(x_rel_i, y_rel_i, x_des, y_des, theta, square_fig):
+def find_corner_coordinates(x_state_center_before, y_state_center_before, x_desired, y_desired, theta, square_fig):
     """
     This function takes an image and an angle then computes
-    the coordinates of the corner (observe that vertical axis here is flipped)
+    the coordinates of the corner (observe that vertical axis here is flipped).
+    If we'd like to put the point specfied by (x_state_center_before, y_state_center_before) at (x_desired, y_desired),
+    this answers the question of where we should place the lower left corner of the image
     """
     w, h = square_fig.size
     theta = -theta
-    if abs(w- h)>1:
-        print("Warning: Figure has to be square!")
-    x_corner_rel, y_corner_rel = -w/2, -h/2
+    if abs(w-h)>1:
+        print("Warning: Figure has to be square! Otherwise, clipping or unexpected behavior may occur")
     R = np.array([[cos(theta), sin(theta)], [-sin(theta), cos(theta)]])
-    x_rel_f, y_rel_f = R.dot(np.array([[x_rel_i], [y_rel_i]]))
-    # xy_unknown - xy_corner + xy_rel_f = xy_des
-    return int(x_des - x_rel_f + x_corner_rel), int(y_des - y_rel_f + y_corner_rel)
+    x_corner_center_before, y_corner_center_before = -w/2., -h/2. # lower left corner before rotation
+    x_corner_center_after, y_corner_center_after = -w/2., -h/2. # doesn't change since figure size remains unchanged
+
+    x_state_center_after, y_state_center_after = R.dot(np.array([[x_state_center_before], [y_state_center_before]])) # relative coordinates after rotation by theta
+
+    x_state_corner_after = x_state_center_after - x_corner_center_after
+    y_state_corner_after = y_state_center_after - y_corner_center_after
+
+    # x_corner_unknown + x_state_corner_after = x_desired
+    # y_corner_unknown + y_state_corner_after = y_desired
+    x_corner_unknown = int(x_desired - x_state_center_after + x_corner_center_after)
+    y_corner_unknown = int(y_desired - y_state_center_after + y_corner_center_after)
+    return x_corner_unknown, y_corner_unknown
 
 def draw_car(vehicle):
     vee, theta, x, y = vehicle.state
@@ -52,21 +60,22 @@ def draw_car(vehicle):
     w_orig, h_orig = vehicle_fig.size
     # set expand=True so as to disable cropping of output image
     vehicle_fig = vehicle_fig.rotate(theta_d, expand = False)
-    scaled_vehicle_fig_size  =  tuple([int(car_scale_factor * i) for i in vehicle_fig.size])
+    scaled_vehicle_fig_size  =  tuple([int(params.car_scale_factor * i) for i in vehicle_fig.size])
     # rescale car 
-    #vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size, Image.ANTIALIAS)
-    vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size) # disable antialiasing for better performance
+    vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size, Image.ANTIALIAS)
+    #vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size) # disable antialiasing for better performance
     # at (full scale) the relative coordinates of the center of the rear axle w.r.t. the
-    # center of the figure is -185
-    x_corner, y_corner = find_corner_coordinates(-car_scale_factor * (w_orig/2-185), 0, x, y, theta, vehicle_fig)
+    # center of the figure is center_to_axle_dist
+    x_corner, y_corner = find_corner_coordinates(-params.car_scale_factor * params.center_to_axle_dist, 0, x, y, theta, vehicle_fig)
     background.paste(vehicle_fig, (x_corner, y_corner), vehicle_fig)
+    return x_corner, y_corner
 
 def draw_pedestrian(pedestrian):
     x, y, theta, current_gait = pedestrian.state
     i = current_gait % pedestrian.film_dim[1]
     j = current_gait // pedestrian.film_dim[1]
     film_fig = Image.open(pedestrian.fig)
-    scaled_film_fig_size  =  tuple([int(pedestrian_scale_factor * i) for i in film_fig.size])
+    scaled_film_fig_size  =  tuple([int(params.pedestrian_scale_factor * i) for i in film_fig.size])
     film_fig = film_fig.resize( scaled_film_fig_size)
     width, height = film_fig.size
     sub_width = width/pedestrian.film_dim[1]
@@ -78,11 +87,10 @@ def draw_pedestrian(pedestrian):
     person_fig = person_fig.rotate(180-theta/np.pi * 180 + 90, expand = False)
     x_corner, y_corner = find_corner_coordinates(0., 0, x, y, theta,  person_fig)
     background.paste(person_fig, (int(x_corner), int(y_corner)), person_fig)
-    print(person_fig.size)
 
 # creates figure
 fig = plt.figure()
-fig.add_axes([0,0,1,1]) # get rid of white border
+ax = fig.add_axes([0,0,1,1]) # get rid of white border
 
 # turn on/off axes
 plt.axis('off')
@@ -191,12 +199,10 @@ pedestrians = [pedestrian_1, pedestrian_2, pedestrian_3, pedestrian_4]
 traffic_lights = traffic_signals.TrafficLights(3, 23, random_start = False)
 horizontal_light = traffic_lights.get_states('horizontal', 'color')
 vertical_light = traffic_lights.get_states('vertical', 'color')
-background = Image.open(intersection_fig + horizontal_light + '_' + vertical_light + '.png')
-def init():
-    stage = plt.imshow(background, origin="lower",zorder=0) # this origin option flips the y-axis
-    return stage, # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
 
-def animate(i): # update animation by dt
+def animate(frame_idx): # update animation by dt
+    ax.cla() # clear Axes before plotting
+    print(frame_idx)
     """ online frame update """
     global background
     # update traffic lights
@@ -207,6 +213,7 @@ def animate(i): # update animation by dt
     # TODO: implement option to lay waypoint graph over background
     background = Image.open(intersection_fig + horizontal_light + '_' + vertical_light + '.png')
     x_lim, y_lim = background.size
+
     # update pedestrians
     for person in pedestrians:
         if (person.state[0] <= x_lim and person.state[0] >= 0 and person.state[1] >= 0 and person.state[1] <= y_lim):
@@ -215,6 +222,7 @@ def animate(i): # update animation by dt
     # update planner
     # TODO: integrate planner
     # update enemy cars
+    corners = []
     for vehicle in enemy_cars:
         nu = 0
         acc = 0
@@ -223,10 +231,11 @@ def animate(i): # update animation by dt
                 nu = random.uniform(-0.02,0.02)
             acc = random.uniform(-5,10)
             vehicle.next((acc, nu),dt)
-            draw_car(vehicle)
-    stage = plt.imshow(background, origin="lower") # this origin option flips the y-axis
+            xc, yc = draw_car(vehicle)
+            if np.random.uniform() < 0.5:
+                corners = ax.plot(xc, yc, 'ro')
 
-    if i > delay_time:
+    if frame_idx > delay_time:
         for vehicle in delayed_enemy_cars:
             nu = 0
             acc = 0
@@ -236,37 +245,46 @@ def animate(i): # update animation by dt
                 acc = random.uniform(-5,10)
                 vehicle.next((acc, nu),dt)
                 draw_car(vehicle)
-        stage = plt.imshow(background, origin="lower") # this origin option flips the y-axis
 
-    if i <= delay_time:
+    if frame_idx <= delay_time:
         for vehicle in waiting_enemy_cars:
             nu = 0
             acc = 0
             vehicle.next((acc, nu),dt)
             draw_car(vehicle)
-        stage = plt.imshow(background, origin="lower") # this origin option flips the y-axis
 
     ## update controlled cars with primitives
     for vehicle in controlled_cars:
         vehicle.prim_next(dt = dt)
         if vehicle.prim_queue.len() > 0:
             draw_car(vehicle)
-    stage = plt.imshow(background, origin="lower") # this origin option flips the y-axis
 
     #collision check
+    boxes = []
     all_components = controlled_cars + enemy_cars + waiting_enemy_cars + pedestrians
+    # initialize boxes
+    boxes = [ax.plot([], [], 'g')[0] for _ in range(len(all_components))]
 
     for i in range(len(all_components)):
+        curr_comp = all_components[i]
+        vertex_set,_,_,_ = get_bounding_box(curr_comp)
+        xs = [vertex[0] for vertex in vertex_set]
+        ys = [vertex[1] for vertex in vertex_set]
+        xs.append(vertex_set[0][0])
+        ys.append(vertex_set[0][1])
+        boxes[i].set_data(xs,ys)
         for j in range(i + 1, len(all_components)):
-            if collision_check(all_components[i], all_components[j], car_scale_factor, pedestrian_scale_factor):
+            collision_free1, min_sep_vector = collision_free(all_components[i], all_components[j])# returns True if collision free and an empty vector, else returns False and the min vector needed to separate the objects
+            if not collision_free1: # had to change variable name from the function to remove error
                 print("Collision, object indices:")
                 print(i, j)
-            else:
-                pass
-
-#        dots = plt.axes().plot(240,300,'ro')
-#        return stage, dots  # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
-    return stage,   # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
+                print(min_sep_vector)
+                cp = contact_points(all_components[i], all_components[j], min_sep_vector)
+                print(cp)
+                boxes[j].set_color('r')
+                boxes[i].set_color('r')
+    stage = ax.imshow(background, origin="lower") # this origin option flips the y-axis
+    return  [stage] + boxes + corners  # returned object must be iterable, a requirement of FuncAnimation
 ##
 ## OBSERVER GOES HERE 
 ## TAKES IN CONTRACTS, CARS AND TRAFFIC LIGHT
@@ -275,14 +293,12 @@ t0 = time()
 animate(0)
 t1 = time()
 interval = (t1 - t0)
-show_waypoint_graph = False
 save_video = False
-num_frames = 550 # number of the first frames to save in video
-ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval, blit=True,
-        init_func = init, repeat=False) # by default the animation function loops, we set repeat to False in order to limit the number of frames generated to num_frames
+num_frames = 600 # number of the first frames to save in video
+ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval, blit=True, repeat=False) # by default the animation function loops, we set repeat to False in order to limit the number of frames generated to num_frames
 
 if save_video:
     Writer = animation.writers['ffmpeg']
-    writer = Writer(fps=30, metadata=dict(artist='Me'), bitrate=1800)
-    ani.save('movies/hi_quality.avi', writer=writer, dpi=200)
+    writer = Writer(fps=20, metadata=dict(artist='Me'), bitrate=1800)
+    ani.save('movies/boxes_better.avi', writer=writer, dpi=300)
 plt.show()
