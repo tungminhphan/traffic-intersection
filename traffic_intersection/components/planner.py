@@ -96,15 +96,19 @@ def time_stamp_edge(path, edge_time_stamps, current_time, primitive_graph, parti
         end_time = scheduled_times[right]
         delta_t = end_time - start_time # TODO: make this more efficient, get t_end directly?
         for segment_id in range(params.num_subprims):
-            if partial and k == len(path)-2 and segment_id == params.num_subprims:
-                stamp = (start_time + segment_id/5. * delta_t, np.float('inf')) # stamp for subedge
+            if partial and k == len(path)-2 and segment_id == params.num_subprims-1:
+                stamp = (start_time + segment_id/5. * delta_t, float('inf')) # reserved for time indefinite
+                last_start_time = stamp[0]
             else:
                 stamp = (start_time + segment_id/5. * delta_t, start_time + (segment_id + 1)/5. * delta_t) # stamp for subedge
             try:
                 edge_time_stamps[(edge_to_prim_id[edge], segment_id)].add(stamp)
             except KeyError:
                 edge_time_stamps[(edge_to_prim_id[edge], segment_id)] = {stamp}
-    return edge_time_stamps
+    if not partial:
+        return edge_time_stamps
+    else:
+        return edge_time_stamps, last_start_time
 
 def is_overlapping(interval_A, interval_B):
     '''

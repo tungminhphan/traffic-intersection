@@ -203,35 +203,43 @@ honk_t = []
 all_wavefronts = set()
 request_queue = queue.Queue()
 
+waiting = dict()
+
 def animate(frame_idx): # update animation by dt
     current_time = frame_idx * dt # compute current time from frame index and dt
     print('{:.2f}'.format(current_time)) # print out current time to 2 decimal places
 
     """ online frame update """
     global background
-    if with_probability(min(1,20/(frame_idx+1))):
+    if with_probability(min(1,10/(frame_idx+1))):
         new_plate_number, new_start_node, new_end_node, new_car = spawn_car()
         request_queue.enqueue((new_plate_number, new_start_node, new_end_node, new_car))
     if request_queue.len() > 0:
         plate_number, start_node, end_node, the_car = request_queue.pop()
+        # temporarily remove reservation
+        if plate_number in waiting.keys():
+            wait_prim_id, interval = waiting[plate_number]
+#            print('______________________')
+#            print(wait_prim_id)
+#            print(interval)
+#            print('______________________')
+            edge_time_stamps[(wait_prim_id, params.num_subprims-1)].remove(interval)
+            del waiting[plate_number]
         _, shortest_path = planner.dijkstra(start_node, end_node, G)
         safety_check, first_conflict_idx = planner.is_safe(path = shortest_path, current_time = current_time, primitive_graph = G, edge_time_stamps = edge_time_stamps)
         if safety_check:
             planner.time_stamp_edge(path = shortest_path, edge_time_stamps = edge_time_stamps, current_time = current_time, primitive_graph = G)
-            cars[plate_number] = the_car # add the car
+            cars[plate_number] = the_car # add the car to cars
             path_prims = path_to_primitives(path = shortest_path) # add primitives
-            while the_car.prim_queue.len() > 0:
-                top_prim_id, _ = the_car.prim_queue.top()
-                if top_prim_id == -1:
-                    the_car.prim_queue.pop()
+            #print(edge_time_stamps)
             for prim_id in path_prims:
                 cars[plate_number].prim_queue.enqueue((prim_id, 0))
         else: # if safety check fails
-            partial_path = shortest_path[0:first_conflict_idx]
+            partial_path = shortest_path[:first_conflict_idx]
             if len(partial_path) > 0:
                 # define current node
                 current_node = (0, partial_path[-1][1], partial_path[-1][2], partial_path[-1][3])
-                planner.time_stamp_edge(path = partial_path, edge_time_stamps = edge_time_stamps, current_time = current_time, primitive_graph = G)
+                _,last_start_time = planner.time_stamp_edge(path = partial_path, edge_time_stamps = edge_time_stamps, current_time = current_time, primitive_graph = G, partial=True)
                 cars[plate_number] = the_car # add the car
                 path_prims = path_to_primitives(path=partial_path) # add primitives
                 for prim_id in path_prims:
@@ -240,14 +248,19 @@ def animate(frame_idx): # update animation by dt
                     top_prim_id, _ = the_car.prim_queue.top()
                     if top_prim_id != -1:
                         cars[plate_number].prim_queue.enqueue((-1, 0))
-                #print('adding new_request')
+                        waiting[plate_number] = (path_prims[-1], (last_start_time, float('inf'))) # add current node there
                 new_request = (plate_number, current_node, end_node, the_car)
                 request_queue.enqueue(new_request)
             else:
                 new_request = (plate_number, start_node, end_node, the_car)
                 request_queue.enqueue(new_request)
+    print('----------------------------------')
+    print(waiting)
+    print(edge_time_stamps)
 #    request_queue.print_queue()
+    print('----------------------------------')
     # update traffic lights
+#    request_queue.print_queue()
     traffic_lights.update(dt)
     horizontal_light = traffic_lights.get_states('horizontal', 'color')
     vertical_light = traffic_lights.get_states('vertical', 'color')
