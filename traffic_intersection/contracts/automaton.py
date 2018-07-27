@@ -5,6 +5,7 @@ import inequality as iq
 import numpy as np
 import itertools
 from graphviz import Digraph
+import graph
 
 # General state class. Has a 'set' property for the purposes of composition.
 class State:
@@ -83,26 +84,6 @@ class guardTransition(Transition):
 
         return transtext
 
-# takes two guard transitions and returns their composition
-def compose_guard_trans(tr1, tr2):
-
-    if tr1.guard == True:
-        guard = tr2.guard
-    elif tr2.guard == True:
-        guard = tr1.guard
-    else:
-        guard = iq.conjunct(tr1.guard, tr2.guard)
-
-    newstart = product(tr1.startState, tr2.startState)
-    newend = product(tr1.endState, tr2.endState)
-    inp = tr1.inputs.intersection(tr2.inputs)
-    out = tr1.outputs.intersection(tr2.outputs)
-    inter = (tr1.inputs.intersection(tr2.outputs)).union(
-        tr1.outputs.intersection(tr2.inputs)).union(tr1.internals).union(tr2.internals)
-    if len(inp.union(out).union(inter)) == 0:
-        return False
-
-    return guardTransition(newstart, newend, guard, inp, out, inter)
 
 # General finite automaton. 
 class Automaton:
@@ -168,6 +149,28 @@ class ComponentAutomaton(Automaton):
         self.output_alphabet = outputAlphabet
         self.alphabet = self.input_alphabet.union(self.output_alphabet)
 
+        # takes two guard transitions and returns their composition
+    def compose_guard_trans(tr1, tr2):
+
+        if tr1.guard == True:
+            guard = tr2.guard
+        elif tr2.guard == True:
+            guard = tr1.guard
+        else:
+            guard = iq.conjunct(tr1.guard, tr2.guard)
+
+        newstart = product(tr1.startState, tr2.startState)
+        newend = product(tr1.endState, tr2.endState)
+        inp = tr1.inputs.intersection(tr2.inputs)
+        out = tr1.outputs.intersection(tr2.outputs)
+        inter = (tr1.inputs.intersection(tr2.outputs)).union(
+            tr1.outputs.intersection(tr2.inputs)).union(tr1.internals).union(tr2.internals)
+        if len(inp.union(out).union(inter)) == 0:
+            return False
+
+        return guardTransition(newstart, newend, guard, inp, out, inter)
+
+
 def compose_components(component_1, component_2):
     new_component = ComponentAutomaton()
     newalphabet = component_1.alphabet.union(component_2.alphabet)
@@ -183,10 +186,128 @@ def compose_components(component_1, component_2):
 
             for trans1 in dict1[key1]:
                 for trans2 in dict2[key2]:
-                    new_component.transitions_dict[newstate].add(compose_guard_trans(trans1, trans2))
+                    new_component.transitions_dict[newstate].add(new_component.compose_guard_trans(trans1, trans2))
 
     new_component.alphabet = newalphabet
     return new_component
+
+class ContractAutomaton(Automaton):
+    def __init__(self, must = {}, may = {}):
+        Automaton.__init__(self)
+        self.must = must
+        self.may = may
+        # may and must are transition dictionaries
+
+    def check_validity(self):
+        # checks that the states are equal
+        for key in may.states:
+            for key2 in must.states:
+                if key not in must.states:
+                    return False
+                if key2 not in may.states:
+                    return False
+
+        # checks every may transition is a must transition
+        for key in may.transitions_dict:
+            trans = may.transitions_dict[key]
+            for transition in trans:
+                if transitions not in must.transitions_dict[key]:
+                    return False
+
+        return True
+
+        def add_transition(self, transition, must = 0):
+            self.may[transition.startState].add(transition)
+            if must:
+                self.must[transition.startState].add(transition)
+
+        def convert_to_digraph(self):
+            automata = Digraph(comment = 'insert description parameter later?')
+
+            for state in self.states:
+                # adds nodes
+                automata.attr('node', shape = 'circle', color='green', style='filled', fixedsize='false', width='1')
+                if state in self.endStates:
+                    automata.attr('node', shape = 'doublecircle')
+                if state == self.startState:
+                    automata.attr('node', color = 'yellow')
+                automata.node(state.text, state.text)
+
+            # adds transitions
+            for state in self.states:
+                maytransit = self.may[state] # this is a set of may transitions from the state
+                musttransit = self.must[state]
+                for trans in maytransit:
+                    if trans != False:
+                        state2 = trans.endState
+                        transtext = trans.show()
+                        automata.edge(state.text, state2.text, label = transtext, style = 'dotted')
+
+                for trans in musttransit:
+                    if trans != False:
+                        state2 = trans.endState
+                        transtext = trans.show()
+                        automata.edge(state.text, state2.text, label = transtext)
+
+            return automata
+
+# assumes weight on a graph is a string of the form "guard / ?input, !output, #internal separated by , "
+def convert_graph_to_automaton(digraph):
+    new_component = ComponentAutomaton()
+    nodes = digraph._nodes
+    edges = digraph._edges
+    stringstatedict = {}
+    inp = set()
+    out = set()
+    inter = set()
+
+    for node in nodes:
+        newstate = State(node)
+        new_component.add_state(node)
+        stringstatedict[node] = newstate
+
+    for trans in edges:
+        state1 = stringstatedict[trans[0]]
+        state2 = stringstatedict[trans[1]]
+        text = digraph._weights[trans]
+        words = text.split() # weight is a string
+
+        actions = text[text.find('/') + 1:].split() # part of transition text after / delimiter
+
+        if words[0] == 'True':
+            guard = True
+
+        else:
+            if len(words) > 3 and words[1] == '≤' and words[3] == '≤':
+                lwrbnd = float(words[0])
+                var = words[2]
+                uprbnd = float(words[4])
+            elif words[1] == '≥':
+                var = words[0]
+                lwrbnd = float(words[2])
+                uprbnd = np.inf
+            elif words[1] == '≤':
+                var = words[0]
+                uprbnd = float(words[2])
+                lwrbnd = -np.inf
+
+        guard = iq.dictionarize(iq.Inequality(var, lwrbnd, uprbnd))
+
+        # Each action in form ?(input), !(output), or #(internal)
+        for action in actions:
+            if action[0] = '?':
+                inp.add(action[1:])
+            elif action[0] = '!':
+                out.add(action[1:])
+            elif action[0] = '#':
+                inter.add(action[1:])
+            else:
+                raise SyntaxError('Input, output or internals in wrong format.')
+
+        new_component.add_transition(guardTransition(state1, state2, guard, inp, out, inter))
+
+    return new_component
+
 
 # # Add this later to make testing easier
 # currently only works if the guard text is a single inequality
