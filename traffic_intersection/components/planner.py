@@ -35,7 +35,9 @@ def dijkstra(start, end, graph):
         predecessor = {}
         unmarked_nodes = graph._nodes.copy() # create a copy of set of nodes in graph
         if start not in graph._nodes or end not in graph._nodes:
-            raise SyntaxError("either the start or end node is not in the graph!")
+            raise SyntaxError("The start node is not in the graph!")
+        elif end not in graph._nodes:
+            raise SyntaxError("The end node is not in the graph!")
         for node in graph._nodes:
             if node != start:
                 score[node] = float('inf') # initialize all scores to inf
@@ -96,19 +98,22 @@ def time_stamp_edge(path, edge_time_stamps, current_time, primitive_graph, parti
         end_time = scheduled_times[right]
         delta_t = end_time - start_time # TODO: make this more efficient, get t_end directly?
         for segment_id in range(params.num_subprims):
-            if partial and k == len(path)-2 and segment_id == params.num_subprims-1:
-                stamp = (start_time + segment_id/5. * delta_t, float('inf')) # reserved for time indefinite
+            if partial and (k == len(path)-2) and (segment_id == params.num_subprims-1):
+                stamp = (start_time + segment_id/params.num_subprims * delta_t, float('inf')) # reserved for time indefinite
                 last_start_time = stamp[0]
             else:
-                stamp = (start_time + segment_id/5. * delta_t, start_time + (segment_id + 1)/5. * delta_t) # stamp for subedge
+                stamp = (start_time + segment_id/(params.num_subprims-1) * delta_t, start_time + (segment_id + 1)/5. * delta_t) # stamp for subedge
             try:
                 edge_time_stamps[(edge_to_prim_id[edge], segment_id)].add(stamp)
             except KeyError:
                 edge_time_stamps[(edge_to_prim_id[edge], segment_id)] = {stamp}
-    if not partial:
-        return edge_time_stamps
+    if partial:
+        try:
+            return edge_time_stamps, last_start_time
+        except UnboundLocalError:
+            print('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
     else:
-        return edge_time_stamps, last_start_time
+        return edge_time_stamps
 
 def is_overlapping(interval_A, interval_B):
     '''
@@ -137,7 +142,7 @@ def is_safe(path, current_time, primitive_graph, edge_time_stamps):
                 if (colliding_id, jj) in edge_time_stamps: # if current loc is already stamped
                     for interval in edge_time_stamps[(colliding_id, jj)]:
                         if is_overlapping( (left_time + (ii)/5. * delta_t, left_time + (ii+1)/5. * delta_t ), interval): # if the two intervals overlap
-                            return False, current_edge_idx
+                            return False, current_edge_idx+1
         current_edge_idx += 1
     return True, None
 

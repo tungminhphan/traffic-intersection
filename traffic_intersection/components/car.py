@@ -115,7 +115,7 @@ class KinematicCar:
 
        # TODO: temporary fix to floating problem
        if a == 0:
-           self.state[0] = np.sign(self.state[0]) * abs(self.state[0]) * dt * 0.05
+           self.state[0] = np.sign(self.state[0]) * abs(self.state[0]) * dt * 0.1
 
     def extract_primitive(self):
        #TODO: rewrite the comment below
