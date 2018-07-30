@@ -2,3 +2,4 @@
 *.avi
 *.pypirc
 *.gv*
+build/

@@ -12,9 +12,10 @@ import scipy.integrate as integrate
 dir_path = os.path.dirname(os.path.realpath(__file__))
 from prepare.queue import Queue
 
+
 def generate_walking_gif():
     pedestrian_fig = dir_path + "/imglib/pedestrians/walking3.png"
-    film_dim = (1, 6) # dimension of the film used for animation
+    film_dim = (1, 6)  # dimension of the film used for animation
     img = Image.open(pedestrian_fig)
     width, height = img.size
     sub_width = width/film_dim[1]
@@ -30,15 +31,16 @@ def generate_walking_gif():
             images.append(cropped_img)
     imageio.mimsave('movie.gif', images, duration=0.1)
 
+
 class Pedestrian:
     def __init__(self,
-                 init_state = [0,0,0,0], # (x, y, theta, gait)
-                 number_of_gaits = 6,
-                 gait_length = 4,
-                 gait_progress = 0,
-                 film_dim = (1, 6),
-                 prim_queue = None, # primitive queue
-                 pedestrian_type = '3'): # three types 1 or 2 or 3
+                 init_state=[0, 0, 0, 0],  # (x, y, theta, gait)
+                 number_of_gaits=6,
+                 gait_length=4,
+                 gait_progress=0,
+                 film_dim=(1, 6),
+                 prim_queue=None,  # primitive queue
+                 pedestrian_type='3'):  # three types 1 or 2 or 3
         """
         Pedestrian class
         """
@@ -60,13 +62,18 @@ class Pedestrian:
         The pedestrian advances forward
         """
         dee_theta, vee = inputs
-        self.state[2] += dee_theta # update heading of pedestrian
-        self.state[0] += vee * np.cos(self.state[2]) * dt # update x coordinate of pedestrian
-        self.state[1] += vee * np.sin(self.state[2]) * dt # update y coordinate of pedestrian
-        distance_travelled = vee * dt # compute distance travelled during dt
-        gait_change = (self.gait_progress + distance_travelled / self.gait_length) // 1 # compute number of gait change
-        self.gait_progress = (self.gait_progress + distance_travelled / self.gait_length) % 1
-        self.state[3] = int((self.state[3] + gait_change) % self.number_of_gaits)
+        self.state[2] += dee_theta  # update heading of pedestrian
+        # update x coordinate of pedestrian
+        self.state[0] += vee * np.cos(self.state[2]) * dt
+        # update y coordinate of pedestrian
+        self.state[1] += vee * np.sin(self.state[2]) * dt
+        distance_travelled = vee * dt  # compute distance travelled during dt
+        gait_change = (self.gait_progress + distance_travelled /
+                       self.gait_length) // 1  # compute number of gait change
+        self.gait_progress = (self.gait_progress +
+                              distance_travelled / self.gait_length) % 1
+        self.state[3] = int((self.state[3] + gait_change) %
+                            self.number_of_gaits)
 
     def visualize(self):
         # convert gait number to i, j coordinates of subfigure
@@ -84,44 +91,46 @@ class Pedestrian:
         return cropped_img
 
     def extract_primitive(self):
-       #TODO: rewrite the comment below
-       """
-       This function updates the primitive queue and picks the next primitive to be applied. When there is no more primitive in the queue, it will
-       return False
+        # TODO: rewrite the comment below
+        """
+        This function updates the primitive queue and picks the next primitive to be applied. When there is no more primitive in the queue, it will
+        return False
 
-       """
-       while self.prim_queue.len() > 0:
-           if self.prim_queue.top()[1] < 1: # if the top primitive hasn't been exhausted
-               prim_data, prim_progress = self.prim_queue.top() # extract it
-               return prim_data, prim_progress
-           else:
-               self.prim_queue.pop() # pop it
-       return False
+        """
+        while self.prim_queue.len() > 0:
+            # if the top primitive hasn't been exhausted
+            if self.prim_queue.top()[1] < 1:
+                prim_data, prim_progress = self.prim_queue.top()  # extract it
+                return prim_data, prim_progress
+            else:
+                self.prim_queue.pop()  # pop it
+        return False
 
     def prim_next(self, dt):
-        if self.extract_primitive() == False: # if there is no primitive to use
+        if self.extract_primitive() == False:  # if there is no primitive to use
             self.next((0, 0), dt)
         else:
-            prim_data, prim_progress = self.extract_primitive() # extract primitive data and primitive progress from prim
-            start, finish, t_end = prim_data # extract data from primitive
-            if prim_progress == 0: # ensure that starting position is correct at start of primitive
+            # extract primitive data and primitive progress from prim
+            prim_data, prim_progress = self.extract_primitive()
+            start, finish, t_end = prim_data  # extract data from primitive
+            if prim_progress == 0:  # ensure that starting position is correct at start of primitive
                 self.state[0] = start[0]
                 self.state[1] = start[1]
-            if start == finish: #waiting mode
+            if start == finish:  # waiting mode
                 remaining_distance = 0
-                self.state[3] = 0 # reset gait
-                if self.prim_queue.len() > 1: # if current not at last primitive
-                    last_prim_data, last_prim_progress = self.prim_queue.bottom() # extract last primitive
+                self.state[3] = 0  # reset gait
+                if self.prim_queue.len() > 1:  # if current not at last primitive
+                    last_prim_data, last_prim_progress = self.prim_queue.bottom()  # extract last primitive
                     last_start, last_finish, last_t_end = last_prim_data
                     dx_last = last_finish[0] - self.state[0]
                     dy_last = last_finish[1] - self.state[1]
-                    heading = np.arctan2(dy_last,dx_last)
+                    heading = np.arctan2(dy_last, dx_last)
                     if self.state[2] != heading:
                         self.state[2] = heading
-            else: # if in walking mode
+            else:  # if in walking mode
                 dx = finish[0] - self.state[0]
                 dy = finish[1] - self.state[1]
-                heading = np.arctan2(dy,dx)
+                heading = np.arctan2(dy, dx)
                 if self.state[2] != heading:
                     self.state[2] = heading
                 remaining_distance = np.linalg.norm(np.array([dx, dy]))
@@ -129,13 +138,14 @@ class Pedestrian:
             vee = remaining_distance / remaining_time
             self.next((0, vee), dt)
             prim_progress += dt / t_end
-            self.prim_queue.replace_top((prim_data, prim_progress)) # update primitive queue
+            self.prim_queue.replace_top(
+                (prim_data, prim_progress))  # update primitive queue
 
 #my_pedestrian = Pedestrian()
 #dt = 0.1
 ##from matplotlib import pyplot as plt
 ##box = (70, 70, 30, 30)
-#my_pedestrian.visualize()
-#while True:
+# my_pedestrian.visualize()
+# while True:
 #    my_pedestrian.next((0.1, 0.05), dt)
 #    print(my_pedestrian.state)

@@ -5,17 +5,19 @@
 
 import random
 
-## TODO: write comments
+# TODO: write comments
+
 
 class TrafficLights():
-    def __init__(self, yellow_max = 5, green_max = 25, random_start = True, horizontal_state = ['red', 28]):
+    def __init__(self, yellow_max=5, green_max=25, random_start=True, horizontal_state=['red', 28]):
         '''
         @param yellow_max is the duration of yellow
         @param green_max is the duration of yellow
         @param random_start
 
         '''
-        self._max_time = {'yellow': yellow_max, 'green': green_max, 'red': yellow_max + green_max}
+        self._max_time = {'yellow': yellow_max,
+                          'green': green_max, 'red': yellow_max + green_max}
         if random_start:
             colors = ['red', 'yellow', 'green']
             random_color = random.choice(colors)
@@ -24,7 +26,8 @@ class TrafficLights():
         else:
             horizontal_state = horizontal_state
         vertical_state = self.get_counterpart(horizontal_state)
-        self._state = {'horizontal': horizontal_state, 'vertical': vertical_state}
+        self._state = {'horizontal': horizontal_state,
+                       'vertical': vertical_state}
 
     def get_counterpart(self, state):
         color = state[0]
@@ -36,7 +39,7 @@ class TrafficLights():
         elif color == 'yellow':
             other_color = 'red'
             other_time = self._max_time['green'] + time
-        else: # color == 'red'
+        else:  # color == 'red'
             if time // self._max_time['green'] >= 1:
                 other_color = 'yellow'
                 other_time = time - self._max_time['green']
@@ -55,7 +58,8 @@ class TrafficLights():
 
     def update(self, dt):
         full_cycle = sum(self._max_time[k] for k in self._max_time)
-        horizontal_time = (self._state['horizontal'][1] + dt) % full_cycle # update and trim time
+        # update and trim time
+        horizontal_time = (self._state['horizontal'][1] + dt) % full_cycle
         current_color = self._state['horizontal'][0]
         next_color = self.successor(current_color)
         last_color = self.successor(next_color)
@@ -66,10 +70,12 @@ class TrafficLights():
             horizontal_time = horizontal_time - self._max_time[current_color]
         else:
             horizontal_color = last_color
-            horizontal_time = horizontal_time - self._max_time[current_color] - self._max_time[next_color]
+            horizontal_time = horizontal_time - \
+                self._max_time[current_color] - self._max_time[next_color]
         new_horizontal_state = [horizontal_color, horizontal_time]
         self._state['horizontal'] = new_horizontal_state
         self._state['vertical'] = self.get_counterpart(new_horizontal_state)
+
     def get_states(self, which_light, color_or_time):
         if color_or_time == 'color':
             color_or_time = 0
@@ -85,7 +91,7 @@ class TrafficLights():
 #dt = 1
 #
 #start_time = time.time()
-#while True:
+# while True:
 #   traffic_lights.update(dt)
 #   print(traffic_lights._state)
 #   time.sleep(dt)
