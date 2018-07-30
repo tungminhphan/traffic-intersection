@@ -273,7 +273,7 @@ def animate(frame_idx): # update animation by dt
                 cars[plate_number].prim_queue.enqueue((prim_id, 0))
                 prim_time = get_prim_data(prim_id, 't_end')[0]
                 effective_current_times[plate_number] += prim_time
-        elif first_conflict_edge_idx == 0:
+        elif first_conflict_edge_idx == None:
             if plate_number in waiting.keys():
                 edge_time_stamps[(wait_prim_id, params.num_subprims-1)].add(interval) # add temporarily removed interval back
             new_request = (plate_number, start_node, end_node, the_car)
