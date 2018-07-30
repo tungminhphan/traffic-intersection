@@ -142,12 +142,14 @@ def is_safe(path, current_time, primitive_graph, edge_time_stamps):
                         if is_overlapping( (left_time + (ii)/params.num_subprims * delta_t, left_time + (ii+1)/params.num_subprims * delta_t ), interval): # if the two intervals overlap
                             for last_index in range(len(scheduled_times)-2, 0, -1): # dial back and find a node where one can stay there forever and still be safe
                                 last_prim_id = edge_to_prim_id[(path[last_index-1], path[last_index])]
-                                last_interval = (scheduled_times[last_index-1], float('inf'))
+                                last_interval = (scheduled_times[last_index], float('inf'))
+                                overlapping = False
                                 for col_id, jjj in collision_dictionary[(last_prim_id, params.num_subprims-1)]:
                                     if (col_id, jjj) in edge_time_stamps: # if current loc is already stamped
                                         for inner_interval in edge_time_stamps[(col_id, jjj)]:
-                                            if not is_overlapping(last_interval, inner_interval): # if the two intervals overlap
-                                                return False, last_index
+                                            overlapping = overlapping or is_overlapping(last_interval, inner_interval) # if the two intervals overlap
+                                if not overlapping:
+                                    return False, last_index
                             return False, None
     return True, None
 
