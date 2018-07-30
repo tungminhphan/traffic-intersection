@@ -127,7 +127,6 @@ def is_overlapping(interval_A, interval_B):
 def is_safe(path, current_time, primitive_graph, edge_time_stamps):
     now = current_time
     scheduled_times = [now]
-    current_edge_idx = 0
     for left_node, right_node in zip(path[0::1], path[1::1]):
         curr_edge = (left_node, right_node)
         curr_prim_id = edge_to_prim_id[curr_edge]
@@ -142,8 +141,6 @@ def is_safe(path, current_time, primitive_graph, edge_time_stamps):
                     # if the two intervals overlap
                     if is_overlapping(curr_interval, interval):
                         return False
-                        return current_edge_idx  # return node with conflict
-        current_edge_idx += 1
     return True
 
 
