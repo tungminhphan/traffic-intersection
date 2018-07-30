@@ -103,7 +103,7 @@ def time_stamp_edge(path, edge_time_stamps, current_time, primitive_graph, parti
                 stamp = (start_time + segment_id/params.num_subprims * delta_t, float('inf')) # reserved for time indefinite
                 last_interval = stamp
             else:
-                stamp = (start_time + segment_id/(params.num_subprims) * delta_t, start_time + (segment_id + 1)/(params.num_subprims) * delta_t) # stamp for subedge
+                stamp = (start_time + segment_id/params.num_subprims * delta_t, start_time + (segment_id + 1)/(params.num_subprims) * delta_t) # stamp for subedge
             try:
                 edge_time_stamps[(edge_to_prim_id[edge], segment_id)].add(stamp)
             except KeyError:
@@ -142,7 +142,7 @@ def is_safe(path, current_time, primitive_graph, edge_time_stamps):
                 if (colliding_id, jj) in edge_time_stamps: # if current loc is already stamped
                     for interval in edge_time_stamps[(colliding_id, jj)]:
                         if is_overlapping( (left_time + (ii)/params.num_subprims * delta_t, left_time + (ii+1)/params.num_subprims * delta_t ), interval): # if the two intervals overlap
-                            return False, current_edge_idx 
+                            return False, current_edge_idx
         current_edge_idx += 1
     return True, None
 

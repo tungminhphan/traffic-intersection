@@ -135,8 +135,8 @@ def draw_pedestrians(pedestrians):
 #random.seed(100)
 #np.random.seed(0)
 
-random.seed(10)
-np.random.seed(10)
+random.seed(99)
+np.random.seed(99)
 
 # disable antialiasing for better performance
 antialias_enabled = False
@@ -227,20 +227,6 @@ def animate(frame_idx): # update animation by dt
     print('{:.2f}'.format(current_time)) # print out current time to 2 decimal places
 
     """ online frame update """
-    if (76,1) in edge_time_stamps:
-        print('time stamp for (76,1)'+ str(edge_time_stamps[(76,1)]))
-    if (76,4) in edge_time_stamps:
-        print('time stamp for (76,4)'+ str(edge_time_stamps[(76,4)]))
-    if (82,0) in edge_time_stamps:
-        print('time stamp for (82,0)'+ str(edge_time_stamps[(82,0)]))
-    if (82,3) in edge_time_stamps:
-        print('time stamp for (82,3)'+ str(edge_time_stamps[(82,3)]))
-    if (82,4) in edge_time_stamps:
-        print('time stamp for (82,4)'+ str(edge_time_stamps[(82,4)]))
-    if (86,0) in edge_time_stamps:
-        print('time stamp for (86,0)'+ str(edge_time_stamps[(86,0)]))
-    if (42,2) in edge_time_stamps:
-        print('time stamp for (42,2)' + str(edge_time_stamps[(42,2)]))
     global background
     if with_probability(0.5):
 #    if with_probability(min(1,10/(frame_idx+1))):
@@ -250,6 +236,14 @@ def animate(frame_idx): # update animation by dt
     original_request_len = request_queue.len()
     while request_queue.len() > 0 and not deadlock: # if there is at least one request in the queue
         plate_number, prestart_node, end_node, the_car = request_queue.pop() # take the first request
+#        ii = 60
+#        for jj in range(params.num_subprims):
+#            if (ii,jj) in edge_time_stamps:
+#                print('time stamp for (' + str(ii) +  ',' + str(jj) + ')' + str(edge_time_stamps[(ii,jj)]))
+#        ii = 62
+#        for jj in range(params.num_subprims):
+#            if (ii,jj) in edge_time_stamps:
+#                print('time stamp for (' + str(ii) +  ',' + str(jj) + ')' + str(edge_time_stamps[(ii,jj)]))
         start_velocity = prestart_node[0]
         if plate_number not in effective_current_times.keys():
             effective_current_times[plate_number] = current_time
@@ -266,11 +260,10 @@ def animate(frame_idx): # update animation by dt
             edge_time_stamps[(wait_prim_id, params.num_subprims-1)].remove(interval)
         _, shortest_path = planner.dijkstra(start_node, end_node, G)
 
-        safety_check, first_conflict_idx = planner.is_safe(path = shortest_path, current_time = effective_current_times[plate_number], primitive_graph = G, edge_time_stamps = edge_time_stamps)
+        safety_check, first_conflict_edge_idx = planner.is_safe(path = shortest_path, current_time = effective_current_times[plate_number], primitive_graph = G, edge_time_stamps = edge_time_stamps)
         if safety_check:
             if plate_number in waiting.keys():
-                new_interval = (interval[0], effective_current_times[plate_number])
-                edge_time_stamps[(wait_prim_id, params.num_subprims-1)].add(new_interval)
+                edge_time_stamps[(wait_prim_id, params.num_subprims-1)].add((interval[0], effective_current_times[plate_number]))
             unpause_car(the_car, plate_number)
             planner.time_stamp_edge(path = shortest_path, edge_time_stamps = edge_time_stamps, current_time = effective_current_times[plate_number], primitive_graph = G)
             if plate_number not in cars:
@@ -278,16 +271,18 @@ def animate(frame_idx): # update animation by dt
             path_prims = path_to_primitives(shortest_path) # add primitives
             for prim_id in path_prims:
                 cars[plate_number].prim_queue.enqueue((prim_id, 0))
-                prim_time = get_prim_data(prim_id, 't_end')[0] 
+                prim_time = get_prim_data(prim_id, 't_end')[0]
                 effective_current_times[plate_number] += prim_time
-        elif first_conflict_idx < 1:
+        elif first_conflict_edge_idx == 0:
             if plate_number in waiting.keys():
                 edge_time_stamps[(wait_prim_id, params.num_subprims-1)].add(interval) # add temporarily removed interval back
             new_request = (plate_number, start_node, end_node, the_car)
             request_queue.enqueue(new_request)
         else:
             unpause_car(the_car, plate_number)
-            partial_path = shortest_path[:first_conflict_idx+1]
+            if plate_number in waiting.keys():
+                edge_time_stamps[(wait_prim_id, params.num_subprims-1)].add((interval[0], effective_current_times[plate_number]))
+            partial_path = shortest_path[:first_conflict_edge_idx+1]
             # define current node
             _, last_interval = planner.time_stamp_edge(path = partial_path, edge_time_stamps = edge_time_stamps, current_time = effective_current_times[plate_number], primitive_graph = G, partial=True)
             if plate_number not in cars:
@@ -460,13 +455,13 @@ t0 = time.time()
 animate(0)
 t1 = time.time()
 interval = (t1 - t0)
-num_frames = 3000 # number of the first frames to save in video
+num_frames = 2000 # number of the first frames to save in video
 ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval, blit=True, repeat=False) # by default the animation function loops, we set repeat to False in order to limit the number of frames generated to num_frames
 
 if options.save_video:
     Writer = animation.writers['ffmpeg']
     writer = Writer(fps = 30, metadata=dict(artist='Me'), bitrate=-1)
-    ani.save('movies/working_planner1.avi', writer=writer, dpi=200)
+    ani.save('movies/working_planner4.avi', writer=writer, dpi=200)
 plt.show()
 t2 = time.time()
 print('Total elapsed time: ' + str(t2-t0))
