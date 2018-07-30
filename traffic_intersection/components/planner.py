@@ -12,6 +12,7 @@ import prepare.queue as queue
 import prepare.car_waypoint_graph as waypoint_graph
 import primitives.tubes
 import numpy as np
+import string
 if __name__ == '__main__':
     visualize = True
 else:
@@ -150,7 +151,6 @@ def print_state():
 
 
 def generate_license_plate():
-    import string
     choices = string.digits + string.ascii_uppercase
     plate_number = ''
     for i in range(0, 7):

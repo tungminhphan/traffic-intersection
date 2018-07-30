@@ -237,15 +237,12 @@ def contact_points(object1, object2, separation_normal):
 
     ref_normal = cross(ref_edge, -1.0) # reference edge normal
     # gets the largest depth and makes sure the points are not past this
-    max1 = dot(ref_normal, ref_vmax)
-    if (flip): 
-        if dot(ref_normal, cp[1]) > max1:
-            del cp[1] 
-        if dot(ref_normal, cp[0]) > max1:
-            del cp[0]
-    else:
-        if dot(ref_normal, cp[1]) < max1:
-            del cp[1] 
-        if dot(ref_normal, cp[0]) < max1:
-            del cp[0] 
+    max1 = -dot(ref_normal, ref_vmax) if flip else dot(ref_normal, ref_vmax)
+    dot1 = -dot(ref_normal, cp[1]) if flip else dot(ref_normal, cp[1])
+    dot0 = -dot(ref_normal, cp[0]) if flip else dot(ref_normal, cp[0])
+
+    if dot1 < max1:
+        del cp[1] 
+    if dot0 < max1:
+        del cp[0] 
     return cp

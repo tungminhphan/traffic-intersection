@@ -22,8 +22,6 @@ class Inequality:
             return self.var + ' ≤ ' + str(self.uprbnd)
         elif self.lwrbnd != -np.inf and self.uprbnd == np.inf:
             return str(self.lwrbnd) + ' ≤ ' + self.var
-        elif self.lwrbnd != -np.inf and self.uprbnd == np.inf:
-            return str(self.lwrbnd) + ' ≤ ' + self.var
         else:
             return str(self.lwrbnd) + ' ≤ ' + self.var + ' ≤ ' + str(self.uprbnd)
 
