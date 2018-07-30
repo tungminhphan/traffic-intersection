@@ -17,6 +17,10 @@ import assumes.params as params
 import primitives.tubes as tubes
 import prepare.options as options
 from  prepare.collision_check import collision_free, get_bounding_box
+import numpy as np
+from numpy import cos, sin, tan
+from PIL import Image
+import scipy.io
 if platform.system() == 'Darwin': # if the operating system is MacOS
     matplotlib.use('macosx')
 else: # if the operating system is Linux or Windows
@@ -28,10 +32,6 @@ else: # if the operating system is Linux or Windows
         matplotlib.use('TkAgg') # this may be slower
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
-import numpy as np
-from numpy import cos, sin, tan
-from PIL import Image
-import scipy.io
 
 
 # set dir_path to current directory
@@ -88,7 +88,7 @@ def find_corner_coordinates(x_state_center_before, y_state_center_before, x_desi
     This function takes an image and an angle then computes
     the coordinates of the corner (observe that vertical axis here is flipped).
     If we'd like to put the point specfied by (x_state_center_before, y_state_center_before) at (x_desired, y_desired),
-    this answers the question of where we should place the lower left corner of the image
+    this function returns the coordinates of the lower left corner of the new image
     """
     w, h = square_fig.size
     theta = -theta
@@ -130,6 +130,10 @@ def draw_pedestrians(pedestrians):
         person_fig = person_fig.rotate(180-theta/np.pi * 180 + 90, expand = False)
         x_corner, y_corner = find_corner_coordinates(0., 0, x, y, theta,  person_fig)
         background.paste(person_fig, (int(x_corner), int(y_corner)), person_fig)
+
+# set random seed
+random.seed(100)
+np.random.seed(0)
 
 # disable antialiasing for better performance
 antialias_enabled = False
@@ -176,7 +180,7 @@ def spawn_car():
     start_node = random.sample(G._sources, 1)[0]
     end_node = random.sample(G._sinks, 1)[0]
     color = np.random.choice(['gray','blue'])
-    the_car = car.KinematicCar(init_state=start_node, color=color)
+    the_car = car.KinematicCar(init_state=start_node, color=color, plate_number=plate_number)
     return plate_number, start_node, end_node, the_car
 
 def path_to_primitives(path):
@@ -202,32 +206,38 @@ honk_y = []
 honk_t = []
 all_wavefronts = set()
 request_queue = queue.Queue()
-
 waiting = dict()
 
 def pause_car(the_car):
-    pass
+    the_car.prim_queue.enqueue((-1, 0))
 
 def unpause_car(the_car, plate_number):
-    if the_car.prim_queue.len() > 0:
-        top_prim_id, _ =  the_car.prim_queue.top()
-        if top_prim_id == -1:
-            the_car.prim_queue.pop()
+    done = False
+    the_car.prim_queue.remove((-1,0))
     if plate_number in waiting.keys():
         del waiting[plate_number]
 
 def animate(frame_idx): # update animation by dt
+    deadlock = False
     current_time = frame_idx * dt # compute current time from frame index and dt
     print('{:.2f}'.format(current_time)) # print out current time to 2 decimal places
 
     """ online frame update """
     global background
-    if with_probability(1):
+    if with_probability(0.5):
 #    if with_probability(min(1,10/(frame_idx+1))):
         new_plate_number, new_start_node, new_end_node, new_car = spawn_car()
         request_queue.enqueue((new_plate_number, new_start_node, new_end_node, new_car))
+    service_count = 0
+    original_request_len = request_queue.len()
     while request_queue.len() > 0 and not deadlock: # if there is at least one request in the queue
-        plate_number, start_node, end_node, the_car = request_queue.pop() # take the first request
+        plate_number, prestart_node, end_node, the_car = request_queue.pop() # take the first request
+        start_velocity = prestart_node[0]
+        if the_car.prim_queue.len() > 1:
+            if the_car.prim_queue.top()[0] == -1:
+                start_velocity = 0
+        start_node = (start_velocity, prestart_node[1], prestart_node[2], prestart_node[3])
+        service_count += 1
         # consider the case where the plate number is already in the waiting set
         if plate_number in waiting.keys(): # if plate number is already waiting
             wait_prim_id, interval = waiting[plate_number]
@@ -238,38 +248,48 @@ def animate(frame_idx): # update animation by dt
         if safety_check:
             unpause_car(the_car, plate_number)
             planner.time_stamp_edge(path = shortest_path, edge_time_stamps = edge_time_stamps, current_time = current_time, primitive_graph = G)
-            cars[plate_number] = the_car # add the car to cars
-            path_prims = path_to_primitives(path = shortest_path) # add primitives
+            if plate_number not in cars:
+                cars[plate_number] = the_car # add the car
+            path_prims = path_to_primitives(shortest_path) # add primitives
             for prim_id in path_prims:
                 cars[plate_number].prim_queue.enqueue((prim_id, 0))
         elif first_conflict_idx <= 1:
             if plate_number in waiting.keys():
-                _, interval = waiting[plate_number]
                 edge_time_stamps[(wait_prim_id, params.num_subprims-1)].add(interval) # add temporarily removed interval back
             new_request = (plate_number, start_node, end_node, the_car)
             request_queue.enqueue(new_request)
         else:
-            first_conflict_idx = first_conflict_idx
             unpause_car(the_car, plate_number)
-            partial_path = shortest_path[:first_conflict_idx]
+            partial_path = shortest_path[:first_conflict_idx+1]
             # define current node
-            _,last_start_time = planner.time_stamp_edge(path = partial_path, edge_time_stamps = edge_time_stamps, current_time = current_time, primitive_graph = G, partial=True)
+            _, last_interval = planner.time_stamp_edge(path = partial_path, edge_time_stamps = edge_time_stamps, current_time = current_time, primitive_graph = G, partial=True)
             if plate_number not in cars:
                 cars[plate_number] = the_car # add the car
+
+
             path_prims = path_to_primitives(path=partial_path) # add primitives
             for prim_id in path_prims:
                 cars[plate_number].prim_queue.enqueue((prim_id, 0))
-            the_car.prim_queue.enqueue((-1, 0))
+            pause_car(the_car)
 
-            current_node = (0, partial_path[-1][1], partial_path[-1][2], partial_path[-1][3])
-            waiting[plate_number] = (path_prims[-1], (last_start_time, float('inf'))) # add/update current node there
+            current_node = (partial_path[-1][0], partial_path[-1][1], partial_path[-1][2], partial_path[-1][3])
+            waiting[plate_number] = (path_prims[-1], last_interval) # add/update current node there
             new_request = (plate_number, current_node, end_node, the_car)
             request_queue.enqueue(new_request)
+        if service_count == original_request_len:
+            service_count = 0 # reset service count
+            if request_queue.len() == original_request_len:
+#                print('deadlock!!')
+                deadlock = True
+            else:
+                original_request_len = request_queue.len()
+
     # update traffic lights
     traffic_lights.update(dt)
     horizontal_light = traffic_lights.get_states('horizontal', 'color')
     vertical_light = traffic_lights.get_states('vertical', 'color')
     # update background
+    background.close()
     background = Image.open(intersection_fig + horizontal_light + '_' + vertical_light + '.png')
     x_lim, y_lim = background.size
 
@@ -345,7 +365,15 @@ def animate(frame_idx): # update animation by dt
     # plot collision boxes
     boxes = []
     # initialize boxes
-    boxes = [ax.plot([], [], 'g')[0] for _ in range(len(cars_to_keep))]
+    boxes = [ax.plot(0, 0, 'c')[0] for _ in range(len(cars_to_keep))]
+
+
+    ids = [ax.text(0, 0, '') for _ in range(len(cars_to_keep))]
+    if options.show_ids:
+        for i in range(len(cars_to_keep)):
+            _,_,x,y = cars_to_keep[i].state
+            plate_number = cars_to_keep[i].plate_number
+            ids[i] = ax.text(x,y,str(plate_number), color='w', horizontalalignment='center', verticalalignment='center', bbox=dict(facecolor='red', alpha=0.5), fontsize=10)
 
     if options.show_boxes:
         for i in range(len(cars_to_keep)):
@@ -389,7 +417,7 @@ def animate(frame_idx): # update animation by dt
     draw_cars(cars_to_keep)
     global stage # set up a global stage
     stage = ax.imshow(background, origin="lower") # update the stage
-    return  [stage] + [honk_waves] + boxes + curr_tubes  # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
+    return  [stage] + [honk_waves] + boxes + curr_tubes + ids  # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
 
 t0 = time.time()
 animate(0)
@@ -401,7 +429,7 @@ ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval
 if options.save_video:
     Writer = animation.writers['ffmpeg']
     writer = Writer(fps = 30, metadata=dict(artist='Me'), bitrate=-1)
-    ani.save('movies/planner4.avi', writer=writer, dpi=200)
+    ani.save('movies/planner10.avi', writer=writer, dpi=200)
 plt.show()
 t2 = time.time()
 print('Total elapsed time: ' + str(t2-t0))

@@ -55,7 +55,9 @@ class Queue():
 
         '''
         self._queue[-1] = new_item
-
+    def remove(self, item): # remove all matching items in queue      
+        while item in self._queue:
+            self._queue.remove(item)
     def print_queue(self):
         '''
         print the queue

@@ -35,6 +35,7 @@ def dijkstra(start, end, graph):
         predecessor = {}
         unmarked_nodes = graph._nodes.copy() # create a copy of set of nodes in graph
         if start not in graph._nodes or end not in graph._nodes:
+            print(start)
             raise SyntaxError("The start node is not in the graph!")
         elif end not in graph._nodes:
             raise SyntaxError("The end node is not in the graph!")
@@ -100,7 +101,7 @@ def time_stamp_edge(path, edge_time_stamps, current_time, primitive_graph, parti
         for segment_id in range(params.num_subprims):
             if partial and (k == len(path)-2) and (segment_id == params.num_subprims-1):
                 stamp = (start_time + segment_id/params.num_subprims * delta_t, float('inf')) # reserved for time indefinite
-                last_start_time = stamp[0]
+                last_interval = stamp
             else:
                 stamp = (start_time + segment_id/(params.num_subprims-1) * delta_t, start_time + (segment_id + 1)/5. * delta_t) # stamp for subedge
             try:
@@ -108,10 +109,7 @@ def time_stamp_edge(path, edge_time_stamps, current_time, primitive_graph, parti
             except KeyError:
                 edge_time_stamps[(edge_to_prim_id[edge], segment_id)] = {stamp}
     if partial:
-        try:
-            return edge_time_stamps, last_start_time
-        except UnboundLocalError:
-            print('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
+        return edge_time_stamps, last_interval
     else:
         return edge_time_stamps
 
@@ -138,11 +136,13 @@ def is_safe(path, current_time, primitive_graph, edge_time_stamps):
         right_time = scheduled_times[-1]
         delta_t = right_time - left_time
         for ii in range(params.num_subprims):
-            for colliding_id, jj in collision_dictionary[(curr_prim_id, ii)]:
+            for conflict in collision_dictionary[(curr_prim_id, ii)]:
+                colliding_id = conflict[0]
+                jj = conflict[1]
                 if (colliding_id, jj) in edge_time_stamps: # if current loc is already stamped
                     for interval in edge_time_stamps[(colliding_id, jj)]:
                         if is_overlapping( (left_time + (ii)/5. * delta_t, left_time + (ii+1)/5. * delta_t ), interval): # if the two intervals overlap
-                            return False, current_edge_idx+1
+                            return False, current_edge_idx 
         current_edge_idx += 1
     return True, None
 

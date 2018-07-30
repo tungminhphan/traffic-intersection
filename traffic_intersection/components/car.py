@@ -44,12 +44,14 @@ class KinematicCar:
                  vee_max = 100, # maximum velocity
                  is_honking = False, # the car is honking
                  color = 'blue', # color of the car
+                 plate_number = None, # license plate number
                  prim_queue = None, # queue of primitives, each item in the queue has the form (prim_id, prim_progress) where prim_id is the primitive ID and prim_progress is the progress of the primitive)
                  fuel_level = float('inf')): # TODO: fuel level of the car - FUTURE FEATURE)
                      if color != 'blue' and color != 'gray':
                          raise Exception("Color must either be blue or gray!")
                      self.params = (L, a_max, a_min, nu_max, nu_min, vee_max)
                      self.alive_time = 0
+                     self.plate_number = plate_number
                      self.state = np.array(init_state, dtype='float')
                      self.color = color
                      self.extended_state = None # extended state required for Bastian's primitive computation
