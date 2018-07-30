@@ -204,7 +204,7 @@ class ContractAutomaton:
 def refines_contracts(unrefined_c, refined_c):
     if unrefined_c.startState != refined_c.startState:
         return False
-    for key in unrefined_c.transitions_dict or not refined_c[key].issubset(unrefined_c[key]):
-        if (key not in refined_c[key]):
+    for key in unrefined_c.transitions_dict:
+        if (key not in refined_c[key]) or not refined_c[key].issubset(unrefined_c[key]):
             return False
     return True
