@@ -100,8 +100,8 @@ def time_stamp_edge(path, edge_time_stamps, current_time, primitive_graph, parti
         delta_t = end_time - start_time # TODO: make this more efficient, get t_end directly?
         for segment_id in range(params.num_subprims):
             if partial and (k == len(path)-2) and (segment_id == params.num_subprims-1):
-                stamp = (start_time + segment_id/params.num_subprims * delta_t, float('inf')) # reserved for time indefinite
-                last_interval = stamp
+                last_int = (start_time + params.num_subprims-1/params.num_subprims * delta_t, float('inf')) # reserved for time indefinite
+                stamp = last_int
             else:
                 stamp = (start_time + segment_id/params.num_subprims * delta_t, start_time + (segment_id + 1)/(params.num_subprims) * delta_t) # stamp for subedge
             try:
@@ -109,7 +109,7 @@ def time_stamp_edge(path, edge_time_stamps, current_time, primitive_graph, parti
             except KeyError:
                 edge_time_stamps[(edge_to_prim_id[edge], segment_id)] = {stamp}
     if partial:
-        return edge_time_stamps, last_interval
+        return edge_time_stamps, last_int
     else:
         return edge_time_stamps
 
@@ -150,6 +150,15 @@ def is_safe(path, current_time, primitive_graph, edge_time_stamps):
                                             overlapping = overlapping or is_overlapping(last_interval, inner_interval) # if the two intervals overlap
                                 if not overlapping:
                                     return False, last_index
+                            overlapping = False
+                            first_prim_id = edge_to_prim_id[(path[0], path[1])]
+                            last_interval = (scheduled_times[0], float('inf'))
+                            for col_id, jjj in collision_dictionary[(first_prim_id, 0)]:
+                                if (col_id, jjj) in edge_time_stamps: # if current loc is already stamped
+                                    for curr_interval in edge_time_stamps[(col_id, jjj)]:
+                                        overlapping = overlapping or is_overlapping(last_interval, curr_interval) # if the two intervals overlap
+                            if not overlapping:
+                                return False, 0
                             return False, None
     return True, None
 

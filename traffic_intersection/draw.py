@@ -131,10 +131,7 @@ def draw_pedestrians(pedestrians):
         x_corner, y_corner = find_corner_coordinates(0., 0, x, y, theta,  person_fig)
         background.paste(person_fig, (int(x_corner), int(y_corner)), person_fig)
 
-# set random seed
-#random.seed(100)
-#np.random.seed(0)
-
+# set random seed (for debugging)
 random.seed(99)
 np.random.seed(99)
 
@@ -211,14 +208,23 @@ all_wavefronts = set()
 request_queue = queue.Queue()
 waiting = dict()
 
+
 def pause_car(the_car):
     the_car.prim_queue.enqueue((-1, 0))
 
 def unpause_car(the_car, plate_number):
-    done = False
     the_car.prim_queue.remove((-1,0))
     if plate_number in waiting.keys():
         del waiting[plate_number]
+
+def clean_stamps(edge_time_stamps, current_time):
+    for key in edge_time_stamps.copy():
+        for interval in edge_time_stamps[key].copy():
+            if interval[1] < current_time:
+                edge_time_stamps[key].remove(interval)
+            if len(edge_time_stamps[key]) == 0:
+                del edge_time_stamps[key]
+
 effective_current_times = dict()
 
 def animate(frame_idx): # update animation by dt
@@ -228,7 +234,7 @@ def animate(frame_idx): # update animation by dt
 
     """ online frame update """
     global background
-    if with_probability(0.5):
+    if with_probability(0.2):
 #    if with_probability(min(1,10/(frame_idx+1))):
         new_plate_number, new_start_node, new_end_node, new_car = spawn_car()
         request_queue.enqueue((new_plate_number, new_start_node, new_end_node, new_car))
@@ -256,18 +262,18 @@ def animate(frame_idx): # update animation by dt
         service_count += 1
         # consider the case where the plate number is already in the waiting set
         if plate_number in waiting.keys(): # if plate number is already waiting
-            wait_prim_id, interval = waiting[plate_number]
-            edge_time_stamps[(wait_prim_id, params.num_subprims-1)].remove(interval)
+            wait_id, interval = waiting[plate_number]
+            edge_time_stamps[wait_id].remove(interval)
         _, shortest_path = planner.dijkstra(start_node, end_node, G)
 
         safety_check, first_conflict_edge_idx = planner.is_safe(path = shortest_path, current_time = effective_current_times[plate_number], primitive_graph = G, edge_time_stamps = edge_time_stamps)
         if safety_check:
-            if plate_number in waiting.keys():
-                edge_time_stamps[(wait_prim_id, params.num_subprims-1)].add((interval[0], effective_current_times[plate_number]))
-            unpause_car(the_car, plate_number)
-            planner.time_stamp_edge(path = shortest_path, edge_time_stamps = edge_time_stamps, current_time = effective_current_times[plate_number], primitive_graph = G)
             if plate_number not in cars:
                 cars[plate_number] = the_car # add the car
+            if plate_number in waiting.keys():
+                edge_time_stamps[wait_id].add((interval[0], effective_current_times[plate_number]))
+            unpause_car(the_car, plate_number)
+            planner.time_stamp_edge(path = shortest_path, edge_time_stamps = edge_time_stamps, current_time = effective_current_times[plate_number], primitive_graph = G)
             path_prims = path_to_primitives(shortest_path) # add primitives
             for prim_id in path_prims:
                 cars[plate_number].prim_queue.enqueue((prim_id, 0))
@@ -275,30 +281,43 @@ def animate(frame_idx): # update animation by dt
                 effective_current_times[plate_number] += prim_time
         elif first_conflict_edge_idx == None:
             if plate_number in waiting.keys():
-                edge_time_stamps[(wait_prim_id, params.num_subprims-1)].add(interval) # add temporarily removed interval back
+                edge_time_stamps[wait_id].add(interval) # add temporarily removed interval back
             new_request = (plate_number, start_node, end_node, the_car)
             request_queue.enqueue(new_request)
         else:
-            unpause_car(the_car, plate_number)
-            if plate_number in waiting.keys():
-                edge_time_stamps[(wait_prim_id, params.num_subprims-1)].add((interval[0], effective_current_times[plate_number]))
-            partial_path = shortest_path[:first_conflict_edge_idx+1]
-            # define current node
-            _, last_interval = planner.time_stamp_edge(path = partial_path, edge_time_stamps = edge_time_stamps, current_time = effective_current_times[plate_number], primitive_graph = G, partial=True)
-            if plate_number not in cars:
+            if first_conflict_edge_idx == 0 and plate_number not in cars:
                 cars[plate_number] = the_car # add the car
-
-
-            path_prims = path_to_primitives(path=partial_path) # add primitives
-            for prim_id in path_prims:
-                cars[plate_number].prim_queue.enqueue((prim_id, 0))
-                prim_time = get_prim_data(prim_id, 't_end')[0]
-                effective_current_times[plate_number] += prim_time
-            pause_car(the_car)
-
-            current_node = (partial_path[-1][0], partial_path[-1][1], partial_path[-1][2], partial_path[-1][3])
-            waiting[plate_number] = (path_prims[-1], last_interval) # add/update current node there
-            new_request = (plate_number, current_node, end_node, the_car)
+                pause_car(the_car)
+                prim_id = path_to_primitives(shortest_path[:2])[0]
+                wait_interval = (effective_current_times[plate_number], float('inf'))
+                wait_id = (prim_id, 0)
+                waiting[plate_number] = (wait_id, wait_interval) # add/update current node there
+                try:
+                    edge_time_stamps[wait_id].add(wait_interval)
+                except KeyError:
+                    edge_time_stamps[wait_id] = {wait_interval}
+            elif first_conflict_edge_idx == 0 and plate_number in cars:
+                if plate_number in waiting:
+                    wait_id, wait_interval = waiting[plate_number]
+                    edge_time_stamps[wait_id].add(wait_interval) # add temporarily removed interval back
+            else: # if first_conflict_edge_idx > 0
+                unpause_car(the_car, plate_number)
+                if plate_number not in cars:
+                    cars[plate_number] = the_car # add the car
+                if plate_number in waiting.keys(): # if plate number is already waiting
+                    edge_time_stamps[wait_id].add((interval[0], effective_current_times[plate_number]))
+                partial_path = shortest_path[:first_conflict_edge_idx+1]
+                _, last_interval = planner.time_stamp_edge(path = partial_path, edge_time_stamps = edge_time_stamps, current_time = effective_current_times[plate_number], primitive_graph = G, partial=True)
+                path_prims = path_to_primitives(path=partial_path) # add primitives
+                for prim_id in path_prims:
+                    cars[plate_number].prim_queue.enqueue((prim_id, 0))
+                    prim_time = get_prim_data(prim_id, 't_end')[0]
+                    effective_current_times[plate_number] += prim_time
+                pause_car(the_car)
+                start_node = (partial_path[-1][0], partial_path[-1][1], partial_path[-1][2], partial_path[-1][3])
+                wait_id = (path_prims[-1], params.num_subprims-1)
+                waiting[plate_number] = (wait_id, last_interval) # add/update current node there
+            new_request = (plate_number, start_node, end_node, the_car)
             request_queue.enqueue(new_request)
         if service_count == original_request_len:
             service_count = 0 # reset service count
@@ -350,6 +369,7 @@ def animate(frame_idx): # update animation by dt
         del cars[plate_number]
 
     ax.cla() # clear Axes before plotting
+    clean_stamps(edge_time_stamps, current_time)
     if not show_axes:
         plt.axis('off')
     ## STAGE UPDATE HAPPENS AFTER THIS COMMENT
@@ -461,7 +481,7 @@ ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval
 if options.save_video:
     Writer = animation.writers['ffmpeg']
     writer = Writer(fps = 30, metadata=dict(artist='Me'), bitrate=-1)
-    ani.save('movies/working_planner4.avi', writer=writer, dpi=200)
+    ani.save('movies/first2.avi', writer=writer, dpi=200)
 plt.show()
 t2 = time.time()
 print('Total elapsed time: ' + str(t2-t0))
