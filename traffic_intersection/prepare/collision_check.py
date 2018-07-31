@@ -146,9 +146,6 @@ def normalize(v):
     norm = (v[0] ** 2 + v[1] ** 2) ** 0.5
     return (v[0] / norm, v[1] / norm)
 
-def cross(ref, z):
-    return (-1.0 * ref[1] * z, ref[0] * z)
-
 def invert_direction(v):
     return (v[0] * -1, v[1] * -1)
 
@@ -174,6 +171,7 @@ def best_edge(polygon_vertices, separation_normal): # the closest edge is the ed
     v = polygon_vertices[max_idx]
     v1 = polygon_vertices[next_idx]
     v0 = polygon_vertices[prev_idx]
+    #print(v)
     
     # the edges next to the max_vertex, pointing towards the max vertex
     left_edge = (v[0] - v1[0], v[1] - v1[1])
@@ -191,14 +189,14 @@ def clip_points(v1, v2, n, o): # clips line segment points v1, v2 if they are pa
     cp = []
     d1 = dot(n, v1) - o
     d2 = dot(n, v2) - o
-
+    
     if d1 >= 0.0: # if point is past o along n then the point is kept
         cp.append(v1)
     if d2 >= 0.0:
         cp.append(v2)
     if d1 * d2 < 0.0: # checks if the points are on opposing sides to compute the correct point
         e = (v2[0] - v1[0], v2[1] - v1[1]) # v2 - v1, gets the vector of edge thats being clipped
-        u = d1 / (d1 - d2)
+        u = d1 / (d1 - d2) 
         e = (u * e[0], u * e[1])
         e = (e[0] + v1[0], e[1] + v1[1])
         cp.append(e)    
@@ -215,37 +213,38 @@ def contact_points(object1, object2, separation_normal):
     flip = False # flag indicating that incident and reference edge were flipped, this is for final clip
     # edge1_comps[0], edge2_comps[0] are the best edge vectors of their shapes
     if abs(dot(edge1_comps[0], separation_normal)) <= abs(dot(edge2_comps[0], separation_normal)):
-        ref_edge, ref_vmax, ref_v1, ref_v2 = edge1_comps
-        inc_edge, inc_vmax, inc_v1, inc_v2 = edge2_comps
+        ref_edge, ref_vmax, ref_v2, ref_v1 = edge1_comps
+        inc_edge, inc_vmax, inc_v2, inc_v1 = edge2_comps
+        ref_edge = invert_direction(ref_edge) # make the winding direction counter clockwise, already normalized
     else:
         flip = True 
-        ref_edge, ref_vmax, ref_v1, ref_v2 = edge2_comps
-        inc_edge, inc_vmax, inc_v1, inc_v2 = edge1_comps
+        ref_edge, ref_vmax, ref_v2, ref_v1 = edge2_comps
+        inc_edge, inc_vmax, inc_v2, inc_v1 = edge1_comps
+        inc_edge = invert_direction(inc_edge) # make the winding direction counter clockwise, already normalized
 
-    ref_v = normalize(ref_edge)
-    ref_v_invert = invert_direction(ref_v)
+    ref_v_invert = invert_direction(ref_edge)
 
-    o1 = dot(ref_edge, ref_v1) # offset of first vertex along ref edge vector 
-    cp = clip_points(inc_v1, inc_v2, ref_edge, o1) # clips the incident edge by the first vertex of the reference edge
+    offset1 = dot(ref_edge, ref_v1) # offset of first vertex along ref edge vector 
+    cp = clip_points(inc_v1, inc_v2, ref_edge, offset1) # clips the incident edge by the first vertex of the reference edge
     if len(cp) < 2: # less than two points then it fails and returns 
         return cp
 
-    o2 = dot(ref_edge, ref_v2) # offset, second vertex along ref edge vector
-    cp = clip_points(cp[0], cp[1], ref_v_invert, -o2) # clips what's left of incident edge by the second vertex of the reference edge in the opposite direction, the offset and direction are flipped
+    offset2 = dot(ref_edge, ref_v2) # offset, second vertex along ref edge vector
+    cp = clip_points(cp[0], cp[1], ref_v_invert, -offset2) # clips what's left of incident edge by the second vertex of the reference edge in the opposite direction, the offset and direction are flipped
     if len(cp) < 2:
         return cp
-
-    ref_normal = cross(ref_edge, -1.0) # reference edge normal
+    
+    ref_normal = invert_direction(get_axis(ref_edge)) # reference edge normal towards its own center
     # gets the largest depth and makes sure the points are not past this
     max1 = dot(ref_normal, ref_vmax)
     if (flip): 
-        if dot(ref_normal, cp[1]) > max1:
+        if dot(ref_normal, cp[1]) - max1 > 0.0:
             del cp[1] 
-        if dot(ref_normal, cp[0]) > max1:
+        if dot(ref_normal, cp[0]) - max1 > 0.0:
             del cp[0]
     else:
-        if dot(ref_normal, cp[1]) < max1:
+        if dot(ref_normal, cp[1]) - max1 < 0.0:
             del cp[1] 
-        if dot(ref_normal, cp[0]) < max1:
+        if dot(ref_normal, cp[0]) - max1 < 0.0:
             del cp[0] 
     return cp

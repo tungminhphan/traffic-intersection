@@ -177,8 +177,6 @@ pedestrian_1.prim_queue.enqueue(((wait_top_left,wait_bottom_left, 15), 0))
 pedestrian_1.prim_queue.enqueue(((wait_bottom_left,bottom_left, 10), 0))
 
 pedestrian_2 = pedestrian.Pedestrian(init_state=[right_bottom[0],right_bottom[1], np.pi/2,0], pedestrian_type='2')
-pedestrian_2.prim_queue.enqueue(((right_bottom,wait_bottom_right, 10), 0))
-pedestrian_2.prim_queue.enqueue(((wait_bottom_right, bottom_right, 10), 0))
 
 pedestrian_3 = pedestrian.Pedestrian(init_state=[left_bottom[0],left_bottom[1],np.pi/2,0], pedestrian_type='3')
 pedestrian_3.prim_queue.enqueue(((left_bottom,wait_bottom_left, 10), 0))
@@ -279,6 +277,7 @@ def animate(frame_idx): # update animation by dt
                 print("Collision, object indices:")
                 print(i, j)
                 print(min_sep_vector)
+                print(all_components[i].state[0],all_components[i].state[1], all_components[j].state[0], all_components[j].state[1])
                 cp = contact_points(all_components[i], all_components[j], min_sep_vector)
                 print(cp)
                 boxes[j].set_color('r')
