@@ -182,7 +182,7 @@ def best_edge(polygon, separation_normal): # the closest edge is the edge most p
 
     #returns the most perpendicular edge, max vertex, and first and second vertex counter clockwise
     if (dot(right_edge, separation_normal) <= dot(left_edge, separation_normal)):
-        return right_edge, v, v, v0
+        return invert_direction(right_edge), v, v, v0
     else: 
         return left_edge, v, v1, v
 
@@ -213,12 +213,10 @@ def contact_points(object1, object2, separation_normal):
     if abs(dot(edge1_comps[0], separation_normal)) <= abs(dot(edge2_comps[0], separation_normal)):
         ref_edge, ref_vmax, ref_v2, ref_v1 = edge1_comps
         inc_edge, inc_vmax, inc_v2, inc_v1 = edge2_comps
-        ref_edge = invert_direction(ref_edge) # make the winding direction counter clockwise, already normalized
     else:
         flip = True 
         ref_edge, ref_vmax, ref_v2, ref_v1 = edge2_comps
         inc_edge, inc_vmax, inc_v2, inc_v1 = edge1_comps
-        inc_edge = invert_direction(inc_edge) # make the winding direction counter clockwise, already normalized
 
     ref_v_invert = invert_direction(ref_edge)
 

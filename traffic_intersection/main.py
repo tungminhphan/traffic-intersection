@@ -278,9 +278,8 @@ def animate(frame_idx): # update animation by dt
             if not collision_free1: # had to change variable name from the function to remove error
                 print("Collision, object indices:")
                 print(i, j)
-                print(min_sep_vector)
                 cp = contact_points(all_components[i], all_components[j], min_sep_vector)
-                print(cp)
+                print(get_impulse(all_components[i], all_components[j], cp, min_sep_vector))
                 boxes[j].set_color('r')
                 boxes[i].set_color('r')
     stage = ax.imshow(background, origin="lower") # this origin option flips the y-axis
