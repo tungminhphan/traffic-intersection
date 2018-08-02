@@ -175,16 +175,16 @@ def best_edge(polygon, separation_normal): # the closest edge is the edge most p
     #print(v)
     
     # the edges next to the max_vertex, pointing towards the max vertex
-    left_edge = (v[0] - v1[0], v[1] - v1[1])
-    right_edge = (v[0] - v0[0], v[1] - v0[1])
-    left_edge = normalize(left_edge)
+    right_edge = (v[0] - v1[0], v[1] - v1[1])
+    left_edge = (v[0] - v0[0], v[1] - v0[1])
     right_edge = normalize(right_edge)
+    left_edge = normalize(left_edge)
 
     #returns the most perpendicular edge, max vertex, and first and second vertex counter clockwise
-    if (dot(right_edge, separation_normal) <= dot(left_edge, separation_normal)):
-        return invert_direction(right_edge), v, v, v0
+    if (dot(left_edge, separation_normal) <= dot(right_edge, separation_normal)):
+        return left_edge, v, v, v0
     else: 
-        return left_edge, v, v1, v
+        return invert_direction(right_edge), v, v1, v
 
 def clip_points(v1, v2, n, o): # clips line segment points v1, v2 if they are past o along n
     cp = []
@@ -245,21 +245,25 @@ def contact_points(object1, object2, separation_normal):
             del cp[0] 
     return cp
 
-######################### IMPULSE #########################
-def get_impulse(object1, object2, cp, min_sep_vector):
+######################### IMPULSE ######################### 
+def get_impulse(object1, object2, cp, min_sep_vector): # need to test 
     if type(object1) is Pedestrian:
-        x, y, theta, vee = object1.state   
+        x, y, theta, vee = object1.state
+        w = 1
+        h = 1   
     elif type(object1) is KinematicCar:
-        vee, theta, x, y = thing.state
+        vee, theta, x, y = object1.state
         w = 788 * params.car_scale_factor
         h = 399 * params.car_scale_factor
     else:
         TypeError('Not sure what this object is')
 
     if type(object2) is Pedestrian:
-        x2, y2, theta2, vee2 = object2.state   
+        x2, y2, theta2, vee2 = object2.state
+        w2 = 1
+        h2 = 1   
     elif type(object2) is KinematicCar:
-        vee2, theta2, x2, y2 = thing.state
+        vee2, theta2, x2, y2 = object2.state
         w2 = 788 * params.car_scale_factor
         h2 = 399 * params.car_scale_factor
     else:
@@ -272,7 +276,7 @@ def get_impulse(object1, object2, cp, min_sep_vector):
     inert_b = m_b * (h2 ** 2 + w2 ** 2) / 12 
 
     r_a = (cp[0][0] - x, cp[0][1] - y) # vector from center towards contact point     
-    r_b = (cp[1][0] - x2, cp[1][1] - y2) # vector from center towards contact point 
+    r_b = (cp[0][0] - x2, cp[0][1] - y2) # vector from center towards contact point 
     
     v_AP = (vee * r_a[0], vee * r_a[1]) # velocity towards contact point
     v_BP = (vee2 * r_b[0], vee2 * r_b[1])
@@ -281,7 +285,7 @@ def get_impulse(object1, object2, cp, min_sep_vector):
  
     edge_obj2,_,_,_ = best_edge(object2, min_sep_vector) # returns best edge of object2
     n = get_axis(edge_obj2) # gets the normal from collision edge
-    if dot(norm_b, r_b) < 0: # if opposite direction from collision point, invert normal
+    if dot(n, r_b) < 0: # if opposite direction from collision point, invert normal
         n = invert_direction(n)
 
     j = -(1 + e) * dot(v_AB, n)
