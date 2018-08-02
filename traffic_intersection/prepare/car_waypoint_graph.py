@@ -77,17 +77,19 @@ G._sources = set([(0, 325), (0, 245), (430, 740), (500, 740)])
 G._sinks = set([(430, 30), (500, 30), (1040, 255), (1040, 340), (570, 740), (635, 740)])
 
 # temporary sources and sinks
-G._sources.add((1144, 515))
-G._sources.add((1144, 435))
-G._sources.add((714, 20))
-G._sources.add((644, 20))
-G._sinks.add((714, 730))
-G._sinks.add((644, 730))
-G._sinks.add((104, 505))
-G._sinks.add((104, 420))
+offset_x = -82
+offset_y = 2
+G._sources.add((1144+offset_x, 515+offset_y))
+G._sources.add((1144+offset_x, 435+offset_y))
+G._sources.add((714+offset_x, 20+offset_y))
+G._sources.add((644+offset_x, 20+offset_y))
+G._sinks.add((714+offset_x, 730+offset_y))
+G._sinks.add((644+offset_x, 730+offset_y))
+G._sinks.add((104+offset_x, 505+offset_y))
+G._sinks.add((104+offset_x, 420+offset_y))
 
-A = np.array([570, 740])
-B = np.array([644, 730])
+A = np.array([570+offset_x, 740+offset_y])
+B = np.array([644+offset_x, 730+10])
 
 if visualize:
     import matplotlib.pyplot as plt
@@ -106,4 +108,12 @@ if visualize:
     head_width = 20
     G.plot_edges(plt, plt_src_snk=True, edge_width = edge_width, head_width = head_width, markersize=markersize)
     G.print_graph()
+    print('the size of the background is')
+    xmax, ymax = background.size
+    origin = np.array([[xmax],[ymax]])/2.
+    source_old = np.array([[0],[325]])
+    source_new = origin+origin-source_old
+
+    source_wrong = np.array([[1144], [435]])
+    print(source_new-source_wrong)
     plt.show()

@@ -17,7 +17,7 @@ import numpy as np
 from PIL import Image
 import random
 import scipy.io
-from traffic_intersection.prepare.collision_check import collision_free, get_bounding_box, contact_points
+from traffic_intersection.prepare.collision_check import collision_free, get_bounding_box, contact_points, get_impulse
 
 #TODO: clean up this section
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -278,7 +278,6 @@ def animate(frame_idx): # update animation by dt
             if not collision_free1: # had to change variable name from the function to remove error
                 print("Collision, object indices:")
                 print(i, j)
-                print(min_sep_vector)
                 cp = contact_points(all_components[i], all_components[j], min_sep_vector)
                 print(cp)
                 boxes[j].set_color('r')

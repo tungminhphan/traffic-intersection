@@ -3,3 +3,5 @@
 *.pypirc
 *.gv*
 build/
+*.npy
+traffic_intersection.egg-info

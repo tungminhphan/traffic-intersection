@@ -49,13 +49,22 @@ class Queue():
         '''
         return self._queue[0]
 
+    def get_element_at_index(self, idx):
+        '''
+        return the element corresponding to the index
+
+        '''
+        return self._queue[idx]
+
     def replace_top(self, new_item):
         '''
         replace the top element in the queue by new_item
 
         '''
         self._queue[-1] = new_item
-
+    def remove(self, item): # remove all matching items in queue      
+        while item in self._queue:
+            self._queue.remove(item)
     def print_queue(self):
         '''
         print the queue

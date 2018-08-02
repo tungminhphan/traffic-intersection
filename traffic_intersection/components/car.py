@@ -43,6 +43,9 @@ class KinematicCar:
     coordinates of the car respectively
     """
 
+
+<< << << < HEAD
+
     def __init__(self, init_state=[0, 0, 0, 0],
                  L=50,  # length of vehicle
                  a_max=9.81,  # maximum acceleration of vehicle
@@ -67,6 +70,40 @@ class KinematicCar:
         self.is_honking = is_honking
         self.prim_queue = Queue() if prim_queue is None else prim_queue
         self.fuel_level = fuel_level
+== == == =
+    def __init__(self, init_state=[0, 0, 0, 0],
+                 L=50,  # length of vehicle
+                 a_max=9.81,  # maximum acceleration of vehicle
+                 a_min=-9.81,  # maximum deceleration of vehicle
+                 nu_max=0.5,  # maximum steering input in radians/sec
+                 nu_min=-0.5,  # minimum steering input in radians/sec)
+                 vee_max=100,  # maximum velocity
+                 is_honking=False,  # the car is honking
+                 color='blue',  # color of the car
+                 plate_number=None,  # license plate number
+                 # queue of primitives, each item in the queue has the form (prim_id, prim_progress) where prim_id is the primitive ID and prim_progress is the progress of the primitive)
+                 prim_queue=None,
+                 fuel_level=float('inf')):  # TODO: fuel level of the car - FUTURE FEATURE)
+        if color != 'blue' and color != 'gray':
+            raise Exception("Color must either be blue or gray!")
+        self.params = (L, a_max, a_min, nu_max, nu_min, vee_max)
+        self.alive_time = 0
+        self.plate_number = plate_number
+        self.state = np.array(init_state, dtype='float')
+        self.color = color
+        # extended state required for Bastian's primitive computation
+        self.extended_state = None
+        self.is_honking = is_honking
+        if prim_queue == None:
+            self.prim_queue = Queue()
+        else:
+            self.prim_queue = prim_queue
+        self.fuel_level = fuel_level
+        if color == 'blue':
+            self.fig = Image.open(blue_car_fig)
+        else:
+            self.fig = Image.open(gray_car_fig)
+>>>>>> > source/master
 
     def state_dot(self,
                   state,
@@ -121,8 +158,7 @@ class KinematicCar:
 
         # TODO: temporary fix to floating problem
         if a == 0:
-            self.state[0] = np.sign(self.state[0]) * \
-                abs(self.state[0]) * dt * 0.05
+            self.state[0] = np.sign(self.state[0]) * abs(self.state[0]) * dt
 
     def extract_primitive(self):
         # TODO: rewrite the comment below
@@ -156,44 +192,48 @@ class KinematicCar:
         else:
             prim_id, prim_progress = self.extract_primitive()
             # load primitive data TODO: make this portion of the code more automated
-            # the primitive corresponding to the primitive number
-            prim = mat['MA3'][prim_id, 0]
-            t_end = prim['t_end'][0, 0][0, 0]  # extract duration of primitive
-            # number of subintervals encoded in primitive
-            N = prim['K'][0, 0].shape[0]
-            # this diagonal matrix encodes the size of input set (a constraint)
-            G_u = np.diag([175, 1.29])
-            nu = 2  # number of inputs
-            nx = 4  # number of states
+            if prim_id > -1:
+                # the primitive corresponding to the primitive number
+                prim = mat['MA3'][prim_id, 0]
+                # extract duration of primitive
+                t_end = prim['t_end'][0, 0][0, 0]
+                # number of subintervals encoded in primitive
+                N = prim['K'][0, 0].shape[0]
+                # this diagonal matrix encodes the size of input set (a constraint)
+                G_u = np.diag([175, 1.29])
+                nu = 2  # number of inputs
+                nx = 4  # number of states
 
-            if prim_progress == 0:  # compute initial extended state
-                x1 = self.state.reshape((-1, 1))
-                x2 = prim['x0'][0, 0]
-                x3 = x1 - prim['x0'][0, 0]
-                x4 = np.matmul(np.linalg.inv(
-                    np.diag([4, 0.02, 4, 4])), (x1-prim['x0'][0, 0]))
-                # initial state, consisting of actual state and virtual states for the controller
-                self.extended_state = (np.vstack((x1, x2, x3, x4)))[:, 0]
-            k = int(prim_progress * N)  # calculate primitive waypoint
+                if prim_progress == 0:  # compute initial extended state
+                    x1 = self.state.reshape((-1, 1))
+                    x2 = prim['x0'][0, 0]
+                    x3 = x1 - prim['x0'][0, 0]
+                    x4 = np.matmul(np.linalg.inv(
+                        np.diag([4, 0.02, 4, 4])), (x1-prim['x0'][0, 0]))
+                    # initial state, consisting of actual state and virtual states for the controller
+                    self.extended_state = (np.vstack((x1, x2, x3, x4)))[:, 0]
+                k = int(prim_progress * N)  # calculate primitive waypoint
 
-            dist = get_disturbance()
-            q1 = prim['K'][0, 0][k, 0].reshape((-1, 1), order='F')
-            q2 = 0.5 * (prim['x_ref'][0, 0][:, k+1] +
-                        prim['x_ref'][0, 0][:, k]).reshape(-1, 1)
-            q3 = prim['u_ref'][0, 0][:, k].reshape(-1, 1)
-            q4 = prim['u_ref'][0, 0][:, k].reshape(-1, 1)
-            q5 = np.matmul(G_u, prim['alpha'][0, 0]
-                           [k*nu:(k+1)*nu]).reshape((-1, 1), order='F')
-            # parameters for the controller
-            q = np.vstack((q1, q2, q3, q4, q5))
-            self.extended_state = odeint(func=prim_state_dot, y0=self.extended_state, t=[
-                                         0, dt], args=(dist, q))[-1, :]
-            self.state = self.extended_state[0:4]
-            # update alive time
-            self.alive_time += dt
-            # update progress
-            prim_progress = prim_progress + dt / t_end
-            self.prim_queue.replace_top((prim_id, prim_progress))
+                dist = get_disturbance()
+                q1 = prim['K'][0, 0][k, 0].reshape((-1, 1), order='F')
+                q2 = 0.5 * (prim['x_ref'][0, 0][:, k+1] +
+                            prim['x_ref'][0, 0][:, k]).reshape(-1, 1)
+                q3 = prim['u_ref'][0, 0][:, k].reshape(-1, 1)
+                q4 = prim['u_ref'][0, 0][:, k].reshape(-1, 1)
+                q5 = np.matmul(
+                    G_u, prim['alpha'][0, 0][k*nu:(k+1)*nu]).reshape((-1, 1), order='F')
+                # parameters for the controller
+                q = np.vstack((q1, q2, q3, q4, q5))
+                self.extended_state = odeint(func=prim_state_dot, y0=self.extended_state, t=[
+                                             0, dt], args=(dist, q))[-1, :]
+                self.state = self.extended_state[0:4]
+                # update alive time
+                self.alive_time += dt
+                # update progress
+                prim_progress = prim_progress + dt / t_end
+                self.prim_queue.replace_top((prim_id, prim_progress))
+            else:  # if is stopping primitive
+                self.next((0, 0), dt)
 
 # TESTING
 #prim_id = 0
