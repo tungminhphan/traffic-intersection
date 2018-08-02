@@ -10,6 +10,7 @@ import prepare.queue as queue
 import prepare.car_waypoint_graph as waypoint_graph
 import primitives.tubes
 import numpy as np
+import assumes.params as params
 if __name__ == '__main__':
     visualize = True
 else:
@@ -34,7 +35,10 @@ def dijkstra(start, end, graph):
         predecessor = {}
         unmarked_nodes = graph._nodes.copy() # create a copy of set of nodes in graph
         if start not in graph._nodes or end not in graph._nodes:
-            raise SyntaxError("either the start or end node is not in the graph!")
+            print(start)
+            raise SyntaxError("The start node is not in the graph!")
+        elif end not in graph._nodes:
+            raise SyntaxError("The end node is not in the graph!")
         for node in graph._nodes:
             if node != start:
                 score[node] = float('inf') # initialize all scores to inf
@@ -80,7 +84,7 @@ def get_scheduled_times(path, current_time, primitive_graph):
         scheduled_times.append(scheduled_times[-1] + primitive_graph._weights[(prev, curr)])
     return scheduled_times
 
-def time_stamp_edge(path, edge_time_stamps, current_time, primitive_graph):
+def time_stamp_edge(path, edge_time_stamps, current_time, primitive_graph, partial = False):
     '''
     given a weighted path, this function updates the edge_time_stamps set according to the given path.
     input:   path - weighted path
@@ -90,12 +94,24 @@ def time_stamp_edge(path, edge_time_stamps, current_time, primitive_graph):
     for k in range(0,len(path)-1):
         left = k
         right = k+1
-        stamp = (scheduled_times[left], scheduled_times[right]) # interval stamp
         edge = (path[left], path[right]) # only get topographical information, ignoring velocity and orientation
-        try: edge_time_stamps[edge_to_prim_id[edge]].add(stamp)
-        except KeyError:
-            edge_time_stamps[(edge_to_prim_id[edge])] = {stamp}
-    return edge_time_stamps
+        start_time = scheduled_times[left]
+        end_time = scheduled_times[right]
+        delta_t = end_time - start_time # TODO: make this more efficient, get t_end directly?
+        for segment_id in range(params.num_subprims):
+            if partial and (k == len(path)-2) and (segment_id == params.num_subprims-1):
+                last_int = (start_time + params.num_subprims-1/params.num_subprims * delta_t, float('inf')) # reserved for time indefinite
+                stamp = last_int
+            else:
+                stamp = (start_time + segment_id/params.num_subprims * delta_t, start_time + (segment_id + 1)/(params.num_subprims) * delta_t) # stamp for subedge
+            try:
+                edge_time_stamps[(edge_to_prim_id[edge], segment_id)].add(stamp)
+            except KeyError:
+                edge_time_stamps[(edge_to_prim_id[edge], segment_id)] = {stamp}
+    if partial:
+        return edge_time_stamps, last_int
+    else:
+        return edge_time_stamps
 
 def is_overlapping(interval_A, interval_B):
     '''
@@ -118,15 +134,33 @@ def is_safe(path, current_time, primitive_graph, edge_time_stamps):
         scheduled_times.append(scheduled_times[-1] + primitive_graph._weights[curr_edge])
         left_time = scheduled_times[-2]
         right_time = scheduled_times[-1]
-        curr_interval = (left_time, right_time) # next interval to check
-        for colliding_id in collision_dictionary[curr_prim_id]:
-            if colliding_id in edge_time_stamps: # if current loc is already stamped
-                for interval in edge_time_stamps[colliding_id]:
-                    if is_overlapping(curr_interval, interval): # if the two intervals overlap
-                        return False
-                        return current_edge_idx # return node with conflict
-        current_edge_idx += 1
-    return True
+        delta_t = right_time - left_time
+        for ii in range(params.num_subprims):
+            for colliding_id, jj in collision_dictionary[(curr_prim_id, ii)]:
+                if (colliding_id, jj) in edge_time_stamps: # if current loc is already stamped
+                    for interval in edge_time_stamps[(colliding_id, jj)]:
+                        if is_overlapping( (left_time + (ii)/params.num_subprims * delta_t, left_time + (ii+1)/params.num_subprims * delta_t ), interval): # if the two intervals overlap
+                            for last_index in range(len(scheduled_times)-2, 0, -1): # dial back and find a node where one can stay there forever and still be safe
+                                last_prim_id = edge_to_prim_id[(path[last_index-1], path[last_index])]
+                                last_interval = (scheduled_times[last_index], float('inf'))
+                                overlapping = False
+                                for col_id, jjj in collision_dictionary[(last_prim_id, params.num_subprims-1)]:
+                                    if (col_id, jjj) in edge_time_stamps: # if current loc is already stamped
+                                        for inner_interval in edge_time_stamps[(col_id, jjj)]:
+                                            overlapping = overlapping or is_overlapping(last_interval, inner_interval) # if the two intervals overlap
+                                if not overlapping:
+                                    return False, last_index
+                            overlapping = False
+                            first_prim_id = edge_to_prim_id[(path[0], path[1])]
+                            last_interval = (scheduled_times[0], float('inf'))
+                            for col_id, jjj in collision_dictionary[(first_prim_id, 0)]:
+                                if (col_id, jjj) in edge_time_stamps: # if current loc is already stamped
+                                    for curr_interval in edge_time_stamps[(col_id, jjj)]:
+                                        overlapping = overlapping or is_overlapping(last_interval, curr_interval) # if the two intervals overlap
+                            if not overlapping:
+                                return False, 0
+                            return False, None
+    return True, None
 
 def print_state():
     print('The current request queue state is')
