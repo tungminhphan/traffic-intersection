@@ -132,8 +132,8 @@ def draw_pedestrians(pedestrians):
         background.paste(person_fig, (int(x_corner), int(y_corner)), person_fig)
 
 # set random seed (for debugging)
-random.seed(99)
-np.random.seed(99)
+# random.seed(99)
+# np.random.seed(99)
 
 # disable antialiasing for better performance
 antialias_enabled = False
