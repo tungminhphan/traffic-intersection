@@ -15,6 +15,8 @@ import prepare.graph as graph
 import prepare.queue as queue
 import assumes.params as params
 import primitives.tubes as tubes
+import primitives.load_primitives as load_primitives
+from primitives.load_primitives import get_prim_data
 import prepare.options as options
 from  prepare.collision_check import collision_free, get_bounding_box
 import numpy as np
@@ -37,27 +39,11 @@ import matplotlib.pyplot as plt
 # set dir_path to current directory
 dir_path = os.path.dirname(os.path.realpath(__file__))
 intersection_fig = dir_path + "/components/imglib/intersection_states/intersection_"
-# load primitive data
-primitive_data = dir_path + '/primitives/MA3.mat'
-mat = scipy.io.loadmat(primitive_data)
-num_of_prims = mat['MA3'].shape[0]
-
-def get_prim_data(prim_id, data_field):
-    '''
-    This function simplifies the process of extracting data from the .mat file
-    Input:
-    prim_id: the index of the primitive the data of which we would like to return
-    data_field: name of the data field (e.g., x0, x_f, controller_found etc.)
-
-    Output: the requested data
-    '''
-    return mat['MA3'][prim_id,0][data_field][0,0][:,0]
-
 
 G = graph.WeightedDirectedGraph() # primitive graph
 edge_to_prim_id = np.load('prepare/edge_to_prim_id.npy').item()
 
-for prim_id in range(0, num_of_prims):
+for prim_id in range(0, load_primitives.num_of_prims):
     try:
         controller_found = get_prim_data(prim_id, 'controller_found')[0]
         if controller_found:
