@@ -29,19 +29,35 @@ mat = scipy.io.loadmat(primitive_data)
 
 
 def saturation_filter(u, u_max, u_min):
-    """ saturation_filter Helper Function
+    ''' saturation_filter Helper Function
 
         the output is equal to u_max if u >= u_max, u_min if u <= u_min, and u otherwise
-    """
+    '''
     return max(min(u, u_max), u_min)
 
 
+def force_saturation_function(sigma, tire_data):
+    ''' Force saturation function used in the calculation of tire traction forces
+    Inputs:
+    sigma - the composite slip
+    tire_data - tire parameters
+
+    Output:
+    f - composite force coefficient such tat f = F_c / (mu * F_z)
+    '''
+    C_1 = tire_data['C1']
+    C_2 = tire_data['C2']
+    C_3 = tire_data['C3']
+    C_4 = tire_data['C4']
+    f =  (C_1 * sigma**3 + C_2 * sigma**2 + (4/np.pi) * sigma)/(C_1 * sigma**3 + C_2 * sigma ** 2 + C_4 * sigma + 1)
+    return f
+
 class KinematicCar:
-    """Kinematic Car Class
+    '''Kinematic car class
 
     init_state is [vee, theta, x, y], where vee, theta, x, y are the velocity, orientation, and
     coordinates of the car respectively
-    """
+    '''
 
 
     def __init__(self, init_state=[0, 0, 0, 0],
@@ -210,7 +226,8 @@ class KinematicCar:
 class DynamicCar(KinematicCar): # bicycle 5 DOF model
     def __init__(self, 
                 m = 100, # mass of the vehile
-                R_w = 5): # mass of the radius of the vehicle
+                tire_designation = '155SR13', # tire specifications
+                R_w = 5): # the radius of the vehicle's wheel
         KinematicCar.__init__(self)
         self.m = m
         self.R_w = R_w
