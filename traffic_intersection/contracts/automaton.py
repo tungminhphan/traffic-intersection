@@ -53,6 +53,7 @@ class guardTransition(Transition):
     def __init__(self, start = None, end = None, guard = True, inp = set(), out = set(), inter = set()):
         Transition.__init__(self, start, end)
         self.guard = guard # guard should be a dictionary of inequalities
+        # actually, now guard is a string representing a boolean
         self.inputs = inp # set of inputs on the transition
         self.outputs = out
         self.internals = inter
@@ -60,8 +61,11 @@ class guardTransition(Transition):
         # transition reads guard/?inputs, !outputs, #internals
     def show(self):
         transtext = ''
+        # guard can be string
+        if isinstance(self.guard, str):
+            transtext = self.guard
 
-        if self.guard == False:
+        elif self.guard == False:
             return transtext
 
         elif self.guard == True:
@@ -150,25 +154,56 @@ class ComponentAutomaton(Automaton):
         self.alphabet = self.input_alphabet.union(self.output_alphabet)
 
         # takes two guard transitions and returns their composition
-    def compose_guard_trans(tr1, tr2):
+    def compose_guard_trans(self, tr1, tr2):
 
         if tr1.guard == True:
             guard = tr2.guard
         elif tr2.guard == True:
             guard = tr1.guard
+        
+        elif isinstance(tr1.guard, str) and isinstance(tr2.guard, str):
+            guard = tr1.guard + ' ∧ ' + tr2.guard
+
+        # assumption is that either both are inequalities or strings
         else:
             guard = iq.conjunct(tr1.guard, tr2.guard)
 
         newstart = product(tr1.startState, tr2.startState)
         newend = product(tr1.endState, tr2.endState)
-        inp = tr1.inputs.intersection(tr2.inputs)
-        out = tr1.outputs.intersection(tr2.outputs)
+
         inter = (tr1.inputs.intersection(tr2.outputs)).union(
             tr1.outputs.intersection(tr2.inputs)).union(tr1.internals).union(tr2.internals)
+
+        inp = tr1.inputs.union(tr2.inputs) - inter
+        out = tr1.outputs.union(tr2.outputs) - inter
         if len(inp.union(out).union(inter)) == 0:
             return False
 
         return guardTransition(newstart, newend, guard, inp, out, inter)
+
+    # in the final composition, delete all transitions that are still waiting for input/output, since we can't take them
+    # also removes all states without transitions
+    def trim(self):
+        for key in self.transitions_dict:
+
+            # removes transitions
+            to_remove = set()
+            for trans in self.transitions_dict[key]:
+                if trans == False or len(trans.inputs) > 0 or len(trans.outputs) > 0:
+                    to_remove.add(trans)
+
+            self.transitions_dict[key] = self.transitions_dict[key] - to_remove
+
+        # removes states without transitions
+        for key in self.transitions_dict:
+            to_remove = set()
+            if len(self.transitions_dict[key]) == 0:
+                to_remove.add(key)
+                self.states.remove(key)
+
+        for key in to_remove:
+            self.transitions_dict.pop(key, None)
+
 
 
 def compose_components(component_1, component_2):
@@ -190,6 +225,13 @@ def compose_components(component_1, component_2):
 
     new_component.alphabet = newalphabet
     return new_component
+
+def compose_multiple_components(list_components):
+    curr_component = list_components[0]
+    for comp in list_components[1:]:
+        curr_component = compose_components(curr_component, comp)
+
+    return curr_component
 
 class ContractAutomaton(Automaton):
     def __init__(self, must = {}, may = {}):
@@ -266,6 +308,13 @@ def convert_graph_to_automaton(digraph):
         new_component.add_state(node)
         stringstatedict[node] = newstate
 
+    for source in sources:
+        new_component.set_start_state(stringstatedict[source])
+
+    for sink in sinks:
+        new_component.endStates.add(stringstatedict[sink])
+
+
     for trans in edges:
         state1 = stringstatedict[trans[0]]
         state2 = stringstatedict[trans[1]]
@@ -295,11 +344,11 @@ def convert_graph_to_automaton(digraph):
 
         # Each action in form ?(input), !(output), or #(internal)
         for action in actions:
-            if action[0] = '?':
+            if action[0] == '?':
                 inp.add(action[1:])
-            elif action[0] = '!':
+            elif action[0] == '!':
                 out.add(action[1:])
-            elif action[0] = '#':
+            elif action[0] == '#':
                 inter.add(action[1:])
             else:
                 raise SyntaxError('Input, output or internals in wrong format.')
@@ -339,22 +388,24 @@ def construct_automaton(statelist, translist, start, ends):
 
         if words[0] == 'True':
             guard = True
-
-        else:
-            if len(words) > 3 and words[1] == '≤' and words[3] == '≤':
-                lwrbnd = float(words[0])
-                var = words[2]
-                uprbnd = float(words[4])
-            elif words[1] == '≥':
-                var = words[0]
-                lwrbnd = float(words[2])
-                uprbnd = np.inf
-            elif words[1] == '≤':
-                var = words[0]
-                uprbnd = float(words[2])
-                lwrbnd = -np.inf
-
+        
+        elif len(words) > 3 and words[1] == '≤' and words[3] == '≤':
+            lwrbnd = float(words[0])
+            var = words[2]
+            uprbnd = float(words[4])
             guard = iq.dictionarize(iq.Inequality(var, lwrbnd, uprbnd))
+        elif len(words) > 2 and words[1] == '≥':
+            var = words[0]
+            lwrbnd = float(words[2])
+            uprbnd = np.inf
+            guard = iq.dictionarize(iq.Inequality(var, lwrbnd, uprbnd))
+        elif len(words) > 2 and words[1] == '≤':
+            var = words[0]
+            uprbnd = float(words[2])
+            lwrbnd = -np.inf
+            guard = iq.dictionarize(iq.Inequality(var, lwrbnd, uprbnd))
+        else:
+            guard = translist[key][0]
 
         new_component.add_transition(guardTransition(state1, state2, guard, inp, out, inter))
 
