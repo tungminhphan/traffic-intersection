@@ -280,6 +280,37 @@ class DynamicCar(KinematicCar): # bicycle 5 DOF model
     def next(self):
         pass
 
+    def tire_model(S, alpha, F_x, F_z): #longitudinal slip, slip angle, F_x, normal load
+        K_mu = 0.124
+        Y_camber = 1 # camber angle
+
+        # equation 2
+        #alpha = arctan2(v, u) # slip angle
+
+        # equation 11 & 12, tire contact patch length
+        a_po = (0.0768 * sqrt(F_z * F_ZT)) / (T_w * (T_p + 5))
+        a_p = a_po * (1 - K_a * F_x / F_z)
+
+        # equation 13, 14 lateral and longitudianl stiffness coeffs 
+        K_s = (2 / a_po**2) * (A_0 + (A_1 * F_z) - ((A_1 / A_2) * F_z**2)) 
+        K_c = (2 / a_po**2) * F_z * CS_FZ
+
+        # equation 15, composite slip calculation
+        sigma = (pi * a_p**2) / ( 8 * mu_o * F_z) * sqrt((K_s**2 * tan(alpha)**2) + (K_c**2 * (S / (1 - S))**2))
+
+        # equation 10 composite force, saturation function
+        f_of_sigma = ((C_1 * sigma**3) + (C_2 * sigma**2) + (4 / pi * sigma)) / ((C_1 * sigma**3) + (C_3 * sigma**2) + (C_4 * sigma) + 1)
+
+        # equation 18 & 19 modified Long. Stiff Coeff and Tire/Rd coeff friction
+        K_c_prime = K_c + (K_s - K_c) * sqrt(sin(alpha)**2 + S**2 * cos(alpha)**2)
+        mu = mu_o * (1 - K_mu * sqrt(sin(alpha)**2 + S**2 * cos(alpha)**2) )
+
+        # equation 16 & 17 Normalized Lateral and Long Force
+        F_y = (f_of_sigma * K_s * tan(alpha) / sqrt(K_s**2 * tan(alpha)**2 + K_c_prime**2 * S**2) + Y_camber) * mu * F_z
+        F_x = f_of_sigma * K_c_prime * S / sqrt(K_s**2 * tan(alpha)**2 + K_c_prime**2 * S**2) * mu * F_z
+
+        return F_x, F_y
+
 # TESTING
 #prim_id = 0
 # prim = mat['MA3'][prim_id,0] # the primitive corresponding to the primitive number
