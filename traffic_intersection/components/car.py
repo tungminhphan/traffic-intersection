@@ -233,7 +233,7 @@ class DynamicCar(KinematicCar): # bicycle 5 DOF model
                 tire_designation = '155SRS13', # tire specifications
                 init_dyn_state = np.zeros(7), # initial dynamical state of vehicle
                 car_width = 1.2,  # car width
-                R_w = 5): # the radius of the vehicle's wheel
+                R_w = 0.25): # the radius of the vehicle's wheel
         KinematicCar.__init__(self)
         self.m = m
         self.L = self.params[0]
@@ -413,4 +413,4 @@ class DynamicCar(KinematicCar): # bicycle 5 DOF model
 dyn_car = DynamicCar(init_dyn_state = np.array([0.1,0.1,0,0.1,0.1,100,100]))
 #state_dot(self, t, delta_f, delta_r, T_af, T_ar, T_bf, T_br):
 print('state_dot: a_x, a_y, r, d_w_f, d_w_r, v_X, v_Y')
-print(dyn_car.state_dot(t = 0, delta_f = 0, delta_r = 0, T_af = 50, T_ar = 0, T_bf = 0, T_br =0))
+print(dyn_car.state_dot(t = 0, delta_f = 0, delta_r = 0, T_af = 1, T_ar = 0, T_bf = 0, T_br =0))
