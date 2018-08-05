@@ -10,3 +10,7 @@ num_subprims = 5
 theta_compensate = 5
 
 pixel_to_meter_scale_factor = 50 / 1.5 # 1.5 meters ~ 50 pixels
+
+# constants
+g = 9.81 # gravitational constant
+#g = pixel_to_meter_scale_factor * 9.81 # gravitational constant

@@ -225,19 +225,20 @@ class KinematicCar:
 
 class DynamicCar(KinematicCar): # bicycle 5 DOF model
     def __init__(self, 
-                m = 100, # mass of the vehile
-                m_w = 1, # mass of one wheel
-                L_r = 25, # distance from rear axle to center of mass
-                h = 7, # height of center of mass
+                m = 2000, # mass of the vehile in kilograms
+                m_w = 10, # mass of one tire
+                L_r = 1.2, # distance in meters from rear axle to center of mass
+                L_f = 1.2, # distance in meters from front axle to center of mass
+                h = 0.4, # height of center of mass in meters
                 tire_designation = '155SRS13', # tire specifications
                 init_dyn_state = np.zeros(7), # initial dynamical state of vehicle
-                car_width = 40,  # car width
+                car_width = 1.2,  # car width
                 R_w = 5): # the radius of the vehicle's wheel
         KinematicCar.__init__(self)
         self.m = m
         self.L = self.params[0]
         self.L_r = L_r
-        self.L_f = self.L - L_r
+        self.L_f = L_f
         self.h = h
         self.R_w = R_w
         self.m_w = m_w
@@ -269,14 +270,13 @@ class DynamicCar(KinematicCar): # bicycle 5 DOF model
         g = params.g
 
         # iteratively solving for a_x, F_xf, F_xr: the instantaneous longitudinal acceleration, and longitudinal traction forces for the front and rear tires respectively
-        a_x_guess = 0.1 # first guess for longitudinal acceleration
-        F_xf_guess = 0.1 # first guess for front tire longitudinal traction
-        F_xr_guess = 0.1 # first guess for rear tire longitudinal traction
-        F_yf_guess = 0.1 # first guess for front tire tangential traction
-        F_yr_guess = 0.1 # first guess for rear tire tangential traction
-        r_guess= 0.1 # first guess for yaw rate
+        a_x = 0 # first guess for longitudinal acceleration
+        F_xf_guess = 0 # first guess for front tire longitudinal traction
+        F_xr_guess = 0 # first guess for rear tire longitudinal traction
+        F_yf_guess = 0 # first guess for front tire tangential traction
+        F_yr_guess = 0 # first guess for rear tire tangential traction
+        r_guess= 0 # first guess for yaw rate
 
-        a_x = a_x_guess 
         F_xf = F_xf_guess 
         F_xr = F_xr_guess 
         F_yf = F_yf_guess
@@ -287,7 +287,7 @@ class DynamicCar(KinematicCar): # bicycle 5 DOF model
 
 
         while iter_error > 0.01: # 
-            errors = []
+            iter_errors = []
             # equation (1)
             rhs = -F_xf * cos(delta_f) - F_yf * sin(delta_f) - F_xr * cos(delta_r) - F_yr * sin(delta_r)
             vdot_x = rhs / m + v_y * r # state 1
@@ -334,27 +334,27 @@ class DynamicCar(KinematicCar): # bicycle 5 DOF model
             F_xf, F_yf = self.get_traction(F_xf, F_zf, S_af, alpha_f)
             F_xr, F_yr = self.get_traction(F_xr, F_zr, S_ar, alpha_r)
 
-            error_a_x = abs(vdot_x - a_x) # recompute error
-            errors.append(error_a_x)
-            error_F_xf = abs(F_xf_guess - F_xf) # recompute error
-            errors.append(error_F_xf)
-            error_F_xr = abs(F_xr_guess - F_xr) # recompute error
-            errors.append(error_F_xr)
-            error_F_yf = abs(F_yf_guess - F_yf) # recompute error
-            errors.append(error_F_yf)
-            error_F_yr = abs(F_yr_guess - F_yr) # recompute error
-            errors.append(error_F_yr)
-            error_r = abs(r_guess - r) # recompute error
-            errors.append(error_r)
-            iter_error = max(errors)
+            # recompute errors
+            error_a_x = abs(vdot_x - a_x)
+            iter_errors.append(error_a_x)
+            error_F_xf = abs(F_xf_guess - F_xf)
+            iter_errors.append(error_F_xf)
+            error_F_xr = abs(F_xr_guess - F_xr)
+            iter_errors.append(error_F_xr)
+            error_F_yf = abs(F_yf_guess - F_yf)
+            iter_errors.append(error_F_yf)
+            error_F_yr = abs(F_yr_guess - F_yr)
+            iter_errors.append(error_F_yr)
+            error_r = abs(r_guess - r)
+            iter_errors.append(error_r)
+
+            iter_error = max(iter_errors)
             a_x = vdot_x
             F_xf_guess = F_xf
             F_xr_guess = F_xr
             F_yf_guess = F_yf
             F_yr_guess = F_yr
             r_guess = r
-
-            print(iter_error)
 
         dstate_dt = [vdot_x, vdot_y, psi_dot, wdot_f, wdot_r, v_X, v_Y]
         return dstate_dt
@@ -382,7 +382,7 @@ class DynamicCar(KinematicCar): # bicycle 5 DOF model
         mu_o = tire_data['mu_o']
 
         K_mu = 0.124
-        Y_camber = 1 # camber angle
+        Y_camber = 0 # camber angle
 
         # equation 11 & 12, tire contact patch length
         a_po = (0.0768 * sqrt(F_z * F_ZT)) / (T_w * (T_p + 5))
@@ -410,6 +410,7 @@ class DynamicCar(KinematicCar): # bicycle 5 DOF model
 
 # TESTING
 # state = [v_x, v_y, psi, w_f, w_r, X, Y]
-dyn_car = DynamicCar(init_dyn_state = np.array([50,20,0,0.1,0.2,100, 100]))
+dyn_car = DynamicCar(init_dyn_state = np.array([0.1,0.1,0,0.1,0.1,100,100]))
 #state_dot(self, t, delta_f, delta_r, T_af, T_ar, T_bf, T_br):
-print(dyn_car.state_dot(t = 0, delta_f = 0.1, delta_r = 0, T_af = 1, T_ar = 0, T_bf = 0, T_br =0))
+print('state_dot: a_x, a_y, r, d_w_f, d_w_r, v_X, v_Y')
+print(dyn_car.state_dot(t = 0, delta_f = 0, delta_r = 0, T_af = 50, T_ar = 0, T_bf = 0, T_br =0))
