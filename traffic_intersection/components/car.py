@@ -17,6 +17,8 @@ primitive_data = main_dir + '/primitives/MA3.mat'
 from prepare.queue import Queue
 from PIL import Image
 from assumes.disturbance import get_disturbance
+import assumes.params as params
+from math import pi
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 blue_car_fig = dir_path + "/imglib/cars/blue_car.png"
@@ -224,28 +226,37 @@ class KinematicCar:
 class DynamicCar(KinematicCar): # bicycle 5 DOF model
     def __init__(self, 
                 m = 100, # mass of the vehile
+                m_w = 1, # mass of one wheel
                 L_r = 25, # distance from rear axle to center of mass
                 h = 7, # height of center of mass
-                tire_designation = '155SR13', # tire specifications
+                tire_designation = '155SRS13', # tire specifications
+                init_dyn_state = np.zeros(7), # initial dynamical state of vehicle
+                car_width = 40,  # car width
                 R_w = 5): # the radius of the vehicle's wheel
         KinematicCar.__init__(self)
         self.m = m
+        self.L = self.params[0]
         self.L_r = L_r
         self.L_f = self.L - L_r
         self.h = h
         self.R_w = R_w
+        self.m_w = m_w
         self.tire_data = get_tire_data(tire_designation)
+        self.dyn_state =  init_dyn_state
+        self.car_width = car_width
+        self.I_w = 0.5 * m_w * R_w ** 2 # approximated as the moment of inertia around z-axis of a thin disk / cylinder of any length with radius R_w and mass m
+        self.I_z = 1/12. * m * (self.L**2 + self.car_width**2)
 
-    def state_dot(self, state, t, delta_f, delta_r, T_af, T_ar, T_bf, T_br):
-        # state = [v_x, v_y, r, psi, w_f, w_r, X, Y, a_x]
+    def state_dot(self, t, delta_f, delta_r, T_af, T_ar, T_bf, T_br):
+        # state = [v_x, v_y, psi, w_f, w_r, X, Y]
+        state = self.dyn_state
         v_x = state[0]
         v_y = state[1]
-        r = state[2]
-        psi = state[3]
-        w_f = state[4]
-        w_r = state[5]
-        X = state[6]
-        Y = state[7]
+        psi = state[2]
+        w_f = state[3]
+        w_r = state[4]
+        X = state[5]
+        Y = state[6]
 
         m = self.m
         L_r = self.L_r
@@ -253,80 +264,106 @@ class DynamicCar(KinematicCar): # bicycle 5 DOF model
         h = self.h
         R_w = self.R_w
 
-        I_w = 0.5 * m * R_w ** 2 # approximated as the moment of inertia around z-axis of a thin disk / cylinder of any length with radius R_w and mass m
-
-        # equation (6)
-        psi_dot = r # state 5
-        # equation (7)
-        v_X = v_x * cos(psi) - v_y * sin(psi) # state 6
-        # equation (8)
-        v_Y = v_x * sin(psi) + v_y * cos(psi) # state 7
-        # equation (11)
-        alpha_f = arctan2(v_y + L_f * r, v_x) - delta_f
-        # equation (12)
-        alpha_r = arctan2(v_y - L_r * r, v_x) - delta_r
-        # equation (13)
-        V_tf = sqrt((v_y + L_f * r)**2 + v_x**2)
-        # equation (14)
-        V_tr = sqrt((v_y - L_r * r)**2 + v_x**2)
-        # equation (15)
-        v_wxf = V_tf * cos(alpha_f)
-        # equation (16)
-        v_wxr = V_tr * cos(alpha_r)
-        # equation (17)
-        S_af = (v_wxf - w_f * R_w) / v_wxf
-        # equation (18)
-        S_ar = (v_wxr - w_r * R_w) / v_wxr
+        I_w = self.I_w
+        I_z = self.I_z
+        g = params.g
 
         # iteratively solving for a_x, F_xf, F_xr: the instantaneous longitudinal acceleration, and longitudinal traction forces for the front and rear tires respectively
-        error_a_x = float('inf')
-        error_F_xf = float('inf')
-        error_F_xr = float('inf')
-        iter_error = max(error_a_x, error_F_xf, error_F_xr)
+        a_x_guess = 0.1 # first guess for longitudinal acceleration
+        F_xf_guess = 0.1 # first guess for front tire longitudinal traction
+        F_xr_guess = 0.1 # first guess for rear tire longitudinal traction
+        F_yf_guess = 0.1 # first guess for front tire tangential traction
+        F_yr_guess = 0.1 # first guess for rear tire tangential traction
+        r_guess= 0.1 # first guess for yaw rate
 
-        a_x = 0 # first guess for longitudinal acceleration
-        F_xf_guess = 0 # first guess for front tire longitudinal traction
-        F_xr_guess = 0 # first guess for rear tire longitudinal traction
+        a_x = a_x_guess 
+        F_xf = F_xf_guess 
+        F_xr = F_xr_guess 
+        F_yf = F_yf_guess
+        F_yr = F_yr_guess
+        r = r_guess
+
+        iter_error = float('inf')
+
 
         while iter_error > 0.01: # 
+            errors = []
+            # equation (1)
+            rhs = -F_xf * cos(delta_f) - F_yf * sin(delta_f) - F_xr * cos(delta_r) - F_yr * sin(delta_r)
+            vdot_x = rhs / m + v_y * r # state 1
+            # equation (2)
+            rhs = F_yf * cos(delta_f) - F_xf * sin(delta_f) + F_yr * cos(delta_r) - F_xr * sin(delta_r)
+            vdot_y = rhs / m  - v_x * r # state 2
+            # equation (3)
+            rhs = L_f * (F_yf * cos(delta_f) - F_xf * sin(delta_f)) - L_r * (F_yr * cos(delta_r) - F_xr * sin(delta_r))
+            r = rhs / I_z
+            # equation (4)
+            rhs = F_xf * R_w - T_bf + T_af
+            wdot_f =  rhs / I_w # state 3
+            # equation (5)
+            rhs = F_xr * R_w - T_br + T_ar
+            wdot_r =  rhs / I_w # state 4
+            # equation (6)
+            psi_dot = r # state 5
+            # equation (7)
+            v_X = v_x * cos(psi) - v_y * sin(psi) # state 6
+            # equation (8)
+            v_Y = v_x * sin(psi) + v_y * cos(psi) # state 7
+            # equation (11)
+            alpha_f = arctan2(v_y + L_f * r, v_x) - delta_f
+            # equation (12)
+            alpha_r = arctan2(v_y - L_r * r, v_x) - delta_r
+            # equation (13)
+            V_tf = sqrt((v_y + L_f * r)**2 + v_x**2)
+            # equation (14)
+            V_tr = sqrt((v_y - L_r * r)**2 + v_x**2)
+            # equation (15)
+            v_wxf = V_tf * cos(alpha_f)
+            # equation (16)
+            v_wxr = V_tr * cos(alpha_r)
+            # equation (17)
+            S_af = ((v_wxf - w_f * R_w) / v_wxf)
+            # equation (18)
+            S_ar = ((v_wxr - w_r * R_w) / v_wxr)
             # equation (9)
             F_zf = (m * g * L_r - m * a_x * h) / (L_f + L_r)
             # equation (10)
             F_zr = (m * g * L_f - m * a_x * h) / (L_f + L_r)
 
-            # compute traction forces
-            F_xf, F_yf = self.get_traction(F_xf_guess, F_zf, S_af, alpha_f, self.tire_data)
-            F_xr, F_yr = self.get_traction(F_xr_guess, F_zr, S_ar, alpha_r, self.tire_data)
+            # compute traction force estimates
+            F_xf, F_yf = self.get_traction(F_xf, F_zf, S_af, alpha_f)
+            F_xr, F_yr = self.get_traction(F_xr, F_zr, S_ar, alpha_r)
 
-            # equation (1)
-            rhs = -F_xf * cos(delta_f) - F_yf * sin(delta_f) - F_xr * cos(delta_r) - F_yr * sin(delta_r) 
-            vdot_x = rhs / m + v_y * r # state 1
-            error_a_x = abs(vdot_x - ax) # recompute error
+            error_a_x = abs(vdot_x - a_x) # recompute error
+            errors.append(error_a_x)
             error_F_xf = abs(F_xf_guess - F_xf) # recompute error
+            errors.append(error_F_xf)
             error_F_xr = abs(F_xr_guess - F_xr) # recompute error
-            iter_error = max(error_a_x, error_F_xf, error_F_xr) # update iter_error
-            a_x = vdot_x # update guess
-            F_xf_guess = F_xf # update guess
-            F_xr_guess = F_xr # update guess
+            errors.append(error_F_xr)
+            error_F_yf = abs(F_yf_guess - F_yf) # recompute error
+            errors.append(error_F_yf)
+            error_F_yr = abs(F_yr_guess - F_yr) # recompute error
+            errors.append(error_F_yr)
+            error_r = abs(r_guess - r) # recompute error
+            errors.append(error_r)
+            iter_error = max(errors)
+            a_x = vdot_x
+            F_xf_guess = F_xf
+            F_xr_guess = F_xr
+            F_yf_guess = F_yf
+            F_yr_guess = F_yr
+            r_guess = r
 
-        # equation (2)
-        rhs = F_yf * cos(delta_f) - F_xf * sin(delta_f) + F_yr * cos(delta_r) - Fxr * sin(delta_r)
-        vdot_y = rhs / m  - v_x * r # state 2
-        # equation (3)
-        rhs = L_f * (F_yf * cos(delta_f) - F_xf * sin(delta_f)) - L_r * (F_yr * cos(delta_r) - F_xr * sin(delta_r))
-        r = rhs / Iz
-        # equation (4)
-        rhs = F_xf * R_w - T_bf + T_af
-        wdot_f =  rhs / I_w # state 3
-        # equation (5)
-        rhs = F_xr * R_w - T_br + T_ar
-        wdot_r =  rhs / I_w # state 4
+            print(iter_error)
+
+        dstate_dt = [vdot_x, vdot_y, psi_dot, wdot_f, wdot_r, v_X, v_Y]
         return dstate_dt
 
     def next(self):
         pass
 
-    def get_traction(F_x, F_z, S, alpha, tire_data): # longitudinal slip, slip angle, F_x, normal load
+    def get_traction(self, F_x, F_z, S, alpha): # longitudinal slip, slip angle, F_x, normal load
+        tire_data = self.tire_data
         T_w = tire_data['T_w']
         T_p = tire_data['T_p']
         F_ZT = tire_data['F_ZT']
@@ -372,11 +409,7 @@ class DynamicCar(KinematicCar): # bicycle 5 DOF model
         return F_x, F_y
 
 # TESTING
-#prim_id = 0
-# prim = mat['MA3'][prim_id,0] # the primitive corresponding to the primitive number
-# x0 = np.array(prim['x0'][0,0]) + np.matmul(np.diag([4, 0.02, 4, 4]),2*np.random.rand(4,1)-np.ones((4,1))) # random state in initial set TODO: incorporate self.state
-# print(x0)
-#my_car = KinematicCar(init_state = np.reshape(x0, (-1, 1)))
-#progress = 0
-# while my_car.prim_progress <= 1:
-#    my_car.prim_next(prim_id = 0, dt = 0.1)
+# state = [v_x, v_y, psi, w_f, w_r, X, Y]
+dyn_car = DynamicCar(init_dyn_state = np.array([50,20,0,0.1,0.2,100, 100]))
+#state_dot(self, t, delta_f, delta_r, T_af, T_ar, T_bf, T_br):
+print(dyn_car.state_dot(t = 0, delta_f = 0.1, delta_r = 0, T_af = 1, T_ar = 0, T_bf = 0, T_br =0))
