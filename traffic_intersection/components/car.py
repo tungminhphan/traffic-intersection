@@ -9,6 +9,7 @@ sys.path.append("..")
 import scipy.io
 import numpy as np
 from primitives.prim_car import prim_state_dot
+from components.aux.tire_data import get_tire_data
 from scipy.integrate import odeint
 from numpy import cos, sin, tan, arctan2, sqrt
 main_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -16,7 +17,6 @@ primitive_data = main_dir + '/primitives/MA3.mat'
 from prepare.queue import Queue
 from PIL import Image
 from assumes.disturbance import get_disturbance
-
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 blue_car_fig = dir_path + "/imglib/cars/blue_car.png"
@@ -36,21 +36,21 @@ def saturation_filter(u, u_max, u_min):
     return max(min(u, u_max), u_min)
 
 
-def force_saturation_function(sigma, tire_data):
-    ''' Force saturation function used in the calculation of tire traction forces
-    Inputs:
-    sigma - the composite slip
-    tire_data - tire parameters
-
-    Output:
-    f - composite force coefficient such tat f = F_c / (mu * F_z)
-    '''
-    C_1 = tire_data['C1']
-    C_2 = tire_data['C2']
-    C_3 = tire_data['C3']
-    C_4 = tire_data['C4']
-    f =  (C_1 * sigma**3 + C_2 * sigma**2 + (4/np.pi) * sigma)/(C_1 * sigma**3 + C_2 * sigma ** 2 + C_4 * sigma + 1)
-    return f
+#def force_saturation_function(sigma, tire_data):
+#    ''' Force saturation function used in the calculation of tire traction forces
+#    Inputs:
+#    sigma - the composite slip
+#    tire_data - tire parameters
+#
+#    Output:
+#    f - composite force coefficient such tat f = F_c / (mu * F_z)
+#    '''
+#    C_1 = tire_data['C1']
+#    C_2 = tire_data['C2']
+#    C_3 = tire_data['C3']
+#    C_4 = tire_data['C4']
+#    f =  (C_1 * sigma**3 + C_2 * sigma**2 + (4/np.pi) * sigma)/(C_1 * sigma**3 + C_3 * sigma ** 2 + C_4 * sigma + 1)
+#    return f
 
 class KinematicCar:
     '''Kinematic car class
@@ -58,10 +58,8 @@ class KinematicCar:
     init_state is [vee, theta, x, y], where vee, theta, x, y are the velocity, orientation, and
     coordinates of the car respectively
     '''
-
-
     def __init__(self, init_state=[0, 0, 0, 0],
-                 L=50,  # length of vehicle
+                 L=50,  # length of vehicle in pixels
                  a_max=9.81,  # maximum acceleration of vehicle
                  a_min=-9.81,  # maximum deceleration of vehicle
                  nu_max=0.5,  # maximum steering input in radians/sec
@@ -226,39 +224,43 @@ class KinematicCar:
 class DynamicCar(KinematicCar): # bicycle 5 DOF model
     def __init__(self, 
                 m = 100, # mass of the vehile
+                L_r = 25, # distance from rear axle to center of mass
+                h = 7, # height of center of mass
                 tire_designation = '155SR13', # tire specifications
                 R_w = 5): # the radius of the vehicle's wheel
         KinematicCar.__init__(self)
         self.m = m
+        self.L_r = L_r
+        self.L_f = self.L - L_r
+        self.h = h
         self.R_w = R_w
+        self.tire_data = get_tire_data(tire_designation)
 
-    def state_dot(self, state, t):
-        dstate_dt = []
-        # equation (1)
-        rhs = -F_xf * cos(delta_f) - F_yf * sin(delta_f) - F_xr * cos(delta_r) - F_yr * sin(delta_r) 
-        vdot_x = rhs / m + v_y * r # state 1
-        # equation (2)
-        rhs = F_yf * cos(delta_f) - F_xf * sin(delta_f) + F_yr * cos(delta_r) - Fxr * sin(delta_r)
-        vdot_y = rhs / m  - v_x * r # state 2
-        # equation (3)
-        rhs = L_f * (F_yf * cos(delta_f) - F_xf * sin(delta_f)) - L_r * (F_yr * cos(delta_r) - F_xr * sin(delta_r))
-        r = rhs / Iz
-        # equation (4)
-        rhs = F_xf * R_w - T_bf + T_af
-        wdot_f =  rhs / I_w # state 3
-        # equation (5)
-        rhs = F_xr * R_w - T_br + T_ar
-        wdot_r =  rhs / I_w # state 4
+    def state_dot(self, state, t, delta_f, delta_r, T_af, T_ar, T_bf, T_br):
+        # state = [v_x, v_y, r, psi, w_f, w_r, X, Y, a_x]
+        v_x = state[0]
+        v_y = state[1]
+        r = state[2]
+        psi = state[3]
+        w_f = state[4]
+        w_r = state[5]
+        X = state[6]
+        Y = state[7]
+
+        m = self.m
+        L_r = self.L_r
+        L_f = self.L_f
+        h = self.h
+        R_w = self.R_w
+
+        I_w = 0.5 * m * R_w ** 2 # approximated as the moment of inertia around z-axis of a thin disk / cylinder of any length with radius R_w and mass m
+
         # equation (6)
         psi_dot = r # state 5
         # equation (7)
         v_X = v_x * cos(psi) - v_y * sin(psi) # state 6
         # equation (8)
         v_Y = v_x * sin(psi) + v_y * cos(psi) # state 7
-        # equation (9)
-        F_zf = (m * g * L_r - m * a_x * h) / (L_f + L_r)
-        # equation (10)
-        F_zr = (m * g * L_f - m * a_x * h) / (L_f + L_r)
         # equation (11)
         alpha_f = arctan2(v_y + L_f * r, v_x) - delta_f
         # equation (12)
@@ -276,16 +278,74 @@ class DynamicCar(KinematicCar): # bicycle 5 DOF model
         # equation (18)
         S_ar = (v_wxr - w_r * R_w) / v_wxr
 
+        # iteratively solving for a_x, F_xf, F_xr: the instantaneous longitudinal acceleration, and longitudinal traction forces for the front and rear tires respectively
+        error_a_x = float('inf')
+        error_F_xf = float('inf')
+        error_F_xr = float('inf')
+        iter_error = max(error_a_x, error_F_xf, error_F_xr)
+
+        a_x = 0 # first guess for longitudinal acceleration
+        F_xf_guess = 0 # first guess for front tire longitudinal traction
+        F_xr_guess = 0 # first guess for rear tire longitudinal traction
+
+        while iter_error > 0.01: # 
+            # equation (9)
+            F_zf = (m * g * L_r - m * a_x * h) / (L_f + L_r)
+            # equation (10)
+            F_zr = (m * g * L_f - m * a_x * h) / (L_f + L_r)
+
+            # compute traction forces
+            F_xf, F_yf = self.get_traction(F_xf_guess, F_zf, S_af, alpha_f, self.tire_data)
+            F_xr, F_yr = self.get_traction(F_xr_guess, F_zr, S_ar, alpha_r, self.tire_data)
+
+            # equation (1)
+            rhs = -F_xf * cos(delta_f) - F_yf * sin(delta_f) - F_xr * cos(delta_r) - F_yr * sin(delta_r) 
+            vdot_x = rhs / m + v_y * r # state 1
+            error_a_x = abs(vdot_x - ax) # recompute error
+            error_F_xf = abs(F_xf_guess - F_xf) # recompute error
+            error_F_xr = abs(F_xr_guess - F_xr) # recompute error
+            iter_error = max(error_a_x, error_F_xf, error_F_xr) # update iter_error
+            a_x = vdot_x # update guess
+            F_xf_guess = F_xf # update guess
+            F_xr_guess = F_xr # update guess
+
+        # equation (2)
+        rhs = F_yf * cos(delta_f) - F_xf * sin(delta_f) + F_yr * cos(delta_r) - Fxr * sin(delta_r)
+        vdot_y = rhs / m  - v_x * r # state 2
+        # equation (3)
+        rhs = L_f * (F_yf * cos(delta_f) - F_xf * sin(delta_f)) - L_r * (F_yr * cos(delta_r) - F_xr * sin(delta_r))
+        r = rhs / Iz
+        # equation (4)
+        rhs = F_xf * R_w - T_bf + T_af
+        wdot_f =  rhs / I_w # state 3
+        # equation (5)
+        rhs = F_xr * R_w - T_br + T_ar
+        wdot_r =  rhs / I_w # state 4
         return dstate_dt
+
     def next(self):
         pass
 
-    def tire_model(S, alpha, F_x, F_z): #longitudinal slip, slip angle, F_x, normal load
+    def get_traction(F_x, F_z, S, alpha, tire_data): # longitudinal slip, slip angle, F_x, normal load
+        T_w = tire_data['T_w']
+        T_p = tire_data['T_p']
+        F_ZT = tire_data['F_ZT']
+        C_1 = tire_data['C_1']
+        C_2 = tire_data['C_2']
+        C_3 = tire_data['C_3']
+        C_4 = tire_data['C_4']
+        A_0 = tire_data['A_0']
+        A_1 = tire_data['A_1']
+        A_2 = tire_data['A_2']
+        A_3 = tire_data['A_3']
+        A_4 = tire_data['A_4']
+        K_a = tire_data['K_a']
+        K_1 = tire_data['K_1']
+        CS_FZ = tire_data['CS_FZ']
+        mu_o = tire_data['mu_o']
+
         K_mu = 0.124
         Y_camber = 1 # camber angle
-
-        # equation 2
-        #alpha = arctan2(v, u) # slip angle
 
         # equation 11 & 12, tire contact patch length
         a_po = (0.0768 * sqrt(F_z * F_ZT)) / (T_w * (T_p + 5))

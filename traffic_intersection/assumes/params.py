@@ -8,3 +8,5 @@ pedestrian_scale_factor = 0.32
 car_scale_factor = 0.1 # scale for when L = 50?
 num_subprims = 5
 theta_compensate = 5
+
+pixel_to_meter_scale_factor = 50 / 1.5 # 1.5 meters ~ 50 pixels
