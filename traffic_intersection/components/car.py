@@ -319,10 +319,9 @@ class DynamicCar(KinematicCar): # bicycle 5 DOF model
             # equation (16)
             v_wxr = V_tr * cos(alpha_r)
             # equation (17)
-            is_breaking = T_br > 0 or T_bf > 0
-            S_af = self.get_longitudinal_slip(v_wxf, w_f, is_breaking and abs(v_wxf) > 0)
+            S_af = self.get_longitudinal_slip(v_wxf, w_f)
             # equation (18)
-            S_ar = self.get_longitudinal_slip(v_wxr, w_r, is_breaking and abs(v_wxr) > 0)
+            S_ar = self.get_longitudinal_slip(v_wxr, w_r)
             # equation (9)
             F_zf = (m * g * L_r - m * a_x * h) / (L_f + L_r)
             # equation (10)
@@ -368,7 +367,7 @@ class DynamicCar(KinematicCar): # bicycle 5 DOF model
         # update alive time
         self.alive_time += dt
 
-    def get_longitudinal_slip(self, u, w, breaking):
+    def get_longitudinal_slip(self, u, w):
         R = self.R_w
         if u > R*w:
             return (u-R*w)/u
@@ -422,8 +421,8 @@ class DynamicCar(KinematicCar): # bicycle 5 DOF model
         return F_x, F_y
 
 # TESTING
-v_x = 10
-v_y = 0.1
+v_x = 0.0001
+v_y = 0
 r = 0
 psi = 0
 w_f = 0
@@ -435,12 +434,12 @@ dyn_car = DynamicCar(init_dyn_state = init_dyn_state)
 delta_f = -0.01
 delta_r = 0
 T_af = 1000
-T_ar = 10
+T_ar = 0.001
 T_bf = 0
 T_br = 0
 inputs = (delta_f, delta_r, T_af, T_ar, T_bf, T_br)
 dt = 0.1
-t_end = 10
+t_end = 12
 t_start = 0
 t_current = t_start
 X = []
@@ -457,6 +456,6 @@ while t_current < t_end:
 # state = [v_x, v_y, r, psi, w_f, w_r, X, Y]
 import matplotlib.pyplot as plt
 plt.plot(X,Y)
-plt.xlim(-100, 100)
-plt.ylim(-100, 100)
+plt.xlim(-200, 200)
+plt.ylim(-200, 200)
 plt.show()
