@@ -225,32 +225,34 @@ class KinematicCar:
 
 class DynamicCar(KinematicCar): # bicycle 5 DOF model
     def __init__(self, 
-                m = 2000, # mass of the vehile in kilograms
-                m_w = 10, # mass of one tire
-                L_r = 1.2, # distance in meters from rear axle to center of mass
-                L_f = 1.2, # distance in meters from front axle to center of mass
-                h = 0.4, # height of center of mass in meters
+                m = 2000, # mass of the vehicle in kilograms
+                m_w = 14, # mass of one tire
+                L_r = 2, # distance in meters from rear axle to center of mass
+                L_f = 2, # distance in meters from front axle to center of mass
+                h = 1, # height of center of mass in meters
                 tire_designation = '155SRS13', # tire specifications
                 init_dyn_state = np.zeros(7), # initial dynamical state of vehicle
-                car_width = 1.2,  # car width
-                R_w = 0.25): # the radius of the vehicle's wheel
+                car_width = 2.,  # car width
+                R_w = 0.3): # the radius of the vehicle's wheel
         KinematicCar.__init__(self)
         self.m = m
-        self.L = self.params[0]
         self.L_r = L_r
         self.L_f = L_f
+        self.L = L_r + L_f
         self.h = h
         self.R_w = R_w
         self.m_w = m_w
         self.tire_data = get_tire_data(tire_designation)
-        self.dyn_state =  init_dyn_state
+        self.dyn_state = init_dyn_state
         self.car_width = car_width
-        self.I_w = 0.5 * m_w * R_w ** 2 # approximated as the moment of inertia around z-axis of a thin disk / cylinder of any length with radius R_w and mass m
+        self.I_w = 1/2. * m_w * R_w**2 # approximated as the moment of inertia around z-axis of a thin disk / cylinder of any length with radius R_w and mass m
         self.I_z = 1/12. * m * (self.L**2 + self.car_width**2)
 
-    def state_dot(self, t, delta_f, delta_r, T_af, T_ar, T_bf, T_br):
+    def state_dot(self, init_dyn_state, t, delta_f, delta_r, T_af, T_ar, T_bf, T_br):
         # state = [v_x, v_y, psi, w_f, w_r, X, Y]
-        state = self.dyn_state
+
+        delta_f, delta_r, T_af, T_ar, T_bf, T_br = inputs
+        state = init_dyn_state
         v_x = state[0]
         v_y = state[1]
         psi = state[2]
@@ -258,24 +260,22 @@ class DynamicCar(KinematicCar): # bicycle 5 DOF model
         w_r = state[4]
         X = state[5]
         Y = state[6]
-
         m = self.m
         L_r = self.L_r
         L_f = self.L_f
         h = self.h
         R_w = self.R_w
-
         I_w = self.I_w
         I_z = self.I_z
         g = params.g
 
         # iteratively solving for a_x, F_xf, F_xr: the instantaneous longitudinal acceleration, and longitudinal traction forces for the front and rear tires respectively
-        a_x = 0 # first guess for longitudinal acceleration
-        F_xf_guess = 0 # first guess for front tire longitudinal traction
-        F_xr_guess = 0 # first guess for rear tire longitudinal traction
-        F_yf_guess = 0 # first guess for front tire tangential traction
-        F_yr_guess = 0 # first guess for rear tire tangential traction
-        r_guess= 0 # first guess for yaw rate
+        a_x = 0.1 # first guess for longitudinal acceleration
+        F_xf_guess = 100 # first guess for front tire longitudinal traction
+        F_xr_guess = 10 # first guess for rear tire longitudinal traction
+        F_yf_guess = 0.1 # first guess for front tire tangential traction
+        F_yr_guess = 0.1 # first guess for rear tire tangential traction
+        r_guess= 0.1 # first guess for yaw rate
 
         F_xf = F_xf_guess 
         F_xr = F_xr_guess 
@@ -284,7 +284,6 @@ class DynamicCar(KinematicCar): # bicycle 5 DOF model
         r = r_guess
 
         iter_error = float('inf')
-
 
         while iter_error > 0.01: # 
             iter_errors = []
@@ -296,7 +295,7 @@ class DynamicCar(KinematicCar): # bicycle 5 DOF model
             vdot_y = rhs / m  - v_x * r # state 2
             # equation (3)
             rhs = L_f * (F_yf * cos(delta_f) - F_xf * sin(delta_f)) - L_r * (F_yr * cos(delta_r) - F_xr * sin(delta_r))
-            r = rhs / I_z
+            r_dot = rhs / I_z
             # equation (4)
             rhs = F_xf * R_w - T_bf + T_af
             wdot_f =  rhs / I_w # state 3
@@ -359,8 +358,21 @@ class DynamicCar(KinematicCar): # bicycle 5 DOF model
         dstate_dt = [vdot_x, vdot_y, psi_dot, wdot_f, wdot_r, v_X, v_Y]
         return dstate_dt
 
-    def next(self):
-        pass
+    def next(self, inputs, dt):
+        """
+        next is a function that updates the current position of the car when inputs are applied for a duration of dt
+        Inputs:
+        dt: integration time
+
+        Outputs:
+        None - the states of the car will get updated
+        """
+        delta_f, delta_r, T_af, T_ar, T_bf, T_br = inputs
+
+        # take only the real part of the solution
+        self.dyn_state = odeint(self.state_dot, self.dyn_state, t=(0, dt), args=inputs)[1]
+        # update alive time
+        self.alive_time += dt
 
     def get_traction(self, F_x, F_z, S, alpha): # longitudinal slip, slip angle, F_x, normal load
         tire_data = self.tire_data
@@ -389,28 +401,61 @@ class DynamicCar(KinematicCar): # bicycle 5 DOF model
         a_p = a_po * (1 - K_a * F_x / F_z)
 
         # equation 13, 14 lateral and longitudianl stiffness coeffs 
-        K_s = (2 / a_po**2) * (A_0 + (A_1 * F_z) - ((A_1 / A_2) * F_z**2)) 
+        K_s = (2 / a_po**2) * (A_0 + A_1 * F_z - (A_1 / A_2) * F_z**2) 
         K_c = (2 / a_po**2) * F_z * CS_FZ
 
         # equation 15, composite slip calculation
-        sigma = (pi * a_p**2) / ( 8 * mu_o * F_z) * sqrt((K_s**2 * tan(alpha)**2) + (K_c**2 * (S / (1 - S))**2))
+        sigma = (pi * a_p**2) / (8 * mu_o * F_z) * sqrt(K_s**2 * (tan(alpha))**2 + K_c**2 * (S / (1 - S))**2)
 
         # equation 10 composite force, saturation function
-        f_of_sigma = ((C_1 * sigma**3) + (C_2 * sigma**2) + (4 / pi * sigma)) / ((C_1 * sigma**3) + (C_3 * sigma**2) + (C_4 * sigma) + 1)
+        f_of_sigma = (C_1 * sigma**3 + C_2 * sigma**2 + 4 / pi * sigma) / (C_1 * sigma**3 + C_3 * sigma**2 + C_4 * sigma + 1)
 
         # equation 18 & 19 modified Long. Stiff Coeff and Tire/Rd coeff friction
-        K_c_prime = K_c + (K_s - K_c) * sqrt(sin(alpha)**2 + S**2 * cos(alpha)**2)
-        mu = mu_o * (1 - K_mu * sqrt(sin(alpha)**2 + S**2 * cos(alpha)**2) )
+        K_c_prime = K_c + (K_s - K_c) * sqrt((sin(alpha))**2 + S**2 * (cos(alpha))**2)
+        mu = mu_o * (1 - K_mu * sqrt((sin(alpha))**2 + S**2 * (cos(alpha))**2) )
 
         # equation 16 & 17 Normalized Lateral and Long Force
-        F_y = (f_of_sigma * K_s * tan(alpha) / sqrt(K_s**2 * tan(alpha)**2 + K_c_prime**2 * S**2) + Y_camber) * mu * F_z
-        F_x = f_of_sigma * K_c_prime * S / sqrt(K_s**2 * tan(alpha)**2 + K_c_prime**2 * S**2) * mu * F_z
+        F_y = (f_of_sigma * K_s * tan(alpha) / sqrt(K_s**2 * (tan(alpha))**2 + K_c_prime**2 * S**2) + Y_camber) * mu * F_z
+        F_x = f_of_sigma * K_c_prime * S / sqrt(K_s**2 * (tan(alpha))**2 + K_c_prime**2 * S**2) * mu * F_z
 
         return F_x, F_y
 
 # TESTING
 # state = [v_x, v_y, psi, w_f, w_r, X, Y]
-dyn_car = DynamicCar(init_dyn_state = np.array([0.1,0.1,0,0.1,0.1,100,100]))
+v_x = 10
+v_y = 1
+psi = 0.5
+w_f = 10
+w_r = 10
+X = 100
+Y = 100
+init_dyn_state = np.array([v_x, v_y, psi, w_f, w_r, X, Y])
+dyn_car = DynamicCar(init_dyn_state = init_dyn_state)
 #state_dot(self, t, delta_f, delta_r, T_af, T_ar, T_bf, T_br):
 print('state_dot: a_x, a_y, r, d_w_f, d_w_r, v_X, v_Y')
-print(dyn_car.state_dot(t = 0, delta_f = 0, delta_r = 0, T_af = 1, T_ar = 0, T_bf = 0, T_br =0))
+delta_f = 0.1
+delta_r = 0
+T_af = 10
+T_ar = 0
+T_bf = 0
+T_br =0
+inputs = (delta_f, delta_r, T_af, T_ar, T_bf, T_br)
+dt = 0.1
+t_end = 10
+t_start = 0
+t_current = t_start
+x = []
+y = []
+psi = []
+while t_current < t_end:
+    dyn_car.next(inputs, 0.1)
+    t_current += dt
+    state = dyn_car.dyn_state
+    x.append(state[-2])
+    y.append(state[-1])
+    psi.append(state[2])
+    print(state)
+
+import matplotlib.pyplot as plt
+plt.plot(x,y)
+plt.show()

@@ -35,7 +35,6 @@ else: # if the operating system is Linux or Windows
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 
-
 # set dir_path to current directory
 dir_path = os.path.dirname(os.path.realpath(__file__))
 intersection_fig = dir_path + "/components/imglib/intersection_states/intersection_"
