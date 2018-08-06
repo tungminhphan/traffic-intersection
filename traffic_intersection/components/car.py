@@ -369,7 +369,11 @@ class DynamicCar(KinematicCar): # bicycle 5 DOF model
         self.alive_time += dt
 
     def get_longitudinal_slip(self, u, w, breaking):
-        return 0.8
+        R = self.R_w
+        if u > R*w:
+            return (u-R*w)/u
+        else:
+            return (R*w-u)/R*w
 
     def get_traction(self, F_x, F_z, S, alpha): # longitudinal slip, slip angle, F_x, normal load
         tire_data = self.tire_data
@@ -419,19 +423,19 @@ class DynamicCar(KinematicCar): # bicycle 5 DOF model
 
 # TESTING
 v_x = 10
-v_y = 0
+v_y = 0.1
 r = 0
 psi = 0
 w_f = 0
 w_r = 0
-X = 100
-Y = 100
+X = 0
+Y = 0
 init_dyn_state = np.array([v_x, v_y, r, psi, w_f, w_r, X, Y])
 dyn_car = DynamicCar(init_dyn_state = init_dyn_state)
-delta_f = 0
+delta_f = -0.01
 delta_r = 0
-T_af = 1
-T_ar = 0
+T_af = 1000
+T_ar = 10
 T_bf = 0
 T_br = 0
 inputs = (delta_f, delta_r, T_af, T_ar, T_bf, T_br)
@@ -453,4 +457,6 @@ while t_current < t_end:
 # state = [v_x, v_y, r, psi, w_f, w_r, X, Y]
 import matplotlib.pyplot as plt
 plt.plot(X,Y)
+plt.xlim(-100, 100)
+plt.ylim(-100, 100)
 plt.show()
