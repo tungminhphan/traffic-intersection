@@ -6,6 +6,7 @@
 import os, sys
 sys.path.append('..')
 import time, random
+import components.traffic_signals as traffic_signals
 import prepare.queue as queue
 import prepare.car_waypoint_graph as waypoint_graph
 import primitives.tubes
@@ -124,7 +125,42 @@ def is_overlapping(interval_A, interval_B):
     is_disjoint = (interval_A[0] > interval_B[1]) or (interval_B[0] > interval_A[1])
     return not is_disjoint
 
-def is_safe(path, current_time, primitive_graph, edge_time_stamps):
+
+def update(self, dt):
+    full_cycle = sum(self._max_time[k] for k in self._max_time)
+    horizontal_time = (self._state['horizontal'][1] + dt) % full_cycle # update and trim time
+    current_color = self._state['horizontal'][0]
+    next_color = self.successor(current_color)
+    last_color = self.successor(next_color)
+    if horizontal_time // self._max_time[current_color] < 1:
+        horizontal_color = current_color
+    elif horizontal_time // (full_cycle - self._max_time[last_color]) < 1:
+        horizontal_color = next_color
+        horizontal_time = horizontal_time - self._max_time[current_color]
+    else:
+        horizontal_color = last_color
+        horizontal_time = horizontal_time - self._max_time[current_color] - self._max_time[next_color]
+    new_horizontal_state = [horizontal_color, horizontal_time]
+    self._state['horizontal'] = new_horizontal_state
+    self._state['vertical'] = self.get_counterpart(new_horizontal_state)
+
+def redlight_safe(interval, which_light, traffic_lights):
+    is_safe = False
+    interval_length = interval[1] - interval[0]
+    first_time = interval[0]
+    predicted_state = traffic_lights.predict(first_time, True) # if horizontal
+    if which_light == 'north' or which_light == 'south': # if vertical
+        predicted_state = traffic_lights.get_counterpart(predicted_state) # vertical light
+    color, time = predicted_state
+    remaining_time = traffic_lights._max_time[color] - time
+    if color == 'yellow':
+        is_safe = remaining_time > interval_length
+    elif color == 'green':
+        remaining_time += traffic_lights._max_time['yellow']
+        is_safe = remaining_time > interval_length
+    return is_safe
+
+def is_safe(path, current_time, primitive_graph, edge_time_stamps, traffic_lights):
     now = current_time
     scheduled_times = [now]
     current_edge_idx = 0
@@ -136,32 +172,74 @@ def is_safe(path, current_time, primitive_graph, edge_time_stamps):
         right_time = scheduled_times[-1]
         delta_t = right_time - left_time
         for ii in range(params.num_subprims):
+            ego_interval = left_time + (ii)/params.num_subprims * delta_t, left_time + (ii+1)/params.num_subprims * delta_t
             for box in collision_dictionary[(curr_prim_id, ii)]:
-                if len(box) == 2:
-                    colliding_id, jj = box
-                if box in edge_time_stamps: # if current loc is already stamped
-                    for interval in edge_time_stamps[(colliding_id, jj)]:
-                        if is_overlapping( (left_time + (ii)/params.num_subprims * delta_t, left_time + (ii+1)/params.num_subprims * delta_t ), interval): # if the two intervals overlap
-                            for last_index in range(len(scheduled_times)-2, 0, -1): # dial back and find a node where one can stay there forever and still be safe
-                                last_prim_id = edge_to_prim_id[(path[last_index-1], path[last_index])]
-                                last_interval = (scheduled_times[last_index], float('inf'))
-                                overlapping = False
-                                for col_id, jjj in collision_dictionary[(last_prim_id, params.num_subprims-1)]:
-                                    if (col_id, jjj) in edge_time_stamps: # if current loc is already stamped
-                                        for inner_interval in edge_time_stamps[(col_id, jjj)]:
-                                            overlapping = overlapping or is_overlapping(last_interval, inner_interval) # if the two intervals overlap
-                                if not overlapping:
-                                    return False, last_index
+                if isinstance(box, str):
+                    if not redlight_safe(ego_interval, box, traffic_lights):
+                        #TODO: turn this into a function
+                        ################################################################################
+                        #                                                                              # 
+                        # dial back and find a node where one can stay there forever and still be safe #
+                        #                                                                              # 
+                        # ##############################################################################
+                        for last_index in range(len(scheduled_times)-2, 0, -1):
+                            last_prim_id = edge_to_prim_id[(path[last_index-1], path[last_index])]
+                            last_interval = (scheduled_times[last_index], float('inf'))
                             overlapping = False
-                            first_prim_id = edge_to_prim_id[(path[0], path[1])]
-                            last_interval = (scheduled_times[0], float('inf'))
-                            for col_id, jjj in collision_dictionary[(first_prim_id, 0)]:
-                                if (col_id, jjj) in edge_time_stamps: # if current loc is already stamped
-                                    for curr_interval in edge_time_stamps[(col_id, jjj)]:
-                                        overlapping = overlapping or is_overlapping(last_interval, curr_interval) # if the two intervals overlap
+                            for box2 in collision_dictionary[(last_prim_id, params.num_subprims-1)]:
+                                if not isinstance(box2,str):
+                                    col_id, jjj = box2
+                                if box2 in edge_time_stamps: # if current loc is already stamped
+                                    for inner_interval in edge_time_stamps[(col_id, jjj)]:
+                                        overlapping = overlapping or is_overlapping(last_interval, inner_interval) # if the two intervals overlap
                             if not overlapping:
-                                return False, 0
-                            return False, None
+                                return False, last_index
+                        overlapping = False
+                        first_prim_id = edge_to_prim_id[(path[0], path[1])]
+                        last_interval = (scheduled_times[0], float('inf'))
+                        for box3 in collision_dictionary[(first_prim_id, 0)]:
+                            if not isinstance(box3, str):
+                                col_id, jjj = box3
+                            if box3 in edge_time_stamps: # if current loc is already stamped
+                                for curr_interval in edge_time_stamps[(col_id, jjj)]:
+                                    overlapping = overlapping or is_overlapping(last_interval, curr_interval) # if the two intervals overlap
+                        if not overlapping:
+                            return False, 0
+                        return False, None
+                else:
+                    colliding_id, jj = box
+                    if box in edge_time_stamps: # if current loc is already stamped
+                        for interval in edge_time_stamps[(colliding_id, jj)]:
+                            if is_overlapping(ego_interval, interval): # if the two intervals overlap
+                                ################################################################################
+                                #                                                                              # 
+                                # dial back and find a node where one can stay there forever and still be safe #
+                                #                                                                              # 
+                                # ##############################################################################
+                                for last_index in range(len(scheduled_times)-2, 0, -1):
+                                    last_prim_id = edge_to_prim_id[(path[last_index-1], path[last_index])]
+                                    last_interval = (scheduled_times[last_index], float('inf'))
+                                    overlapping = False
+                                    for box2 in collision_dictionary[(last_prim_id, params.num_subprims-1)]:
+                                        if not isinstance(box2,str):
+                                            col_id, jjj = box2
+                                        if box2 in edge_time_stamps: # if current loc is already stamped
+                                            for inner_interval in edge_time_stamps[(col_id, jjj)]:
+                                                overlapping = overlapping or is_overlapping(last_interval, inner_interval) # if the two intervals overlap
+                                    if not overlapping:
+                                        return False, last_index
+                                overlapping = False
+                                first_prim_id = edge_to_prim_id[(path[0], path[1])]
+                                last_interval = (scheduled_times[0], float('inf'))
+                                for box3 in collision_dictionary[(first_prim_id, 0)]:
+                                    if not isinstance(box3, str):
+                                        col_id, jjj = box3
+                                    if box3 in edge_time_stamps: # if current loc is already stamped
+                                        for curr_interval in edge_time_stamps[(col_id, jjj)]:
+                                            overlapping = overlapping or is_overlapping(last_interval, curr_interval) # if the two intervals overlap
+                                if not overlapping:
+                                    return False, 0
+                                return False, None
     return True, None
 
 def print_state():

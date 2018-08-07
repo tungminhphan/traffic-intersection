@@ -95,6 +95,7 @@ def nonoverlapping_subtubes(prim1, prim2):
     nonoverlapping = collision.nonoverlapping_polygons(rects_1, rects_2)
     return nonoverlapping
 
+#def compute_collision_dictionary(primitive_id_set):
 def compute_collision_dictionary(primitive_id_set):
     colsn_dict = {(prim_id, segment_id): {(prim_id, segment_id)} for prim_id in primitive_id_set for segment_id in range(params.num_subprims)}
     # add traffic light wall computations
@@ -111,13 +112,13 @@ def compute_collision_dictionary(primitive_id_set):
         for direction in traffic_light_ids:
             xs = intersection.traffic_light_walls[direction]['x']
             ys = intersection.traffic_light_walls[direction]['y']
-            rects_2 = []
             for ii in range(params.num_subprims):
+                rects_2 = []
                 rects_1 = make_tube(primitive_id_set[i])
                 rects_1 = np.squeeze(rects_1[ii])
-                for i in range(len(xs)):
-                    x = xs[i]
-                    y = ys[i]
+                for idx in range(len(xs)):
+                    x = xs[idx]
+                    y = ys[idx]
                     rects_2.append((x, y))
                 if not collision.nonoverlapping_polygons(rects_1, rects_2)[0]:
                     colsn_dict[(primitive_id_set[i], ii)].add(direction)

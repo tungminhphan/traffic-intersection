@@ -177,7 +177,10 @@ def path_to_primitives(path):
     return primitives
 
 # create traffic lights
-traffic_lights = traffic_signals.TrafficLights(3, 23, random_start = False)
+traffic_lights = traffic_signals.TrafficLights(3, 23, random_start = True)
+#init_horizontal_light = traffic_lights._state['horizontal']
+#init_vertical_light = traffic_lights._state['vertical']
+#init_lights = {'horizontal': init_horizontal_light, 'vertical': init_vertical_light}
 horizontal_light = traffic_lights.get_states('horizontal', 'color')
 vertical_light = traffic_lights.get_states('vertical', 'color')
 background = Image.open(intersection_fig + horizontal_light + '_' + vertical_light + '.png')
@@ -252,7 +255,7 @@ def animate(frame_idx): # update animation by dt
             edge_time_stamps[wait_id].remove(interval)
         _, shortest_path = planner.dijkstra(start_node, end_node, G)
 
-        safety_check, first_conflict_edge_idx = planner.is_safe(path = shortest_path, current_time = effective_current_times[plate_number], primitive_graph = G, edge_time_stamps = edge_time_stamps)
+        safety_check, first_conflict_edge_idx = planner.is_safe(path = shortest_path, current_time = effective_current_times[plate_number], primitive_graph = G, edge_time_stamps = edge_time_stamps, traffic_lights = traffic_lights)
         if safety_check:
             if plate_number not in cars:
                 cars[plate_number] = the_car # add the car
@@ -496,7 +499,7 @@ ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval
 if options.save_video:
     Writer = animation.writers['ffmpeg']
     writer = Writer(fps = 30, metadata=dict(artist='Me'), bitrate=-1)
-    ani.save('movies/first2.avi', writer=writer, dpi=200)
+    ani.save('movies/first3.avi', writer=writer, dpi=200)
 plt.show()
 t2 = time.time()
 print('Total elapsed time: ' + str(t2-t0))

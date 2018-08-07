@@ -125,7 +125,7 @@ def nonoverlapping_polygons(polygon1_vertices, polygon2_vertices): # SAT algorit
 
     min_sep_vector = min(separation_vectors, key = (lambda v: dot(v,v))) # gets the smallest vector needed to separate the objects
     if dot(min_sep_vector, vector_of_centers) > 0: # if vectors are the same direction, invert min_sep_vector, this is for consistency in finding contact points later
-        min_sep_vector = (min_sep_vector[0] * -1, min_sep_vector[1] * -1) 
+        min_sep_vector = (min_sep_vector[0] * -1, min_sep_vector[1] * -1)
 
     return False, min_sep_vector
 

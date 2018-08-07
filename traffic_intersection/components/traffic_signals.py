@@ -20,9 +20,11 @@ class TrafficLights():
             colors = ['red', 'yellow', 'green']
             random_color = random.choice(colors)
             random_time = random.uniform(0, self._max_time[random_color])
-            horizontal_state = [random_color, random_time]
+            self._horizontal_init = [random_color, random_time]
+            horizontal_state = self._horizontal_init
         else:
-            horizontal_state = horizontal_state
+            self._horizontal_init = horizontal_state
+            horizontal_state = self._horizontal_init
         vertical_state = self.get_counterpart(horizontal_state)
         self._state = {'horizontal': horizontal_state, 'vertical': vertical_state}
 
@@ -53,10 +55,14 @@ class TrafficLights():
         else:
             return 'red'
 
-    def update(self, dt):
+    def predict(self, dt, use_init_state = False):
         full_cycle = sum(self._max_time[k] for k in self._max_time)
-        horizontal_time = (self._state['horizontal'][1] + dt) % full_cycle # update and trim time
-        current_color = self._state['horizontal'][0]
+        if use_init_state == True:
+            current_color = self._horizontal_init[0]
+            horizontal_time = (self._horizontal_init[1] + dt) % full_cycle # update and trim time
+        else:
+            horizontal_time = (self._state['horizontal'][1] + dt) % full_cycle # update and trim time
+            current_color = self._state['horizontal'][0]
         next_color = self.successor(current_color)
         last_color = self.successor(next_color)
         if horizontal_time // self._max_time[current_color] < 1:
@@ -68,8 +74,15 @@ class TrafficLights():
             horizontal_color = last_color
             horizontal_time = horizontal_time - self._max_time[current_color] - self._max_time[next_color]
         new_horizontal_state = [horizontal_color, horizontal_time]
+        return new_horizontal_state
+        self._state['horizontal'] = new_horizontal_state
+        return new_horizontal_state
+
+    def update(self, dt):
+        new_horizontal_state = self.predict(dt)
         self._state['horizontal'] = new_horizontal_state
         self._state['vertical'] = self.get_counterpart(new_horizontal_state)
+
     def get_states(self, which_light, color_or_time):
         if color_or_time == 'color':
             color_or_time = 0
