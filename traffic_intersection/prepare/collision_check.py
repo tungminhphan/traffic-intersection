@@ -6,8 +6,9 @@ import os, sys
 sys.path.append("..")
 from math import cos, sin
 from components.pedestrian import Pedestrian
-from components.car import KinematicCar
+from components.car import KinematicCar, DynamicCar
 import assumes.params as params
+import numpy as np
 
 # input center coords of car to get its unrotated vertices
 def vertices_car(x, y):
@@ -180,7 +181,7 @@ def best_edge(polygon, separation_normal): # the closest edge is the edge most p
     right_edge = normalize(right_edge)
     left_edge = normalize(left_edge)
 
-    #returns the most perpendicular edge, max vertex, and first and second vertex counter clockwise
+    #returns the most perpendicular edge (normalized), max vertex, and first and second vertex counter clockwise
     if (dot(left_edge, separation_normal) <= dot(right_edge, separation_normal)):
         return left_edge, v, v, v0
     else: 
@@ -245,25 +246,32 @@ def contact_points(object1, object2, separation_normal):
             del cp[0] 
     return cp
 
-######################### IMPULSE ######################### 
-def get_impulse(object1, object2, cp, min_sep_vector): # need to test 
+######################### Collision Response ######################### 
+# need to test, currently only for cars
+def collision_response(object1, object2, cp, min_sep_vector): # returns the translational and rotational motion of the objects   
     if type(object1) is Pedestrian:
-        x, y, theta, vee = object1.state
+        x, y,_,_ = object1.state
         w = 1
         h = 1   
     elif type(object1) is KinematicCar:
-        vee, theta, x, y = object1.state
+        _,_, x, y = object1.state
+        dyn_car1 = DynamicCar(object1)
+        v_a1 = np.array([dyn_car1.dyn_state[0], dyn_car1.dyn_state[1]]) # pre-collision velocity of center of mass
+        omega_a1 = dyn_car1.dyn_state[2] # angular velocity, yaw rate 
         w = 788 * params.car_scale_factor
         h = 399 * params.car_scale_factor
     else:
         TypeError('Not sure what this object is')
 
     if type(object2) is Pedestrian:
-        x2, y2, theta2, vee2 = object2.state
+        x2, y2,_,_ = object2.state
         w2 = 1
         h2 = 1   
     elif type(object2) is KinematicCar:
-        vee2, theta2, x2, y2 = object2.state
+        _,_, x2, y2 = object2.state
+        dyn_car2 = DynamicCar(object2)
+        v_b1 = np.array([dyn_car2.dyn_state[0], dyn_car2.dyn_state[1]]) # pre-collision velocity of center of mass
+        omega_b1 = dyn_car2.dyn_state[2] # angular velocity, yaw rate 
         w2 = 788 * params.car_scale_factor
         h2 = 399 * params.car_scale_factor
     else:
@@ -275,20 +283,32 @@ def get_impulse(object1, object2, cp, min_sep_vector): # need to test
     inert_a = m_a * (h ** 2 + w ** 2) / 12
     inert_b = m_b * (h2 ** 2 + w2 ** 2) / 12 
 
-    r_a = (cp[0][0] - x, cp[0][1] - y) # vector from center towards contact point     
-    r_b = (cp[0][0] - x2, cp[0][1] - y2) # vector from center towards contact point 
+    r_ap = np.array([cp[0][0] - x, cp[0][1] - y]) # vector from center obj1 towards contact point     
+    r_bp = np.array([cp[0][0] - x2, cp[0][1] - y2]) # vector from center obj2 towards contact point 
     
-    v_AP = (vee * r_a[0], vee * r_a[1]) # velocity towards contact point
-    v_BP = (vee2 * r_b[0], vee2 * r_b[1])
+    omega1_cross_rap = np.array([-omega_a1 * r_ap[1], omega_a1 * r_ap[0]]) # angular velocity cross r_ap
+    omegb1_cross_rbp = np.array([-omega_b1 * r_bp[1], omega_b1 * r_bp[0]])   
 
-    v_AB = (v_AP[0] - v_BP[0], v_AP[1] - v_BP[1]) # relative velocity
+    v_ap1 = v_a1 + omega1_cross_rap # pre-collision velocities of the points of collision
+    v_bp1 = v_b1 + omegb1_cross_rbp 
+
+    v_ab1 = v_ap1 - vbp1 # relative velocity (pre-collision) v_ap1 - vbp1
  
     edge_obj2,_,_,_ = best_edge(object2, min_sep_vector) # returns best edge of object2
     n = get_axis(edge_obj2) # gets the normal from collision edge
     if dot(n, r_b) < 0: # if opposite direction from collision point, invert normal
         n = invert_direction(n)
+    n = np.array([n[0], n[1]])
+    
+    j = -(1 + e) * np.dot(v_ab1, n)
+    j /= ((1 / m_a) + (1 / m_b) + (np.cross(r_ap, n))**2 / inert_a + (np.cross(r_bp, n))**2 / inert_b)
 
-    j = -(1 + e) * dot(v_AB, n)
-    j /= dot(n, n) * ((1 / m_a) + (1 / m_b)) + (dot(r_a, n) ** 2 / inert_a) + (dot(r_b, n) ** 2 / inert_b)
-    return j
+    # post collision translational motion
+    v_a2 = v_a1 + j * n / m_a
+    v_b2 = v_b1 - j * n / m_b
 
+    # post collision rotational motion 
+    omega_a2 = omega_a1 + np.cross(r_ap, j*n) / inert_a
+    omega_b2 = omega_b1 + np.cross(r_bp, j*n) / inert_b
+
+    return v_a2, omega_a2, v_b2, omega_b2
