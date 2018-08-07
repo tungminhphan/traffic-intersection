@@ -10,6 +10,7 @@ import components.car as car
 import components.aux.honk_wavefront as wavefront
 import components.pedestrian as pedestrian
 import components.traffic_signals as traffic_signals
+import components.intersection as intersection
 import prepare.car_waypoint_graph as car_graph
 import prepare.graph as graph
 import prepare.queue as queue
@@ -392,7 +393,7 @@ def animate(frame_idx): # update animation by dt
             car.toggle_honk()
 
     # initialize boxes
-    boxes = [ax.plot(0, 0, 'c')[0] for _ in range(len(cars_to_keep))]
+    boxes = [ax.plot([], [], 'c')[0] for _ in range(len(cars_to_keep))]
 
     if options.show_boxes:
         for i in range(len(cars_to_keep)):
@@ -416,7 +417,7 @@ def animate(frame_idx): # update animation by dt
             plate_number = cars_to_keep[i].plate_number
             ids[i] = ax.text(x,y,str(plate_number), color='w', horizontalalignment='center', verticalalignment='center', bbox=dict(facecolor='red', alpha=0.5), fontsize=10)
 
-    # initialize ids
+    # initialize prims
     plot_prims = [ax.text([], [], '') for _ in range(len(cars_to_keep))]
     if options.show_prims:
         for i in range(len(cars_to_keep)):
@@ -425,7 +426,6 @@ def animate(frame_idx): # update animation by dt
             if cars_to_keep[i].prim_queue.len() > 0:
                 prim_str = str((cars_to_keep[i].prim_queue.top()[0], int(params.num_subprims*cars_to_keep[i].prim_queue.top()[1])))
             plot_prims[i] = ax.text(x,y, prim_str, color='w', horizontalalignment='center', verticalalignment='center', bbox=dict(facecolor='red', alpha=0.5), fontsize=10)
-
 
     # plot primitive tubes
     curr_tubes = []
@@ -452,9 +452,39 @@ def animate(frame_idx): # update animation by dt
     # plot honking 
     draw_pedestrians(pedestrians_to_keep) # draw pedestrians to background
     draw_cars(cars_to_keep)
+
+    # plot traffic light walls
+    walls = [ax.plot([], [],'r')[0] for _ in range(4)]
+    if options.show_traffic_light_walls:
+        if traffic_lights.get_states('horizontal', 'color') == 'red':
+            xs = intersection.traffic_light_walls['west']['x']
+            ys = intersection.traffic_light_walls['west']['y']
+            xs.append(xs[0])
+            ys.append(ys[0])
+            walls[0].set_data(xs,ys)
+            xs = intersection.traffic_light_walls['east']['x']
+            ys = intersection.traffic_light_walls['east']['y']
+            xs.append(xs[0])
+            ys.append(ys[0])
+            walls[1].set_data(xs,ys)
+        elif traffic_lights.get_states('vertical', 'color') == 'red':
+            xs = intersection.traffic_light_walls['north']['x']
+            ys = intersection.traffic_light_walls['north']['y']
+            xs.append(xs[0])
+            ys.append(ys[0])
+            walls[2].set_data(xs,ys)
+            xs = intersection.traffic_light_walls['south']['x']
+            ys = intersection.traffic_light_walls['south']['y']
+            xs.append(xs[0])
+            ys.append(ys[0])
+            walls[3].set_data(xs,ys)
+
+
+
+    # show artists
     global stage # set up a global stage
     stage = ax.imshow(background, origin="lower") # update the stage
-    return  [stage] + [honk_waves] + boxes + curr_tubes + ids + plot_prims  # notice the comma is required to make returned object iterable (a requirement of FuncAnimation)
+    return  [stage] + [honk_waves] + boxes + curr_tubes + ids + plot_prims + walls
 
 t0 = time.time()
 animate(0)

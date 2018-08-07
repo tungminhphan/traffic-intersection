@@ -11,6 +11,7 @@ import numpy as np
 import prepare.collision_check as collision
 import prepare.options as options
 import assumes.params as params
+import components.intersection as intersection
 import scipy.io
 import warnings
 if __name__ == '__main__':
@@ -96,19 +97,36 @@ def nonoverlapping_subtubes(prim1, prim2):
 
 def compute_collision_dictionary(primitive_id_set):
     colsn_dict = {(prim_id, segment_id): {(prim_id, segment_id)} for prim_id in primitive_id_set for segment_id in range(params.num_subprims)}
+    # add traffic light wall computations
+    traffic_light_ids = ['east', 'west', 'north', 'south']
+
     for i in range(len(primitive_id_set)):
         print('prim_id ' + str(i))
         for j in range(i, len(primitive_id_set)):
             for ii in range(params.num_subprims):
                 for jj in range(params.num_subprims):
-                    if not nonoverlapping_subtubes((primitive_id_set[i], ii), (primitive_id_set[j], jj)): # if they don't collide
+                    if not nonoverlapping_subtubes((primitive_id_set[i], ii), (primitive_id_set[j], jj))[0]: # if they overlap
                         colsn_dict[(primitive_id_set[i], ii)].add((primitive_id_set[j], jj))
                         colsn_dict[(primitive_id_set[j], jj)].add((primitive_id_set[i], ii))
+        for direction in traffic_light_ids:
+            xs = intersection.traffic_light_walls[direction]['x']
+            ys = intersection.traffic_light_walls[direction]['y']
+            rects_2 = []
+            for ii in range(params.num_subprims):
+                rects_1 = make_tube(primitive_id_set[i])
+                rects_1 = np.squeeze(rects_1[ii])
+                for i in range(len(xs)):
+                    x = xs[i]
+                    y = ys[i]
+                    rects_2.append((x, y))
+                if not collision.nonoverlapping_polygons(rects_1, rects_2)[0]:
+                    colsn_dict[(primitive_id_set[i], ii)].add(direction)
+                    print('added light')
     return colsn_dict
 
 # computes collision_dictionary
 if make_dictionary:
-    prim_id_set = [idx for idx in range(num_of_prims) if get_prim_data(idx, 'controller_found') ]
+    prim_id_set = [idx for idx in range(num_of_prims) if get_prim_data(idx, 'controller_found')]
     edge_to_prim_id = dict() # dictionary to convert primitive move to primitive ID
     for prim_id in prim_id_set:
         from_node = tuple(get_prim_data(prim_id, 'x0'))

@@ -79,10 +79,10 @@ class TrafficLights():
 
 
 ################################### SIMULATION ##########################################################
-#
+
 #import time
 #traffic_lights = TrafficLights(yellow_max = 5, green_max = 30)
-#dt = 1
+#dt = 0.01
 #
 #start_time = time.time()
 #while True:

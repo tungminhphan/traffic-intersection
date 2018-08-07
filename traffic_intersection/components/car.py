@@ -18,6 +18,7 @@ from prepare.queue import Queue
 from PIL import Image
 from assumes.disturbance import get_disturbance
 import assumes.params as params
+import math
 from math import pi
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -247,6 +248,7 @@ class DynamicCar(KinematicCar): # bicycle 5 DOF model
         self.car_width = car_width
         self.I_w = 1/2. * m_w * R_w**2 # approximated as the moment of inertia around z-axis of a thin disk / cylinder of any length with radius R_w and mass m
         self.I_z = 1/12. * m * (self.L**2 + self.car_width**2)
+        self.traction_guesses = [0, 0, 0, 0]
 
     def state_dot(self, init_dyn_state, t, delta_f, delta_r, T_af, T_ar, T_bf, T_br):
         # state = [v_x, v_y, r, psi, w_f, w_r, X, Y]
@@ -270,10 +272,10 @@ class DynamicCar(KinematicCar): # bicycle 5 DOF model
         g = params.g
 
         # iteratively solving for a_x, F_xf, F_xr: the instantaneous longitudinal acceleration, and longitudinal traction forces for the front and rear tires respectively
-        F_xf_guess = 0 # first guess for front tire longitudinal traction
-        F_xr_guess = 0 # first guess for rear tire longitudinal traction
-        F_yf_guess = 0 # first guess for front tire tangential traction
-        F_yr_guess = 0 # first guess for rear tire tangential traction
+        F_xf_guess = self.traction_guesses[0] # first guess for front tire longitudinal traction
+        F_xr_guess = self.traction_guesses[1] # first guess for rear tire longitudinal traction
+        F_yf_guess = self.traction_guesses[2] # first guess for front tire tangential traction
+        F_yr_guess = self.traction_guesses[3] # first guess for rear tire tangential traction
 
         F_xf = F_xf_guess
         F_xr = F_xr_guess
@@ -342,11 +344,18 @@ class DynamicCar(KinematicCar): # bicycle 5 DOF model
             iter_errors.append(error_F_yr)
 
             iter_error = max(iter_errors)
-            a_x = vdot_x
             F_xf_guess = F_xf
             F_xr_guess = F_xr
             F_yf_guess = F_yf
             F_yr_guess = F_yr
+
+        temp = [F_xf, F_xr, F_yf, F_yr]
+        good = True
+        for F in temp:
+            good = good and not math.isnan(F)
+        if good:
+            self.traction_guesses = temp
+
 
         dstate_dt = [vdot_x, vdot_y, r_dot, psi_dot, wdot_f, wdot_r, v_X, v_Y]
         return dstate_dt
@@ -421,41 +430,41 @@ class DynamicCar(KinematicCar): # bicycle 5 DOF model
         return F_x, F_y
 
 # TESTING
-v_x = 0.0001
-v_y = 0
-r = 0
-psi = 0
-w_f = 0
-w_r = 0
-X = 0
-Y = 0
-init_dyn_state = np.array([v_x, v_y, r, psi, w_f, w_r, X, Y])
-dyn_car = DynamicCar(init_dyn_state = init_dyn_state)
-delta_f = -0.01
-delta_r = 0
-T_af = 1000
-T_ar = 0.001
-T_bf = 0
-T_br = 0
-inputs = (delta_f, delta_r, T_af, T_ar, T_bf, T_br)
-dt = 0.1
-t_end = 12
-t_start = 0
-t_current = t_start
-X = []
-Y = []
-psi = []
-while t_current < t_end:
-    dyn_car.next(inputs, 0.1)
-    t_current += dt
-    state = dyn_car.dyn_state
-    X.append(state[-2])
-    Y.append(state[-1])
-    print(state)
-
-# state = [v_x, v_y, r, psi, w_f, w_r, X, Y]
-import matplotlib.pyplot as plt
-plt.plot(X,Y)
-plt.xlim(-200, 200)
-plt.ylim(-200, 200)
-plt.show()
+#v_x = 0.0001
+#v_y = 0
+#r = 0
+#psi = 0
+#w_f = 0
+#w_r = 0
+#X = 0
+#Y = 0
+#init_dyn_state = np.array([v_x, v_y, r, psi, w_f, w_r, X, Y])
+#dyn_car = DynamicCar(init_dyn_state = init_dyn_state)
+#delta_f = -0.04
+#delta_r = 0
+#T_af = 300
+#T_ar = 0.001
+#T_bf = 0
+#T_br = 0
+#inputs = (delta_f, delta_r, T_af, T_ar, T_bf, T_br)
+#dt = 0.1
+#t_end = 10
+#t_start = 0
+#t_current = t_start
+#X = []
+#Y = []
+#psi = []
+#while t_current < t_end:
+#    dyn_car.next(inputs, 0.1)
+#    t_current += dt
+#    state = dyn_car.dyn_state
+#    X.append(state[-2])
+#    Y.append(state[-1])
+#    print(state)
+#
+## state = [v_x, v_y, r, psi, w_f, w_r, X, Y]
+#import matplotlib.pyplot as plt
+#plt.plot(X,Y)
+#plt.xlim(-100, 100)
+#plt.ylim(-100, 100)
+#plt.show()

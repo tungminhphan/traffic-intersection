@@ -291,4 +291,3 @@ def get_impulse(object1, object2, cp, min_sep_vector): # need to test
     j = -(1 + e) * dot(v_AB, n)
     j /= dot(n, n) * ((1 / m_a) + (1 / m_b)) + (dot(r_a, n) ** 2 / inert_a) + (dot(r_b, n) ** 2 / inert_b)
     return j
-

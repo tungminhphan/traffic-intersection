@@ -136,8 +136,10 @@ def is_safe(path, current_time, primitive_graph, edge_time_stamps):
         right_time = scheduled_times[-1]
         delta_t = right_time - left_time
         for ii in range(params.num_subprims):
-            for colliding_id, jj in collision_dictionary[(curr_prim_id, ii)]:
-                if (colliding_id, jj) in edge_time_stamps: # if current loc is already stamped
+            for box in collision_dictionary[(curr_prim_id, ii)]:
+                if len(box) == 2:
+                    colliding_id, jj = box
+                if box in edge_time_stamps: # if current loc is already stamped
                     for interval in edge_time_stamps[(colliding_id, jj)]:
                         if is_overlapping( (left_time + (ii)/params.num_subprims * delta_t, left_time + (ii+1)/params.num_subprims * delta_t ), interval): # if the two intervals overlap
                             for last_index in range(len(scheduled_times)-2, 0, -1): # dial back and find a node where one can stay there forever and still be safe
