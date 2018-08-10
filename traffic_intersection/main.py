@@ -283,9 +283,9 @@ def animate(frame_idx): # update animation by dt
                 if len(cp) > 0:
                     motions = collision_response(all_components[i], all_components[j], cp, min_sep_vector)
                     print(motions)
-                    all_components[i].next((.5, motions[1]), dt)
+                    all_components[i].next((0.5, motions[1]), dt)
                     draw_car(all_components[i])
-                    all_components[j].next((.5, motions[3]), dt)
+                    all_components[j].next((0.5, motions[3]), dt)
                     draw_car(all_components[j])
                 boxes[j].set_color('r')
                 boxes[i].set_color('r')

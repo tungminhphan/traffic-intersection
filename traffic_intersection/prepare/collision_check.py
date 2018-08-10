@@ -248,38 +248,32 @@ def contact_points(object1, object2, separation_normal):
 
 ######################### Collision Response ######################### 
 # need to test, currently only for cars
-def collision_response(object1, object2, cp, min_sep_vector): # returns the translational and rotational motion of the objects   
-    if type(object1) is Pedestrian:
-        x, y,_,_ = object1.state
-        w = 1
-        h = 1   
-    elif type(object1) is KinematicCar:
-        vee,theta, x, y = object1.state
-        v_a1 = np.array([vee*cos(theta),vee*sin(theta)]) # pre-collision velocity of center of mass
-        omega_a1 = 0 # angular velocity, yaw rate 
+def get_motion_data(thing):
+    if type(thing) is Pedestrian:
+        x,y,theta,vee = thing.state
+        velocity = np.array([vee*cos(theta),vee*sin(theta)]) # pre-collision velocity of center of mass
+        omega = 0 # angular velocity, yaw rate 
+        mass = 100 
+        w = 54 * params.pedestrian_scale_factor
+        h = 70 * params.pedestrian_scale_factor
+        inertia = mass * (h ** 2 + w ** 2) / 24
+    elif type(thing) is KinematicCar:
+        vee,theta,x,y = thing.state
+        velocity = np.array([vee*cos(theta),vee*sin(theta)]) # pre-collision velocity of center of mass
+        omega = 0 # angular velocity, yaw rate
+        mass = 100 
         w = 788 * params.car_scale_factor
         h = 399 * params.car_scale_factor
+        inertia = mass * (h ** 2 + w ** 2) / 12
     else:
         TypeError('Not sure what this object is')
+    return x, y, velocity, omega, mass, inertia
 
-    if type(object2) is Pedestrian:
-        x2, y2,_,_ = object2.state
-        w2 = 1
-        h2 = 1   
-    elif type(object2) is KinematicCar:
-        vee2,theta2, x2, y2 = object2.state
-        v_b1 = np.array([vee2*cos(theta2),vee2*sin(theta2)]) # pre-collision velocity of center of mass
-        omega_b1 = 0 # angular velocity, yaw rate
-        w2 = 788 * params.car_scale_factor
-        h2 = 399 * params.car_scale_factor
-    else:
-        TypeError('Not sure what this object is')
+def collision_response(object1, object2, cp, min_sep_vector): # returns the translational and rotational motion of the objects   
+    x, y, v_a1, omega_a1, m_a, inert_a = get_motion_data(object1)
+    x2, y2, v_b1, omega_b1, m_b, inert_b = get_motion_data(object2)
 
-    m_a = 100 # mass
-    m_b = 100
     e = 1.0 # coeff of restitution
-    inert_a = m_a * (h ** 2 + w ** 2) / 12
-    inert_b = m_b * (h2 ** 2 + w2 ** 2) / 12 
 
     r_ap = np.array([cp[0][0] - x, cp[0][1] - y]) # vector from center obj1 towards contact point     
     r_bp = np.array([cp[0][0] - x2, cp[0][1] - y2]) # vector from center obj2 towards contact point 
