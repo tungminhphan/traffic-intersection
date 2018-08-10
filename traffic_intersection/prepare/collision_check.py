@@ -254,10 +254,9 @@ def collision_response(object1, object2, cp, min_sep_vector): # returns the tran
         w = 1
         h = 1   
     elif type(object1) is KinematicCar:
-        _,_, x, y = object1.state
-        dyn_car1 = DynamicCar(object1)
-        v_a1 = np.array([dyn_car1.dyn_state[0], dyn_car1.dyn_state[1]]) # pre-collision velocity of center of mass
-        omega_a1 = dyn_car1.dyn_state[2] # angular velocity, yaw rate 
+        vee,theta, x, y = object1.state
+        v_a1 = np.array([vee*cos(theta),vee*sin(theta)]) # pre-collision velocity of center of mass
+        omega_a1 = 0 # angular velocity, yaw rate 
         w = 788 * params.car_scale_factor
         h = 399 * params.car_scale_factor
     else:
@@ -268,10 +267,9 @@ def collision_response(object1, object2, cp, min_sep_vector): # returns the tran
         w2 = 1
         h2 = 1   
     elif type(object2) is KinematicCar:
-        _,_, x2, y2 = object2.state
-        dyn_car2 = DynamicCar(object2)
-        v_b1 = np.array([dyn_car2.dyn_state[0], dyn_car2.dyn_state[1]]) # pre-collision velocity of center of mass
-        omega_b1 = dyn_car2.dyn_state[2] # angular velocity, yaw rate 
+        vee2,theta2, x2, y2 = object2.state
+        v_b1 = np.array([vee2*cos(theta2),vee2*sin(theta2)]) # pre-collision velocity of center of mass
+        omega_b1 = 0 # angular velocity, yaw rate
         w2 = 788 * params.car_scale_factor
         h2 = 399 * params.car_scale_factor
     else:
@@ -292,11 +290,11 @@ def collision_response(object1, object2, cp, min_sep_vector): # returns the tran
     v_ap1 = v_a1 + omega1_cross_rap # pre-collision velocities of the points of collision
     v_bp1 = v_b1 + omegb1_cross_rbp 
 
-    v_ab1 = v_ap1 - vbp1 # relative velocity (pre-collision) v_ap1 - vbp1
+    v_ab1 = v_ap1 - v_bp1 # relative velocity (pre-collision) v_ap1 - vbp1
  
     edge_obj2,_,_,_ = best_edge(object2, min_sep_vector) # returns best edge of object2
     n = get_axis(edge_obj2) # gets the normal from collision edge
-    if dot(n, r_b) < 0: # if opposite direction from collision point, invert normal
+    if dot(n, r_bp) < 0: # if opposite direction from collision point, invert normal
         n = invert_direction(n)
     n = np.array([n[0], n[1]])
     
@@ -309,6 +307,6 @@ def collision_response(object1, object2, cp, min_sep_vector): # returns the tran
 
     # post collision rotational motion 
     omega_a2 = omega_a1 + np.cross(r_ap, j*n) / inert_a
-    omega_b2 = omega_b1 + np.cross(r_bp, j*n) / inert_b
+    omega_b2 = omega_b1 - np.cross(r_bp, j*n) / inert_b
 
     return v_a2, omega_a2, v_b2, omega_b2

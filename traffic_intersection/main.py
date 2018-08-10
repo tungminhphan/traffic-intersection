@@ -17,7 +17,7 @@ import numpy as np
 from PIL import Image
 import random
 import scipy.io
-from traffic_intersection.prepare.collision_check import collision_free, get_bounding_box, contact_points, get_impulse
+from traffic_intersection.prepare.collision_check import collision_free, get_bounding_box, contact_points, collision_response
 
 #TODO: clean up this section
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -125,8 +125,8 @@ car_1c.prim_queue.enqueue((26, 0))
 car_1c.prim_queue.enqueue((28, 0))
 
 controlled_cars = [car_1a, car_1b, car_1c]
-car_2 = car.KinematicCar(init_state=(60,np.pi/2,635,300), color='gray')
-car_3 = car.KinematicCar(init_state=(50,0,0,250), color='gray')
+car_2 = car.KinematicCar(init_state=(60,0,520,300), color='gray')
+car_3 = car.KinematicCar(init_state=(60,np.pi/2,635,270), color='gray')
 car_4 = car.KinematicCar(init_state=(40,-np.pi,1000,520), color='gray')
 enemy_cars = [car_2, car_3, car_4]
 #
@@ -280,6 +280,13 @@ def animate(frame_idx): # update animation by dt
                 print(i, j)
                 cp = contact_points(all_components[i], all_components[j], min_sep_vector)
                 print(cp)
+                if len(cp) > 0:
+                    motions = collision_response(all_components[i], all_components[j], cp, min_sep_vector)
+                    print(motions)
+                    all_components[i].next((.5, motions[1]), dt)
+                    draw_car(all_components[i])
+                    all_components[j].next((.5, motions[3]), dt)
+                    draw_car(all_components[j])
                 boxes[j].set_color('r')
                 boxes[i].set_color('r')
     stage = ax.imshow(background, origin="lower") # this origin option flips the y-axis
