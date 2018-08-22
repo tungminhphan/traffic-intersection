@@ -12,12 +12,14 @@ import components.pedestrian as pedestrian
 import components.traffic_signals as traffic_signals
 import components.intersection as intersection
 import prepare.car_waypoint_graph as car_graph
+import prepare.pedestrian_waypoint_graph as pedestrian_graph 
 import prepare.graph as graph
 import prepare.queue as queue
 import assumes.params as params
 import primitives.tubes as tubes
 import primitives.load_primitives as load_primitives
 from primitives.load_primitives import get_prim_data
+from components.pedestrian_names import names
 import prepare.options as options
 from  prepare.collision_check import collision_free, get_bounding_box
 import numpy as np
@@ -169,6 +171,21 @@ def spawn_car():
     the_car = car.KinematicCar(init_state=start_node, color=color, plate_number=plate_number)
     return plate_number, start_node, end_node, the_car
 
+######## pedestrian implementation ########
+def spawn_pedestrian():
+    name = random.choice(names)
+    age = random.randint(18,70)
+    start_node = random.sample(pedestrian_graph.G._sources, 1)[0]
+    end_node = random.sample(pedestrian_graph.G._sinks, 1)[0]
+    init_state = start_node + (0,0)         
+    if age > 50:
+        pedestrian_type = '2'
+    else:
+        pedestrian_type = random.choice(['1','3'])
+    the_pedestrian = pedestrian.Pedestrian(init_state=init_state, pedestrian_type=pedestrian_type, name=name, age=age)
+    return name, start_node, end_node, the_pedestrian
+######## pedestrian implementation ########
+
 def path_to_primitives(path):
     primitives = []
     for node_s, node_e  in zip(path[:-1], path[1:]):
@@ -186,6 +203,9 @@ vertical_light = traffic_lights.get_states('vertical', 'color')
 background = Image.open(intersection_fig + horizontal_light + '_' + vertical_light + '.png')
 
 pedestrians = []
+pedestrian_queue = queue.Queue()
+pedestrian_wait = dict()
+
 cars = dict()
 edge_time_stamps = dict()
 time_stamps = dict()
@@ -316,6 +336,26 @@ def animate(frame_idx): # update animation by dt
             else:
                 original_request_len = request_queue.len()
 
+######## pedestrian implementation ########
+    if with_probability(.05):
+        new_name, new_begin_node, new_final_node, new_pedestrian = spawn_pedestrian()
+        if new_begin_node == new_final_node:
+            print("Request Denied")
+        else:
+            pedestrian_queue.enqueue((new_name, new_begin_node, new_final_node, new_pedestrian))
+    while pedestrian_queue.len() > 0: 
+        name, begin_node, final_node, the_pedestrian = pedestrian_queue.pop()
+        _, shortest_path = planner.dijkstra((begin_node[0], begin_node[1]), final_node, pedestrian_graph.G)
+        #print(shortest_path)
+        while len(shortest_path) > 0:
+            if len(shortest_path) == 1:
+                del shortest_path[0]
+            else:
+                the_pedestrian.prim_queue.enqueue(((shortest_path[0], shortest_path[1], 10), 0))
+                del shortest_path[0]
+        pedestrians.append(the_pedestrian)
+######## pedestrian implementation ########
+
     # update traffic lights
     traffic_lights.update(dt)
     horizontal_light = traffic_lights.get_states('horizontal', 'color')
@@ -330,15 +370,9 @@ def animate(frame_idx): # update animation by dt
     if len(pedestrians) > 0:
         for person in pedestrians:
             if (person.state[0] <= x_lim and person.state[0] >= 0 and person.state[1] >= 0 and person.state[1] <= y_lim):
-                pedestrians.append(person)
+                person.prim_next(dt)
+                pedestrians_to_keep.append(person)
 
-    # checking collision among pedestrians
-        for i in range(len(pedestrians)):
-            for j in range(i + 1, len(pedestrians)):
-                if collision_check(pedestrians[i], pedestrians[j], params.car_scale_factor, params.pedestrian_scale_factor):
-                    print('Collision between pedestrian' + str(i) + 'and '+  str(j))
-                else:
-                    print("No Collision")
     cars_to_keep = []
     cars_to_remove = set()
 

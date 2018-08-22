@@ -120,7 +120,7 @@ for edge in all_edges:
     node_1 = edge[0]
     node_2 = edge[1]
     weight = np.linalg.norm(np.array(edge[0]) - np.array(edge[1]))
-    G.add_double_edges([(node_1, node_2, weight)])
+    G.add_double_edges([(node_1, node_2)])
 
 G.print_graph()
 G.plot_edges(plt, alpha = transparency, edge_width = edge_width, head_width=head_width,

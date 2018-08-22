@@ -38,7 +38,9 @@ class Pedestrian:
                  gait_progress = 0,
                  film_dim = (1, 6),
                  prim_queue = None, # primitive queue
-                 pedestrian_type = '3'): # three types 1 or 2 or 3
+                 pedestrian_type = '3', # three types 1 or 2 or 3
+                 name = None,
+                 age = 20): 
         """
         Pedestrian class
         """
@@ -49,6 +51,8 @@ class Pedestrian:
         self.gait_length = gait_length
         self.gait_progress = gait_progress
         self.film_dim = film_dim
+        self.name = name
+        self.age = age
         if prim_queue == None:
             self.prim_queue = Queue()
         else:
