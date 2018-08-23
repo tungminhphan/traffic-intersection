@@ -346,7 +346,7 @@ def animate(frame_idx): # update animation by dt
     while pedestrian_queue.len() > 0: 
         name, begin_node, final_node, the_pedestrian = pedestrian_queue.pop()
         _, shortest_path = planner.dijkstra((begin_node[0], begin_node[1]), final_node, pedestrian_graph.G)
-        #print(shortest_path)
+        print(shortest_path)
         while len(shortest_path) > 0:
             if len(shortest_path) == 1:
                 del shortest_path[0]
@@ -367,10 +367,28 @@ def animate(frame_idx): # update animation by dt
 
     # update pedestrians
     pedestrians_to_keep = []
+    vertical_nodes = [(355,565), (705, 565), (355,195), (705, 195)] # top left, top right, bottom left, bottom right
+    horizontal_nodes = [(380,170), (380,590), (680, 170), (680, 590)] # bottom left, top left, bottom right, top right
     if len(pedestrians) > 0:
         for person in pedestrians:
             if (person.state[0] <= x_lim and person.state[0] >= 0 and person.state[1] >= 0 and person.state[1] <= y_lim):
-                person.prim_next(dt)
+                person_xy = (person.state[0], person.state[1])
+                if person_xy in vertical_nodes:
+                    if vertical_light == 'green':
+                        person.prim_next(.5)
+                    elif (person_xy == vertical_nodes[0] or person_xy == vertical_nodes[1]) and person.state[2] == np.pi / 2:
+                        person.prim_next(.5)
+                    elif (person_xy == vertical_nodes[2] or person_xy == vertical_nodes[3]) and person.state[2] == -np.pi/2:
+                        person.prim_next(.5)
+                elif person_xy in horizontal_nodes:
+                    if horizontal_light == 'green':
+                        person.prim_next(.5)
+                    elif (person_xy == horizontal_nodes[0] or person_xy == horizontal_nodes[1]) and person.state[2] == np.pi:
+                        person.prim_next(.5)
+                    elif (person_xy == horizontal_nodes[2] or person_xy == horizontal_nodes[3]) and person.state[2] == 0:
+                        person.prim_next(.5)
+                else:
+                    person.prim_next(.5)
                 pedestrians_to_keep.append(person)
 
     cars_to_keep = []

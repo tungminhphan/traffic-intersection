@@ -108,6 +108,9 @@ class Pedestrian:
         else:
             prim_data, prim_progress = self.extract_primitive() # extract primitive data and primitive progress from prim
             start, finish, t_end = prim_data # extract data from primitive
+            x = finish[0] - start[0]
+            y = finish[1] - start[1]
+            total_distance = np.linalg.norm(np.array([x, y]))
             if prim_progress == 0: # ensure that starting position is correct at start of primitive
                 self.state[0] = start[0]
                 self.state[1] = start[1]
@@ -126,13 +129,13 @@ class Pedestrian:
                 dx = finish[0] - self.state[0]
                 dy = finish[1] - self.state[1]
                 heading = np.arctan2(dy,dx)
-                if self.state[2] != heading:
+                if self.state[2] != heading and heading != 0:
                     self.state[2] = heading
                 remaining_distance = np.linalg.norm(np.array([dx, dy]))
             remaining_time = (1-prim_progress) * t_end
-            vee = remaining_distance / remaining_time
+            vee = 10.
             self.next((0, vee), dt)
-            prim_progress += dt / t_end
+            prim_progress += dt / (total_distance/int(vee))
             self.prim_queue.replace_top((prim_data, prim_progress)) # update primitive queue
 
 #my_pedestrian = Pedestrian()
