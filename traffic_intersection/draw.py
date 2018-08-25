@@ -346,12 +346,13 @@ def animate(frame_idx): # update animation by dt
     while pedestrian_queue.len() > 0: 
         name, begin_node, final_node, the_pedestrian = pedestrian_queue.pop()
         _, shortest_path = planner.dijkstra((begin_node[0], begin_node[1]), final_node, pedestrian_graph.G)
-        print(shortest_path)
+        #print(shortest_path)
+        vee = np.random.uniform(50, 100)
         while len(shortest_path) > 0:
             if len(shortest_path) == 1:
                 del shortest_path[0]
             else:
-                the_pedestrian.prim_queue.enqueue(((shortest_path[0], shortest_path[1], 10), 0))
+                the_pedestrian.prim_queue.enqueue(((shortest_path[0], shortest_path[1], vee), 0))
                 del shortest_path[0]
         pedestrians.append(the_pedestrian)
 ######## pedestrian implementation ########
@@ -360,35 +361,68 @@ def animate(frame_idx): # update animation by dt
     traffic_lights.update(dt)
     horizontal_light = traffic_lights.get_states('horizontal', 'color')
     vertical_light = traffic_lights.get_states('vertical', 'color')
+    horizontal_light_time = traffic_lights.get_states('horizontal', 'time')
+    vertical_light_time = traffic_lights.get_states('vertical', 'time')
+    red_duration = traffic_lights._max_time['red']
+
     # update background
     background.close()
     background = Image.open(intersection_fig + horizontal_light + '_' + vertical_light + '.png')
     x_lim, y_lim = background.size
 
+    # if the pedestrian just crossed the street, continue walking and ignore traffic light color
+    def keep_walking(xy_coord, node1, node2, theta, direction):
+        return (person_xy == node1 or person_xy == node2) and theta == direction
+
     # update pedestrians
     pedestrians_to_keep = []
-    vertical_nodes = [(355,565), (705, 565), (355,195), (705, 195)] # top left, top right, bottom left, bottom right
-    horizontal_nodes = [(380,170), (380,590), (680, 170), (680, 590)] # bottom left, top left, bottom right, top right
+    lane1 = [(355, 195), (355, 565)] # left vertical path, (bottom node, top node)
+    lane2 = [(705, 195), (705, 565)] # right vertical path, (bottom node, top node)
+    lane3 = [(380, 590), (680, 590)] # top horizontal path (left node, right node)
+    lane4 = [(380, 170), (680, 170)] # bottom horizontal path (left node, right node)
+
+    # checks if pedestrian is crossing street
+    def distance(a, b):
+        return ((a[0] - b[0])**2 + (a[1] - b[1])**2)**0.5
+    def is_between(node1, node2, person_xy):
+        return distance(node1, person_xy) + distance(person_xy, node2) == distance(node1, node2)
+
     if len(pedestrians) > 0:
         for person in pedestrians:
             if (person.state[0] <= x_lim and person.state[0] >= 0 and person.state[1] >= 0 and person.state[1] <= y_lim):
                 person_xy = (person.state[0], person.state[1])
-                if person_xy in vertical_nodes:
+                # lets the pedestrian know if it should cross the street and continues walking after crossing the street
+                if person_xy in (lane1 + lane2):
                     if vertical_light == 'green':
-                        person.prim_next(.5)
-                    elif (person_xy == vertical_nodes[0] or person_xy == vertical_nodes[1]) and person.state[2] == np.pi / 2:
-                        person.prim_next(.5)
-                    elif (person_xy == vertical_nodes[2] or person_xy == vertical_nodes[3]) and person.state[2] == -np.pi/2:
-                        person.prim_next(.5)
-                elif person_xy in horizontal_nodes:
+                        person.prim_next(dt)
+                    elif keep_walking(person_xy, lane1[1], lane2[1], person.state[2], np.pi/2):
+                        person.prim_next(dt)
+                    elif keep_walking(person_xy, lane1[0], lane2[0], person.state[2], -np.pi/2):
+                        person.prim_next(dt)
+                elif person_xy in (lane3 + lane4):
                     if horizontal_light == 'green':
-                        person.prim_next(.5)
-                    elif (person_xy == horizontal_nodes[0] or person_xy == horizontal_nodes[1]) and person.state[2] == np.pi:
-                        person.prim_next(.5)
-                    elif (person_xy == horizontal_nodes[2] or person_xy == horizontal_nodes[3]) and person.state[2] == 0:
-                        person.prim_next(.5)
+                        person.prim_next(dt)
+                    elif keep_walking(person_xy, lane3[0], lane4[0], person.state[2], np.pi):
+                        person.prim_next(dt)
+                    elif keep_walking(person_xy, lane3[1], lane4[1], person.state[2], 0):
+                        person.prim_next(dt)
                 else:
-                    person.prim_next(.5)
+                    person.prim_next(dt)
+                # while the pedestrian is crossing the street
+                if person.prim_queue.len() > 0:
+                    prim_data, prim_progress = person.prim_queue.top()
+                    start, finish, vee = prim_data
+                    dx = finish[0] - person.state[0]
+                    dy = finish[1] - person.state[1]
+                    remaining_distance = np.linalg.norm(np.array([dx, dy]))
+                    if is_between(lane1[0],lane1[1],person_xy) or is_between(lane2[0],lane2[1],person_xy):
+                        if (remaining_distance/vee) > (red_duration - vertical_light_time):
+                            vee = remaining_distance / (red_duration - vertical_light_time)
+                            person.prim_queue.replace_top(((start, finish, vee), prim_progress))
+                    elif is_between(lane3[0],lane3[1],person_xy) or is_between(lane4[0],lane4[1],person_xy):
+                        if (remaining_distance/vee) > (red_duration - horizontal_light_time):
+                            vee = remaining_distance / (red_duration - horizontal_light_time)
+                            person.prim_queue.replace_top(((start, finish, vee), prim_progress))
                 pedestrians_to_keep.append(person)
 
     cars_to_keep = []
