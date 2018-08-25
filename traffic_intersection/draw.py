@@ -423,7 +423,7 @@ def animate(frame_idx): # update animation by dt
                         if (remaining_distance/vee) > (red_duration - horizontal_light_time):
                             vee = remaining_distance / (red_duration - horizontal_light_time)
                             person.prim_queue.replace_top(((start, finish, vee), prim_progress))
-                pedestrians_to_keep.append(person)
+                    pedestrians_to_keep.append(person)
 
     cars_to_keep = []
     cars_to_remove = set()
