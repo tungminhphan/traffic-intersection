@@ -21,7 +21,7 @@ import primitives.load_primitives as load_primitives
 from primitives.load_primitives import get_prim_data
 from components.pedestrian_names import names
 import prepare.options as options
-from  prepare.collision_check import collision_free, get_bounding_box
+from  prepare.collision_check import collision_free, get_bounding_box, contact_points
 import numpy as np
 from numpy import cos, sin, tan
 from PIL import Image
@@ -541,6 +541,19 @@ def animate(frame_idx): # update animation by dt
     # plot honking 
     draw_pedestrians(pedestrians_to_keep) # draw pedestrians to background
     draw_cars(cars_to_keep)
+
+    all_components = pedestrians_to_keep + cars_to_keep
+    for i in range(len(all_components)):
+        for j in range(i + 1, len(all_components)):
+            collision_free1, min_sep_vector = collision_free(all_components[i], all_components[j])
+            if not collision_free1: # had to change variable name from the function to remove error
+                cp = contact_points(all_components[i], all_components[j], min_sep_vector)
+                if len(cp) > 0:
+                    medic_sign = dir_path + '/components/imglib/medic.png'
+                    medic_fig = Image.open(medic_sign).convert("RGBA")
+                    medic_fig = medic_fig.resize((20,20))
+                    x, y = find_corner_coordinates(0,0, cp[0][0], cp[0][1], 0, medic_fig)
+                    background.paste(medic_fig, (int(x), int(y)), medic_fig)    
 
     # plot traffic light walls
     walls = [ax.plot([], [],'r')[0] for _ in range(4)]
