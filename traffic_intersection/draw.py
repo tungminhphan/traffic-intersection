@@ -21,7 +21,7 @@ import primitives.load_primitives as load_primitives
 from primitives.load_primitives import get_prim_data
 from components.pedestrian_names import names
 import prepare.options as options
-from  prepare.collision_check import collision_free, get_bounding_box, contact_points
+from  prepare.collision_check import collision_free, get_bounding_box
 import numpy as np
 from numpy import cos, sin, tan
 from PIL import Image
@@ -143,6 +143,15 @@ def draw_cars(vehicles):
         # at (full scale) the relative coordinates of the center of the rear axle w.r.t. the center of the figure is center_to_axle_dist
         x_corner, y_corner = find_corner_coordinates(-params.car_scale_factor * params.center_to_axle_dist, 0, x, y, theta, vehicle_fig)
         background.paste(vehicle_fig, (x_corner, y_corner), vehicle_fig)
+
+medic_signs = []
+medic_sign = dir_path + '/components/imglib/medic.png'
+medic_fig = Image.open(medic_sign).convert("RGBA")
+medic_fig = medic_fig.resize((20,20))
+def draw_medic_signs(medic_signs):
+    for sign in medic_signs:
+        x, y = find_corner_coordinates(0, 0, sign[0], sign[1], 0, medic_fig)
+        background.paste(medic_fig, (int(x), int(y)), medic_fig)  
 
 # creates figure
 fig = plt.figure()
@@ -337,7 +346,7 @@ def animate(frame_idx): # update animation by dt
                 original_request_len = request_queue.len()
 
 ######## pedestrian implementation ########
-    if with_probability(.05):
+    if with_probability(.2):
         new_name, new_begin_node, new_final_node, new_pedestrian = spawn_pedestrian()
         if new_begin_node == new_final_node:
             print("Request Denied")
@@ -538,22 +547,20 @@ def animate(frame_idx): # update animation by dt
                         ys.append(ys[0])
                         curr_tubes[i].set_data(xs,ys)
 
+    # if cars are hitting pedestrians replace pedestrian with medic sign
+    for person in pedestrians_to_keep:
+        for car in cars_to_keep:
+            collision_free1,_ = collision_free(person, car)
+            if not collision_free1 and car.state[0] > 0:
+                medic_signs.append((person.state[0], person.state[1]))
+                del pedestrians[pedestrians.index(person)]
+
     # plot honking 
     draw_pedestrians(pedestrians_to_keep) # draw pedestrians to background
     draw_cars(cars_to_keep)
+    draw_medic_signs(medic_signs)
 
-    all_components = pedestrians_to_keep + cars_to_keep
-    for i in range(len(all_components)):
-        for j in range(i + 1, len(all_components)):
-            collision_free1, min_sep_vector = collision_free(all_components[i], all_components[j])
-            if not collision_free1: # had to change variable name from the function to remove error
-                cp = contact_points(all_components[i], all_components[j], min_sep_vector)
-                if len(cp) > 0:
-                    medic_sign = dir_path + '/components/imglib/medic.png'
-                    medic_fig = Image.open(medic_sign).convert("RGBA")
-                    medic_fig = medic_fig.resize((20,20))
-                    x, y = find_corner_coordinates(0,0, cp[0][0], cp[0][1], 0, medic_fig)
-                    background.paste(medic_fig, (int(x), int(y)), medic_fig)    
+  
 
     # plot traffic light walls
     walls = [ax.plot([], [],'r')[0] for _ in range(4)]
