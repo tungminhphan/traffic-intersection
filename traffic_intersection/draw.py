@@ -346,11 +346,7 @@ def animate(frame_idx): # update animation by dt
                 original_request_len = request_queue.len()
 
 ######## pedestrian implementation ########
-<<<<<<< HEAD
-    if with_probability(.01):
-=======
     if with_probability(.2):
->>>>>>> 8619ca50619a064418a8923c391e9159ed122256
         new_name, new_begin_node, new_final_node, new_pedestrian = spawn_pedestrian()
         if new_begin_node == new_final_node:
             print("Request Denied")
