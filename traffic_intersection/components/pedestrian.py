@@ -119,7 +119,7 @@ class Pedestrian:
                 self.state[3] = 0 # reset gait
                 if self.prim_queue.len() > 1: # if current not at last primitive
                     last_prim_data, last_prim_progress = self.prim_queue.bottom() # extract last primitive
-                    last_start, last_finish, last_vee = last_prim_data
+                    last_start, last_finish, vee = last_prim_data
                     dx_last = last_finish[0] - self.state[0]
                     dy_last = last_finish[1] - self.state[1]
                     heading = np.arctan2(dy_last,dx_last)
@@ -132,11 +132,12 @@ class Pedestrian:
                 heading = np.arctan2(dy,dx)
                 if self.state[2] != heading:
                     self.state[2] = heading
-            if vee * dt > remaining_distance:
+            if vee * dt > remaining_distance and remaining_distance != 0:
                 self.next((0, remaining_distance/dt), dt)
             else:
                 self.next((0, vee), dt)
-            prim_progress += dt / (total_distance/vee)
+            if total_distance != 0:
+                prim_progress += dt / (total_distance / vee)
             self.prim_queue.replace_top((prim_data, prim_progress)) # update primitive queue
 
 #my_pedestrian = Pedestrian()
