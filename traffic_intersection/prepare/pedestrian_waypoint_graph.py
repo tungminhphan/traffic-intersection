@@ -5,29 +5,12 @@
 
 import os
 import numpy as np
+show = True
 if __name__ == '__main__':
     from graph import WeightedDirectedGraph
 else:
     from traffic_intersection.prepare.graph import WeightedDirectedGraph
-import matplotlib.pyplot as plt
-from PIL import Image
-dir_path = os.path.dirname(os.path.realpath(__file__))
-intersection_fig = os.path.dirname(dir_path) + "/components/imglib/intersection.png"
-fig = plt.figure()
-
-# turn on/off axes
-plt.axis("on")
-background = Image.open(intersection_fig)
-xlim, ylim = background.size
-plt.xlim(0, xlim)
-plt.ylim(0, ylim)
-
-plt.imshow(background, origin="Lower")
-
-markersize = 30
-edge_width = 0.5
-head_width = 10
-transparency = 0.5
+    show = False
 
 G = WeightedDirectedGraph()
 # define sources/sinks
@@ -122,7 +105,28 @@ for edge in all_edges:
     weight = np.linalg.norm(np.array(edge[0]) - np.array(edge[1]))
     G.add_double_edges([(node_1, node_2)])
 
-G.print_graph()
-G.plot_edges(plt, alpha = transparency, edge_width = edge_width, head_width=head_width,
+if show:
+    G.print_graph()
+    import matplotlib.pyplot as plt
+    from PIL import Image
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    intersection_fig = os.path.dirname(dir_path) + "/components/imglib/intersection.png"
+    fig = plt.figure()
+
+    # turn on/off axes
+    plt.axis("on")
+    background = Image.open(intersection_fig)
+    xlim, ylim = background.size
+    plt.xlim(0, xlim)
+    plt.ylim(0, ylim)
+
+    plt.imshow(background, origin="Lower")
+
+    markersize = 30
+    edge_width = 0.5
+    head_width = 10
+    transparency = 0.5
+    G.plot_edges(plt, alpha = transparency, edge_width = edge_width, head_width=head_width,
         plt_src_snk=False)
-plt.show()
+    plt.show()
+

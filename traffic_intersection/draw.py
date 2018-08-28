@@ -19,7 +19,7 @@ import assumes.params as params
 import primitives.tubes as tubes
 import primitives.load_primitives as load_primitives
 from primitives.load_primitives import get_prim_data
-from components.pedestrian_names import names
+from components.aux.pedestrian_names import names
 import prepare.options as options
 from  prepare.collision_check import collision_free, get_bounding_box
 import numpy as np
@@ -147,7 +147,7 @@ def draw_cars(vehicles):
 medic_signs = []
 medic_sign = dir_path + '/components/imglib/medic.png'
 medic_fig = Image.open(medic_sign).convert("RGBA")
-medic_fig = medic_fig.resize((20,20))
+medic_fig = medic_fig.resize((15,15))
 def draw_medic_signs(medic_signs):
     for sign in medic_signs:
         x, y = find_corner_coordinates(0, 0, sign[0], sign[1], 0, medic_fig)
@@ -222,7 +222,6 @@ honk_t = []
 all_wavefronts = set()
 request_queue = queue.Queue()
 waiting = dict()
-
 
 def pause_car(the_car):
     the_car.prim_queue.enqueue((-1, 0))
@@ -374,7 +373,7 @@ def animate(frame_idx): # update animation by dt
                 original_request_len = request_queue.len()
 
 ######## pedestrian implementation ########
-    if with_probability(.2):
+    if with_probability(.05):
         new_name, new_begin_node, new_final_node, new_pedestrian = spawn_pedestrian()
         if new_begin_node == new_final_node:
             print("Request Denied")
@@ -383,7 +382,7 @@ def animate(frame_idx): # update animation by dt
     while pedestrian_queue.len() > 0: 
         name, begin_node, final_node, the_pedestrian = pedestrian_queue.pop()
         _, shortest_path = planner.dijkstra((begin_node[0], begin_node[1]), final_node, pedestrian_graph.G)
-        vee = np.random.uniform(50, 100)
+        vee = np.random.uniform(20, 40)
         while len(shortest_path) > 0:
             if len(shortest_path) == 1:
                 the_pedestrian.prim_queue.enqueue(((shortest_path[0], shortest_path[0], vee), 0))
