@@ -32,7 +32,7 @@ crossing_walls['south'] ={'x': reflect([395, 670, 670, 395], max_x), 'y': reflec
 #          VISUALIZATION         # 
 #                                #
 ##################################
-visualize = True
+visualize = False
 if visualize:
     import matplotlib.pyplot as plt
     dir = 'south'
