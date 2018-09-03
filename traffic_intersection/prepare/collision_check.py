@@ -165,7 +165,7 @@ def best_edge(polygon, separation_normal): # the closest edge is the edge most p
         prev_idx = len(polygon_vertices) - 1
     elif max_idx == (len(polygon_vertices) - 1):
         next_idx = 0
-        prev_idx = max_idx - 1   
+        prev_idx = max_idx - 1
     else:
         next_idx = max_idx + 1
         prev_idx = max_idx - 1
@@ -174,7 +174,7 @@ def best_edge(polygon, separation_normal): # the closest edge is the edge most p
     v1 = polygon_vertices[next_idx]
     v0 = polygon_vertices[prev_idx]
     #print(v)
-    
+
     # the edges next to the max_vertex, pointing towards the max vertex
     right_edge = (v[0] - v1[0], v[1] - v1[1])
     left_edge = (v[0] - v0[0], v[1] - v0[1])
@@ -184,30 +184,30 @@ def best_edge(polygon, separation_normal): # the closest edge is the edge most p
     #returns the most perpendicular edge (normalized), max vertex, and first and second vertex counter clockwise
     if (dot(left_edge, separation_normal) <= dot(right_edge, separation_normal)):
         return left_edge, v, v, v0
-    else: 
+    else:
         return invert_direction(right_edge), v, v1, v
 
 def clip_points(v1, v2, n, o): # clips line segment points v1, v2 if they are past o along n
     cp = []
     d1 = dot(n, v1) - o
     d2 = dot(n, v2) - o
-    
+
     if d1 >= 0.0: # if point is past o along n then the point is kept
         cp.append(v1)
     if d2 >= 0.0:
         cp.append(v2)
     if d1 * d2 < 0.0: # checks if the points are on opposing sides to compute the correct point
         e = (v2[0] - v1[0], v2[1] - v1[1]) # v2 - v1, gets the vector of edge thats being clipped
-        u = d1 / (d1 - d2) 
+        u = d1 / (d1 - d2)
         e = (u * e[0], u * e[1])
         e = (e[0] + v1[0], e[1] + v1[1])
-        cp.append(e)    
+        cp.append(e)
     return cp
 
 def contact_points(object1, object2, separation_normal):
     invert_normal = invert_direction(separation_normal) # keep consistent separation normal from object 2 to object 1
-    edge1_comps = best_edge(object1, separation_normal) 
-    edge2_comps = best_edge(object2, invert_normal) 
+    edge1_comps = best_edge(object1, separation_normal)
+    edge2_comps = best_edge(object2, invert_normal)
 
     flip = False # flag indicating that incident and reference edge were flipped, this is for final clip
     # edge1_comps[0], edge2_comps[0] are the best edge vectors of their shapes
@@ -215,7 +215,7 @@ def contact_points(object1, object2, separation_normal):
         ref_edge, ref_vmax, ref_v2, ref_v1 = edge1_comps
         inc_edge, inc_vmax, inc_v2, inc_v1 = edge2_comps
     else:
-        flip = True 
+        flip = True
         ref_edge, ref_vmax, ref_v2, ref_v1 = edge2_comps
         inc_edge, inc_vmax, inc_v2, inc_v1 = edge1_comps
 
@@ -230,20 +230,20 @@ def contact_points(object1, object2, separation_normal):
     cp = clip_points(cp[0], cp[1], ref_v_invert, -offset2) # clips what's left of incident edge by the second vertex of the reference edge in the opposite direction, the offset and direction are flipped
     if len(cp) < 2:
         return cp
-    
+
     ref_normal = invert_direction(get_axis(ref_edge)) # reference edge normal towards its own center
     # gets the largest depth and makes sure the points are not past this
     max1 = dot(ref_normal, ref_vmax)
-    if (flip): 
+    if (flip):
         if dot(ref_normal, cp[1]) - max1 > 0.0:
-            del cp[1] 
+            del cp[1]
         if dot(ref_normal, cp[0]) - max1 > 0.0:
             del cp[0]
     else:
         if dot(ref_normal, cp[1]) - max1 < 0.0:
-            del cp[1] 
+            del cp[1]
         if dot(ref_normal, cp[0]) - max1 < 0.0:
-            del cp[0] 
+            del cp[0]
     return cp
 
 ######################### Collision Response ######################### 
@@ -253,7 +253,7 @@ def get_motion_data(thing):
         x,y,theta,vee = thing.state
         velocity = np.array([vee*cos(theta),vee*sin(theta)]) # pre-collision velocity of center of mass
         omega = 0 # angular velocity, yaw rate 
-        mass = 100 
+        mass = 100
         w = 54 * params.pedestrian_scale_factor
         h = 70 * params.pedestrian_scale_factor
         inertia = mass * (h ** 2 + w ** 2) / 24
@@ -261,7 +261,7 @@ def get_motion_data(thing):
         vee,theta,x,y = thing.state
         velocity = np.array([vee*cos(theta),vee*sin(theta)]) # pre-collision velocity of center of mass
         omega = 0 # angular velocity, yaw rate
-        mass = 100 
+        mass = 100
         w = 788 * params.car_scale_factor
         h = 399 * params.car_scale_factor
         inertia = mass * (h ** 2 + w ** 2) / 12
@@ -277,21 +277,21 @@ def collision_response(object1, object2, cp, min_sep_vector): # returns the tran
 
     r_ap = np.array([cp[0][0] - x, cp[0][1] - y]) # vector from center obj1 towards contact point     
     r_bp = np.array([cp[0][0] - x2, cp[0][1] - y2]) # vector from center obj2 towards contact point 
-    
+
     omega1_cross_rap = np.array([-omega_a1 * r_ap[1], omega_a1 * r_ap[0]]) # angular velocity cross r_ap
-    omegb1_cross_rbp = np.array([-omega_b1 * r_bp[1], omega_b1 * r_bp[0]])   
+    omegb1_cross_rbp = np.array([-omega_b1 * r_bp[1], omega_b1 * r_bp[0]])
 
     v_ap1 = v_a1 + omega1_cross_rap # pre-collision velocities of the points of collision
-    v_bp1 = v_b1 + omegb1_cross_rbp 
+    v_bp1 = v_b1 + omegb1_cross_rbp
 
     v_ab1 = v_ap1 - v_bp1 # relative velocity (pre-collision) v_ap1 - vbp1
- 
+
     edge_obj2,_,_,_ = best_edge(object2, min_sep_vector) # returns best edge of object2
     n = get_axis(edge_obj2) # gets the normal from collision edge
     if dot(n, r_bp) < 0: # if opposite direction from collision point, invert normal
         n = invert_direction(n)
     n = np.array([n[0], n[1]])
-    
+
     j = -(1 + e) * np.dot(v_ab1, n)
     j /= ((1 / m_a) + (1 / m_b) + (np.cross(r_ap, n))**2 / inert_a + (np.cross(r_bp, n))**2 / inert_b)
 

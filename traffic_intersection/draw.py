@@ -12,7 +12,7 @@ import components.pedestrian as pedestrian
 import components.traffic_signals as traffic_signals
 import components.intersection as intersection
 import prepare.car_waypoint_graph as car_graph
-import prepare.pedestrian_waypoint_graph as pedestrian_graph 
+import prepare.pedestrian_waypoint_graph as pedestrian_graph
 import prepare.graph as graph
 import prepare.queue as queue
 import assumes.params as params
@@ -124,7 +124,7 @@ def draw_pedestrians(pedestrians):
 # np.random.seed(99)
 
 # disable antialiasing for better performance
-antialias_enabled = False
+antialias_enabled = True
 def draw_cars(vehicles):
     for vehicle in vehicles:
         vee, theta, x, y = vehicle.state
@@ -202,7 +202,7 @@ def spawn_pedestrian():
     age = random.randint(18,70)
     start_node = random.sample(pedestrian_graph.G._sources, 1)[0]
     end_node = random.sample(pedestrian_graph.G._sinks, 1)[0]
-    init_state = start_node + (0,0)         
+    init_state = start_node + (0,0)
     if age > 50:
         pedestrian_type = '2'
     else:

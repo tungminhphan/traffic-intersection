@@ -100,6 +100,7 @@ def compute_collision_dictionary(primitive_id_set):
     colsn_dict = {(prim_id, segment_id): {(prim_id, segment_id)} for prim_id in primitive_id_set for segment_id in range(params.num_subprims)}
     # add traffic light wall computations
     traffic_light_ids = ['east', 'west', 'north', 'south']
+    crossing_ids = ['east', 'west', 'north', 'south']
 
     for i in range(len(primitive_id_set)):
         print('prim_id ' + str(i))
@@ -113,9 +114,8 @@ def compute_collision_dictionary(primitive_id_set):
             xs = intersection.traffic_light_walls[direction]['x']
             ys = intersection.traffic_light_walls[direction]['y']
             for ii in range(params.num_subprims):
+                rects_1 = np.squeeze((make_tube(primitive_id_set[i]))[ii])
                 rects_2 = []
-                rects_1 = make_tube(primitive_id_set[i])
-                rects_1 = np.squeeze(rects_1[ii])
                 for idx in range(len(xs)):
                     x = xs[idx]
                     y = ys[idx]
@@ -123,6 +123,19 @@ def compute_collision_dictionary(primitive_id_set):
                 if not collision.nonoverlapping_polygons(rects_1, rects_2)[0]:
                     colsn_dict[(primitive_id_set[i], ii)].add(direction)
                     print('added light')
+        for direction in crossing_ids:
+            xs = intersection.crossing_walls[direction]['x']
+            ys = intersection.crossing_walls[direction]['y']
+            for ii in range(params.num_subprims):
+                rects_1 = np.squeeze((make_tube(primitive_id_set[i]))[ii])
+                rects_2 = []
+                for idx in range(len(xs)):
+                    x = xs[idx]
+                    y = ys[idx]
+                    rects_2.append((x, y))
+                if not collision.nonoverlapping_polygons(rects_1, rects_2)[0]:
+                    colsn_dict[(primitive_id_set[i], ii)].add('crossing' + direction)
+                    print('added crossing')
     return colsn_dict
 
 # computes collision_dictionary
