@@ -144,13 +144,15 @@ def update(self, dt):
     self._state['horizontal'] = new_horizontal_state
     self._state['vertical'] = self.get_counterpart(new_horizontal_state)
 
-def redlight_safe(interval, which_light, traffic_lights):
+def redlight_safe(interval, which_light, traffic_lights, walk_signs):
     is_safe = False
     interval_length = interval[1] - interval[0]
     first_time = interval[0]
     predicted_state = traffic_lights.predict(first_time, True) # if horizontal
+    walk_sign = walk_signs[1] # horizontal walk sign
     if which_light == 'north' or which_light == 'south': # if vertical
         predicted_state = traffic_lights.get_counterpart(predicted_state) # vertical light
+        walk_sign = walk_signs[0] # vertical walk sign
     color, time = predicted_state
     remaining_time = traffic_lights._max_time[color] - time
     if color == 'yellow':
@@ -158,9 +160,11 @@ def redlight_safe(interval, which_light, traffic_lights):
     elif color == 'green':
         remaining_time += traffic_lights._max_time['yellow']
         is_safe = remaining_time > interval_length
+    if walk_sign:
+        is_safe = False
     return is_safe
 
-def is_safe(path, current_time, primitive_graph, edge_time_stamps, traffic_lights):
+def is_safe(path, current_time, primitive_graph, edge_time_stamps, traffic_lights, walk_signs):
     now = current_time
     scheduled_times = [now]
     current_edge_idx = 0
@@ -175,7 +179,7 @@ def is_safe(path, current_time, primitive_graph, edge_time_stamps, traffic_light
             ego_interval = left_time + (ii)/params.num_subprims * delta_t, left_time + (ii+1)/params.num_subprims * delta_t
             for box in collision_dictionary[(curr_prim_id, ii)]:
                 if isinstance(box, str):
-                    if not redlight_safe(ego_interval, box, traffic_lights):
+                    if not redlight_safe(ego_interval, box, traffic_lights, walk_signs):
                         #TODO: turn this into a function
                         ################################################################################
                         #                                                                              # 

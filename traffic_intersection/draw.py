@@ -200,6 +200,10 @@ def path_to_primitives(path):
             primitives.append(next_prim_id)
     return primitives
 
+#if true, pedestrians can cross street and cars cannot cross
+def walk_sign(green_duration, light_color, light_time):
+    return(light_color == 'green' and light_time < (green_duration / 3))
+
 # create traffic lights
 traffic_lights = traffic_signals.TrafficLights(3, 23, random_start = True)
 #init_horizontal_light = traffic_lights._state['horizontal']
@@ -248,10 +252,10 @@ def is_between(lane, person_xy):
     return distance(lane[0], person_xy) + distance(lane[1], person_xy) == distance(lane[0], lane[1])
 
 # cross the street if light is green, or if the pedestrian just crossed the street, continue walking and ignore traffic light color
-def continue_walking(person, light, lane1, lane2, direction):
+def continue_walking(person, walk_sign, lane1, lane2, direction):
     person_xy = (person.state[0], person.state[1])
     theta = person.state[2]
-    if person_xy in (lane1 + lane2) and light == 'green':
+    if person_xy in (lane1 + lane2) and walk_sign:
         return True
     elif (person_xy == lane1[0] or person_xy == lane2[0]) and theta == direction[0]:
         return True
@@ -276,6 +280,16 @@ def animate(frame_idx): # update animation by dt
     deadlock = False
     current_time = frame_idx * dt # compute current time from frame index and dt
     print('{:.2f}'.format(current_time)) # print out current time to 2 decimal places
+
+    horizontal_light = traffic_lights.get_states('horizontal', 'color')
+    vertical_light = traffic_lights.get_states('vertical', 'color')
+
+    horizontal_light_time = traffic_lights.get_states('horizontal', 'time')
+    vertical_light_time = traffic_lights.get_states('vertical', 'time')
+    green_duration = traffic_lights._max_time['green']
+
+    vertical_walk_sign = walk_sign(green_duration, vertical_light, vertical_light_time)
+    horizontal_walk_sign = walk_sign(green_duration, horizontal_light, horizontal_light_time)
 
     """ online frame update """
     global background
@@ -311,7 +325,7 @@ def animate(frame_idx): # update animation by dt
             edge_time_stamps[wait_id].remove(interval)
         _, shortest_path = planner.dijkstra(start_node, end_node, G)
 
-        safety_check, first_conflict_edge_idx = planner.is_safe(path = shortest_path, current_time = effective_current_times[plate_number], primitive_graph = G, edge_time_stamps = edge_time_stamps, traffic_lights = traffic_lights)
+        safety_check, first_conflict_edge_idx = planner.is_safe(path = shortest_path, current_time = effective_current_times[plate_number], primitive_graph = G, edge_time_stamps = edge_time_stamps, traffic_lights = traffic_lights, walk_signs = (vertical_walk_sign, horizontal_walk_sign))
         if safety_check:
             if plate_number not in cars:
                 cars[plate_number] = the_car # add the car
@@ -373,7 +387,7 @@ def animate(frame_idx): # update animation by dt
                 original_request_len = request_queue.len()
 
 ######## pedestrian implementation ########
-    if with_probability(.05):
+    if with_probability(0.05):
         new_name, new_begin_node, new_final_node, new_pedestrian = spawn_pedestrian()
         if new_begin_node == new_final_node:
             print("Request Denied")
@@ -397,9 +411,6 @@ def animate(frame_idx): # update animation by dt
     traffic_lights.update(dt)
     horizontal_light = traffic_lights.get_states('horizontal', 'color')
     vertical_light = traffic_lights.get_states('vertical', 'color')
-    horizontal_light_time = traffic_lights.get_states('horizontal', 'time')
-    vertical_light_time = traffic_lights.get_states('vertical', 'time')
-    red_duration = traffic_lights._max_time['red']
 
     # update background
     background.close()
@@ -421,24 +432,23 @@ def animate(frame_idx): # update animation by dt
                 if person_xy not in (lane1 + lane2 + lane3 + lane4): # if pedestrian is not at any of the nodes then continue  
                     person.prim_next(dt)
                     pedestrians_to_keep.append(person)
-                elif continue_walking(person, vertical_light, lane1, lane2, (-pi/2, pi/2)): # if light is green cross the street, or if at a node and facing away from the street i.e. just crossed the street then continue
+                elif continue_walking(person, vertical_walk_sign, lane1, lane2, (-pi/2, pi/2)): # if light is green cross the street, or if at a node and facing away from the street i.e. just crossed the street then continue
                     person.prim_next(dt)
                     pedestrians_to_keep.append(person)
-                elif continue_walking(person, horizontal_light, lane3, lane4, (pi, 0)):
+                elif continue_walking(person, horizontal_walk_sign, lane3, lane4, (pi, 0)):
                     person.prim_next(dt)
                     pedestrians_to_keep.append(person)
                 else:
                     person.state[3] = 0
                     pedestrians_waiting.append(person)
 
-                # while the pedestrian is crossing the street
-                # remaining times of vertical and horizontal light before light turns red
-                remaining_vertical_time = red_duration - vertical_light_time
-                remaining_horizontal_time = red_duration - horizontal_light_time
-                # pedestrians walk faster if not going fast enough to finish crossing the street before light turns red
+                # pedestrians walk faster if not going fast enough to finish crossing the street before walk sign is off or 'false'
+                walk_sign_duration = green_duration / 3
                 if is_between(lane1, person_xy) or is_between(lane2, person_xy):
+                    remaining_vertical_time = abs(walk_sign_duration - vertical_light_time)
                     walk_faster(person, remaining_vertical_time)
                 elif is_between(lane3, person_xy) or is_between(lane4, person_xy):
+                    remaining_horizontal_time = abs(walk_sign_duration  - horizontal_light_time)
                     walk_faster(person, remaining_horizontal_time)
 
     cars_to_keep = []
@@ -564,6 +574,7 @@ def animate(frame_idx): # update animation by dt
 
     # plot honking 
     np.random.shuffle(pedestrians_waiting)
+    np.random.shuffle(pedestrians_to_keep)
     draw_pedestrians(pedestrians_waiting)
     draw_medic_signs(medic_signs)
     draw_pedestrians(pedestrians_to_keep) # draw pedestrians to background
