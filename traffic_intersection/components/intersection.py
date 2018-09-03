@@ -21,3 +21,25 @@ traffic_light_walls['east'] ={'x': reflect([345, 365, 365, 345], max_x), 'y': re
 traffic_light_walls['north'] ={'x': [395, 530, 530, 395], 'y': [600, 600, 580, 580]}
 traffic_light_walls['south'] ={'x': reflect([395, 530, 530, 395], max_x), 'y': reflect([600, 600, 580, 580], max_y)}
 
+crossing_walls = dict()
+crossing_walls ['west'] ={'x': [345, 365, 365, 345], 'y': [550, 550, 210, 210]}
+crossing_walls ['east'] ={'x': reflect([345, 365, 365, 345], max_x), 'y': reflect([550, 550, 210, 210], max_y)}
+crossing_walls ['north'] ={'x': [395, 670, 670, 395], 'y': [600, 600, 580, 580]}
+crossing_walls['south'] ={'x': reflect([395, 670, 670, 395], max_x), 'y': reflect([600, 600, 580, 580], max_y)}
+
+##################################
+#                                #
+#          VISUALIZATION         # 
+#                                #
+##################################
+visualize = True
+if visualize:
+    import matplotlib.pyplot as plt
+    dir = 'south'
+    plt.imshow(intersection)
+    xs = crossing_walls[dir]['x']
+    xs.append(xs[0])
+    ys = crossing_walls[dir]['y']
+    ys.append(ys[0])
+    plt.plot(xs,ys, 'r')
+    plt.show()
