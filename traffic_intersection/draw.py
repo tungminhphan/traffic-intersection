@@ -162,7 +162,7 @@ show_axes = False
 if not show_axes:
     plt.axis('off')
 # sampling time
-dt = 0.1
+dt = 0.01
 # create car
 def spawn_car():
     def generate_license_plate():
@@ -293,7 +293,7 @@ def animate(frame_idx): # update animation by dt
 
     """ online frame update """
     global background
-    if with_probability(0.2):
+    if with_probability(0.2*dt/0.1):
 #    if with_probability(min(1,10/(frame_idx+1))):
         new_plate_number, new_start_node, new_end_node, new_car = spawn_car()
         request_queue.enqueue((new_plate_number, new_start_node, new_end_node, new_car))
@@ -387,13 +387,14 @@ def animate(frame_idx): # update animation by dt
                 original_request_len = request_queue.len()
 
 ######## pedestrian implementation ########
-    if with_probability(0.05):
+    if with_probability(0.05*dt/0.1):
         new_name, new_begin_node, new_final_node, new_pedestrian = spawn_pedestrian()
         if new_begin_node == new_final_node:
-            print("Request Denied")
+            # print("Request Denied")
+            pass
         else:
             pedestrian_queue.enqueue((new_name, new_begin_node, new_final_node, new_pedestrian))
-    while pedestrian_queue.len() > 0: 
+    while pedestrian_queue.len() > 0:
         name, begin_node, final_node, the_pedestrian = pedestrian_queue.pop()
         _, shortest_path = planner.dijkstra((begin_node[0], begin_node[1]), final_node, pedestrian_graph.G)
         vee = np.random.uniform(20, 40)
@@ -618,7 +619,7 @@ t0 = time.time()
 animate(0)
 t1 = time.time()
 interval = (t1 - t0)
-num_frames = 2000 # number of the first frames to save in video
+num_frames = 8000 # number of the first frames to save in video
 ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval, blit=True, repeat=False) # by default the animation function loops, we set repeat to False in order to limit the number of frames generated to num_frames
 
 if options.save_video:
