@@ -155,13 +155,11 @@ def redlight_safe(interval, which_light, traffic_lights, walk_signs):
         walk_sign = walk_signs[0] # vertical walk sign
     color, time = predicted_state
     remaining_time = traffic_lights._max_time[color] - time
-    if color == 'yellow':
+    if color == 'yellow' and not walk_sign:
         is_safe = remaining_time > interval_length
-    elif color == 'green':
+    elif color == 'green' and not walk_sign:
         remaining_time += traffic_lights._max_time['yellow']
         is_safe = remaining_time > interval_length
-    if walk_sign:
-        is_safe = False
     return is_safe
 
 def check_crossing(scheduled_times, path, edge_time_stamps):
