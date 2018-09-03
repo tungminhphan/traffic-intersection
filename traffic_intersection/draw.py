@@ -149,9 +149,26 @@ medic_sign = dir_path + '/components/imglib/medic.png'
 medic_fig = Image.open(medic_sign).convert("RGBA")
 medic_fig = medic_fig.resize((15,15))
 def draw_medic_signs(medic_signs):
-    for sign in medic_signs:
-        x, y = find_corner_coordinates(0, 0, sign[0], sign[1], 0, medic_fig)
+    for coordinate in medic_signs:
+        x, y = find_corner_coordinates(0, 0, coordinate[0], coordinate[1], 0, medic_fig)
         background.paste(medic_fig, (int(x), int(y)), medic_fig)  
+
+walk_sign_go = dir_path + '/components/imglib/go.png'
+go_fig = Image.open(walk_sign_go).convert("RGBA")
+go_fig = go_fig.resize((20,20))
+
+walk_sign_stop = dir_path + '/components/imglib/stop.png'
+stop_fig = Image.open(walk_sign_stop).convert("RGBA")
+stop_fig = stop_fig.resize((20,20))
+
+vertical_go_fig = go_fig.rotate(-180, expand = False)
+vertical_stop_fig = stop_fig.rotate(-180, expand = False)
+horizontal_go_fig = go_fig.rotate(-90, expand = False)
+horizontal_stop_fig = stop_fig.rotate(-90, expand = False)
+
+def draw_walk_sign(sign, coordinates):
+    x, y = find_corner_coordinates(0, 0, coordinates[0], coordinates[1], 0, sign)
+    background.paste(sign, (int(x), int(y)), sign)
 
 # creates figure
 fig = plt.figure()
@@ -416,6 +433,16 @@ def animate(frame_idx): # update animation by dt
     background.close()
     background = Image.open(intersection_fig + horizontal_light + '_' + vertical_light + '.png')
     x_lim, y_lim = background.size
+ 
+    if vertical_walk_sign:
+        draw_walk_sign(vertical_go_fig, (380, 670))
+    else:
+        draw_walk_sign(vertical_stop_fig, (380, 670))
+
+    if horizontal_walk_sign:
+        draw_walk_sign(horizontal_go_fig, (265, 195))
+    else:
+        draw_walk_sign(horizontal_stop_fig, (265, 195))
 
     # update pedestrians
     pedestrians_to_keep = []
