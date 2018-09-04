@@ -155,20 +155,34 @@ def draw_medic_signs(medic_signs):
 
 walk_sign_go = dir_path + '/components/imglib/go.png'
 go_fig = Image.open(walk_sign_go).convert("RGBA")
-go_fig = go_fig.resize((20,20))
+go_fig = go_fig.resize((18,25))
 
 walk_sign_stop = dir_path + '/components/imglib/stop.png'
 stop_fig = Image.open(walk_sign_stop).convert("RGBA")
-stop_fig = stop_fig.resize((20,20))
+stop_fig = stop_fig.resize((18,25))
 
 vertical_go_fig = go_fig.rotate(-180, expand = False)
 vertical_stop_fig = stop_fig.rotate(-180, expand = False)
-horizontal_go_fig = go_fig.rotate(-90, expand = False)
-horizontal_stop_fig = stop_fig.rotate(-90, expand = False)
+horizontal_go_fig = go_fig.rotate(-90, expand = True)
+horizontal_stop_fig = stop_fig.rotate(-90, expand = True)
 
-def draw_walk_sign(sign, coordinates):
-    x, y = find_corner_coordinates(0, 0, coordinates[0], coordinates[1], 0, sign)
-    background.paste(sign, (int(x), int(y)), sign)
+def draw_walk_sign(orientation, safe_to_walk):
+    if orientation == 'vertical':
+        if safe_to_walk:
+            x, y = find_corner_coordinates(0, 0, 380, 670, 0, vertical_go_fig)
+            background.paste(vertical_go_fig, (int(x), int(y)), vertical_go_fig)
+        else:
+            x, y = find_corner_coordinates(0, 0, 380, 670, 0, vertical_stop_fig)
+            background.paste(vertical_stop_fig, (int(x), int(y)), vertical_stop_fig)
+    elif orientation == 'horizontal':
+        if safe_to_walk:
+            x, y = find_corner_coordinates(0, 0, 260, 195, 0, horizontal_go_fig)
+            background.paste(horizontal_go_fig, (int(x), int(y)), horizontal_go_fig)
+        else:
+            x, y = find_corner_coordinates(0, 0, 260, 195, 0, horizontal_stop_fig)
+            background.paste(horizontal_stop_fig, (int(x), int(y)), horizontal_stop_fig)
+    else:
+        TypeError('Orientation must be vertical or horizontal')
 
 # creates figure
 fig = plt.figure()
@@ -218,7 +232,7 @@ def path_to_primitives(path):
     return primitives
 
 #if true, pedestrians can cross street and cars cannot cross
-def walk_sign(green_duration, light_color, light_time):
+def safe_to_walk(green_duration, light_color, light_time):
     return(light_color == 'green' and light_time < (green_duration / 3))
 
 # create traffic lights
@@ -305,8 +319,11 @@ def animate(frame_idx): # update animation by dt
     vertical_light_time = traffic_lights.get_states('vertical', 'time')
     green_duration = traffic_lights._max_time['green']
 
-    vertical_walk_sign = walk_sign(green_duration, vertical_light, vertical_light_time)
-    horizontal_walk_sign = walk_sign(green_duration, horizontal_light, horizontal_light_time)
+    # if sign is true then walk, stop if false
+    vertical_walk_safe = safe_to_walk(green_duration, vertical_light, vertical_light_time)
+    horizontal_walk_safe = safe_to_walk(green_duration, horizontal_light, horizontal_light_time)
+    draw_walk_sign('vertical', vertical_walk_safe)
+    draw_walk_sign('horizontal', horizontal_walk_safe)
 
     """ online frame update """
     global background
@@ -342,7 +359,7 @@ def animate(frame_idx): # update animation by dt
             edge_time_stamps[wait_id].remove(interval)
         _, shortest_path = planner.dijkstra(start_node, end_node, G)
 
-        safety_check, first_conflict_edge_idx = planner.is_safe(path = shortest_path, current_time = effective_current_times[plate_number], primitive_graph = G, edge_time_stamps = edge_time_stamps, traffic_lights = traffic_lights, walk_signs = (vertical_walk_sign, horizontal_walk_sign))
+        safety_check, first_conflict_edge_idx = planner.is_safe(path = shortest_path, current_time = effective_current_times[plate_number], primitive_graph = G, edge_time_stamps = edge_time_stamps, traffic_lights = traffic_lights, walk_signs = (vertical_walk_safe, horizontal_walk_safe))
         if safety_check:
             if plate_number not in cars:
                 cars[plate_number] = the_car # add the car
@@ -433,16 +450,12 @@ def animate(frame_idx): # update animation by dt
     background.close()
     background = Image.open(intersection_fig + horizontal_light + '_' + vertical_light + '.png')
     x_lim, y_lim = background.size
- 
-    if vertical_walk_sign:
-        draw_walk_sign(vertical_go_fig, (380, 670))
-    else:
-        draw_walk_sign(vertical_stop_fig, (380, 670))
 
-    if horizontal_walk_sign:
-        draw_walk_sign(horizontal_go_fig, (265, 195))
-    else:
-        draw_walk_sign(horizontal_stop_fig, (265, 195))
+    # if sign is true then walk, stop if false
+    vertical_walk_safe = safe_to_walk(green_duration, vertical_light, vertical_light_time)
+    horizontal_walk_safe = safe_to_walk(green_duration, horizontal_light, horizontal_light_time)
+    draw_walk_sign('vertical', vertical_walk_safe)
+    draw_walk_sign('horizontal', horizontal_walk_safe)
 
     # update pedestrians
     pedestrians_to_keep = []
@@ -459,10 +472,10 @@ def animate(frame_idx): # update animation by dt
                 if person_xy not in (lane1 + lane2 + lane3 + lane4): # if pedestrian is not at any of the nodes then continue  
                     person.prim_next(dt)
                     pedestrians_to_keep.append(person)
-                elif continue_walking(person, vertical_walk_sign, lane1, lane2, (-pi/2, pi/2)): # if light is green cross the street, or if at a node and facing away from the street i.e. just crossed the street then continue
+                elif continue_walking(person, vertical_walk_safe, lane1, lane2, (-pi/2, pi/2)): # if light is green cross the street, or if at a node and facing away from the street i.e. just crossed the street then continue
                     person.prim_next(dt)
                     pedestrians_to_keep.append(person)
-                elif continue_walking(person, horizontal_walk_sign, lane3, lane4, (pi, 0)):
+                elif continue_walking(person, horizontal_walk_safe, lane3, lane4, (pi, 0)):
                     person.prim_next(dt)
                     pedestrians_to_keep.append(person)
                 else:
