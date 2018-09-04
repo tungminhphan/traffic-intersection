@@ -236,7 +236,7 @@ def safe_to_walk(green_duration, light_color, light_time):
     return(light_color == 'green' and light_time < (green_duration / 3))
 
 # create traffic lights
-traffic_lights = traffic_signals.TrafficLights(3, 23, random_start = True)
+traffic_lights = traffic_signals.TrafficLights(yellow_max = 10, green_max = 50, random_start = True)
 #init_horizontal_light = traffic_lights._state['horizontal']
 #init_vertical_light = traffic_lights._state['vertical']
 #init_lights = {'horizontal': init_horizontal_light, 'vertical': init_vertical_light}
@@ -657,13 +657,13 @@ t0 = time.time()
 animate(0)
 t1 = time.time()
 interval = (t1 - t0)
-num_frames = 8000 # number of the first frames to save in video
+num_frames = 2000 # number of the first frames to save in video
 ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval, blit=True, repeat=False) # by default the animation function loops, we set repeat to False in order to limit the number of frames generated to num_frames
 
 if options.save_video:
     Writer = animation.writers['ffmpeg']
     writer = Writer(fps = 30, metadata=dict(artist='Me'), bitrate=-1)
-    ani.save('movies/peds.avi', writer=writer, dpi=200)
+    ani.save('movies/test.avi', writer=writer, dpi=200)
 plt.show()
 t2 = time.time()
 print('Total elapsed time: ' + str(t2-t0))
