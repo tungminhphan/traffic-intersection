@@ -648,8 +648,6 @@ def animate(frame_idx): # update animation by dt
             ys.append(ys[0])
             walls[3].set_data(xs,ys)
 
-
-
     # show artists
     global stage # set up a global stage
     stage = ax.imshow(background, origin="lower") # update the stage

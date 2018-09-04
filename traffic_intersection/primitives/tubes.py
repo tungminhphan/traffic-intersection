@@ -16,8 +16,10 @@ import scipy.io
 import warnings
 if __name__ == '__main__':
     make_dictionary = True
+    rel = '../'
 else:
     make_dictionary = options.create_collision_dictionary
+    rel = ''
 # set dir_path to current directory
 dir_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 car_scale_factor = params.car_scale_factor
@@ -134,7 +136,7 @@ def compute_collision_dictionary(primitive_id_set):
                     y = ys[idx]
                     rects_2.append((x, y))
                 if not collision.nonoverlapping_polygons(rects_1, rects_2)[0]:
-                    colsn_dict[(primitive_id_set[i], ii)].add('crossing' + direction)
+                    colsn_dict[(primitive_id_set[i], ii)].add('crossing_' + direction)
                     print('added crossing')
     return colsn_dict
 
@@ -148,8 +150,8 @@ if make_dictionary:
         edge_to_prim_id[(from_node, to_node)] = prim_id
     collision_dictionary = compute_collision_dictionary(prim_id_set)
     edge_to_prim_id[(from_node, to_node)] = prim_id
-    np.save('prepare/collision_dictionary.npy', collision_dictionary)
-    np.save('prepare/edge_to_prim_id.npy', edge_to_prim_id)
+    np.save(rel + 'prepare/collision_dictionary.npy', collision_dictionary)
+    np.save(rel + 'prepare/edge_to_prim_id.npy', edge_to_prim_id)
     warnings.warn('New Collision and Primitive ID Dictionaries Created!')
 else:
     warnings.warn('Warning: Using Last Computed Collision and Primitive ID Dictionaries!')
