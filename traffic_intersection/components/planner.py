@@ -144,10 +144,10 @@ def update(self, dt):
     self._state['vertical'] = self.get_counterpart(new_horizontal_state)
 
 def crossing_safe(interval, which_light, traffic_lights, walk_signs):
+    interval_length = interval[1] - interval[0]
+    first_time = interval[0]
+    is_safe = False
     if which_light in {'north', 'south', 'west', 'east'}:
-        is_safe = False
-        interval_length = interval[1] - interval[0]
-        first_time = interval[0]
         predicted_state = traffic_lights.predict(first_time, True) # if horizontal
         if which_light == 'north' or which_light == 'south': # if vertical
             predicted_state = traffic_lights.get_counterpart(predicted_state) # vertical light
@@ -158,14 +158,16 @@ def crossing_safe(interval, which_light, traffic_lights, walk_signs):
         elif color == 'green':
             remaining_time += traffic_lights._max_time['yellow']
             is_safe = remaining_time > interval_length
-        return is_safe
-    else:
-        if which_light in {'crossingnorth', 'crossingsouth'}:
-            walk_sign = walk_signs[1] # vertical walk sign
+    else: # if invisible wall is due to crossing
+        predicted_state = traffic_lights.predict(first_time, True) # if horizontal
+        if which_light == 'crossing_west' or which_light == 'crossing_east': # if vertical
+            predicted_state = traffic_lights.get_counterpart(predicted_state) # vertical light
+        color, time = predicted_state
+        if color == 'green' and time <= traffic_lights._max_time['green']/3:
+            is_safe = False
         else:
-            walk_sign = walk_signs[0] # horizontal walk sign
-        return not walk_sign
-
+            is_safe = True
+    return is_safe
 def backtrack(scheduled_times, path, edge_time_stamps):
     '''
     find the furthest node to stop at (potentially forever)
