@@ -48,7 +48,7 @@ edge_to_prim_id = np.load('prepare/edge_to_prim_id.npy').item()
 for prim_id in range(0, load_primitives.num_of_prims):
     try:
         controller_found = get_prim_data(prim_id, 'controller_found')[0]
-        if controller_found:
+        if controller_found and prim_id not in {29,30,31,32, 129, 130, 131}:
             from_node = tuple(get_prim_data(prim_id, 'x0'))
             to_node = tuple(get_prim_data(prim_id, 'x_f'))
             time_weight = get_prim_data(prim_id, 't_end')[0]
@@ -421,7 +421,7 @@ def animate(frame_idx): # update animation by dt
                 original_request_len = request_queue.len()
 
 ######## pedestrian implementation ########
-    if with_probability(0.05*dt/0.1):
+    if with_probability(0.02*dt/0.1):
         new_name, new_begin_node, new_final_node, new_pedestrian = spawn_pedestrian()
         if new_begin_node == new_final_node:
             # print("Request Denied")
@@ -484,7 +484,7 @@ def animate(frame_idx): # update animation by dt
                     pedestrians_waiting.append(person)
 
                 # pedestrians walk faster if not going fast enough to finish crossing the street before walk sign is off or 'false'
-                walk_sign_duration = green_duration / 3
+                walk_sign_duration = green_duration / 3.
                 if is_between(lane1, person_xy) or is_between(lane2, person_xy):
                     remaining_vertical_time = abs(walk_sign_duration - vertical_light_time)
                     walk_faster(person, remaining_vertical_time)
