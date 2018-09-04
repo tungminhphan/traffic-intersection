@@ -183,32 +183,6 @@ def backtrack(scheduled_times, path, edge_time_stamps):
         if not overlapping:
             return False, last_index
     return False, None
-#    ##########################
-#    for last_index in range(len(scheduled_times)-2, 0, -1):
-#        last_prim_id = edge_to_prim_id[(path[last_index-1], path[last_index])]
-#        last_interval = (scheduled_times[last_index], float('inf'))
-#        overlapping = False
-#        for box2 in collision_dictionary[(last_prim_id, params.num_subprims-1)]:
-#            if not isinstance(box2,str):
-#                col_id, jjj = box2
-#            if box2 in edge_time_stamps: # if current loc is already stamped
-#                for inner_interval in edge_time_stamps[(col_id, jjj)]:
-#                    overlapping = overlapping or is_overlapping(last_interval, inner_interval) # if the two intervals overlap
-#        if not overlapping:
-#            return False, last_index
-#    # finally treating first node in path
-#    overlapping = False
-#    first_prim_id = edge_to_prim_id[(path[0], path[1])]
-#    last_interval = (scheduled_times[0], float('inf'))
-#    for box3 in collision_dictionary[(first_prim_id, 0)]:
-#        if not isinstance(box3, str):
-#            col_id, jjj = box3
-#        if box3 in edge_time_stamps: # if current loc is already stamped
-#            for curr_interval in edge_time_stamps[(col_id, jjj)]:
-#                overlapping = overlapping or is_overlapping(last_interval, curr_interval) # if the two intervals overlap
-#    if not overlapping:
-#        return False, 0
-#    return False, None
 
 def is_safe(path, current_time, primitive_graph, edge_time_stamps, traffic_lights, walk_signs):
     now = current_time
