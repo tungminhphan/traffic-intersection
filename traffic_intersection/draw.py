@@ -179,7 +179,7 @@ show_axes = False
 if not show_axes:
     plt.axis('off')
 # sampling time
-dt = 0.01
+dt = 0.1
 # create car
 def spawn_car():
     def generate_license_plate():
