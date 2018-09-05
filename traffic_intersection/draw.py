@@ -48,7 +48,7 @@ edge_to_prim_id = np.load('prepare/edge_to_prim_id.npy').item()
 for prim_id in range(0, load_primitives.num_of_prims):
     try:
         controller_found = get_prim_data(prim_id, 'controller_found')[0]
-        if controller_found:
+        if controller_found and prim_id not in {29,30,31,32, 129, 130, 131}:
             from_node = tuple(get_prim_data(prim_id, 'x0'))
             to_node = tuple(get_prim_data(prim_id, 'x_f'))
             time_weight = get_prim_data(prim_id, 't_end')[0]
@@ -237,7 +237,7 @@ def safe_to_walk(green_duration, light_color, light_time):
     return(light_color == 'green' and (light_time + walk_sign_delay) <= (green_duration / 3 + walk_sign_delay))
 
 # create traffic lights
-traffic_lights = traffic_signals.TrafficLights(3, 23, random_start = True)
+traffic_lights = traffic_signals.TrafficLights(yellow_max = 10, green_max = 50, random_start = True)
 #init_horizontal_light = traffic_lights._state['horizontal']
 #init_vertical_light = traffic_lights._state['vertical']
 #init_lights = {'horizontal': init_horizontal_light, 'vertical': init_vertical_light}
@@ -433,7 +433,7 @@ def animate(frame_idx): # update animation by dt
                 original_request_len = request_queue.len()
 
 ######## pedestrian implementation ########
-    if with_probability(0.05*dt/0.1):
+    if with_probability(0.02*dt/0.1):
         new_name, new_begin_node, new_final_node, new_pedestrian = spawn_pedestrian()
         if new_begin_node == new_final_node:
             # print("Request Denied")
@@ -482,7 +482,7 @@ def animate(frame_idx): # update animation by dt
         for person in pedestrians:
             if (person.state[0] <= x_lim and person.state[0] >= 0 and person.state[1] >= 0 and person.state[1] <= y_lim):
                 person_xy = (person.state[0], person.state[1])
-                walk_sign_duration = green_duration / 3
+                walk_sign_duration = green_duration / 3.
                 remaining_vertical_time = abs(walk_sign_duration - vertical_light_time)
                 remaining_horizontal_time = abs(walk_sign_duration  - horizontal_light_time)
 
@@ -670,13 +670,13 @@ t0 = time.time()
 animate(0)
 t1 = time.time()
 interval = (t1 - t0)
-num_frames = 8000 # number of the first frames to save in video
+num_frames = 2000 # number of the first frames to save in video
 ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval, blit=True, repeat=False) # by default the animation function loops, we set repeat to False in order to limit the number of frames generated to num_frames
 
 if options.save_video:
     Writer = animation.writers['ffmpeg']
     writer = Writer(fps = 30, metadata=dict(artist='Me'), bitrate=-1)
-    ani.save('movies/peds.avi', writer=writer, dpi=200)
+    ani.save('movies/test.avi', writer=writer, dpi=200)
 plt.show()
 t2 = time.time()
 print('Total elapsed time: ' + str(t2-t0))

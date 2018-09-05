@@ -153,20 +153,18 @@ def crossing_safe(interval, which_light, traffic_lights, walk_signs):
             predicted_state = traffic_lights.get_counterpart(predicted_state) # vertical light
         color, time = predicted_state
         remaining_time = traffic_lights._max_time[color] - time
-        if color == 'yellow':
-            is_safe = remaining_time > interval_length
-        elif color == 'green':
-            remaining_time += traffic_lights._max_time['yellow']
-            is_safe = remaining_time > interval_length
+#        if color == 'yellow':
+#            is_safe = remaining_time > interval_length
+#        elif color == 'green':
+#            remaining_time += traffic_lights._max_time['yellow']
+#            is_safe = remaining_time > interval_length
+        is_safe = (color == 'yellow' and remaining_time > interval_length) or (color == 'green' and remaining_time + traffic_lights._max_time['yellow'] > interval_length)
     else: # if invisible wall is due to crossing
         predicted_state = traffic_lights.predict(first_time, True) # if horizontal
         if which_light == 'crossing_west' or which_light == 'crossing_east': # if vertical
             predicted_state = traffic_lights.get_counterpart(predicted_state) # vertical light
         color, time = predicted_state
-        if color == 'green' and time <= traffic_lights._max_time['green']/3:
-            is_safe = False
-        else:
-            is_safe = True
+        is_safe = not (color == 'green' and time <= traffic_lights._max_time['green']/3 or color == 'yellow' and time < traffic_lights._max_time['yellow']/10)
     return is_safe
 def backtrack(scheduled_times, path, edge_time_stamps):
     '''
