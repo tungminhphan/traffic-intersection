@@ -40,7 +40,7 @@ import matplotlib.pyplot as plt
 
 # set dir_path to current directory
 dir_path = os.path.dirname(os.path.realpath(__file__))
-intersection_fig = dir_path + "/components/imglib/intersection_states/intersection_"
+intersection_fig = dir_path + "/components/imglib/intersection_states/intersection_lights.png"
 
 G = graph.WeightedDirectedGraph() # primitive graph
 edge_to_prim_id = np.load('prepare/edge_to_prim_id.npy').item()
@@ -169,20 +169,68 @@ horizontal_stop_fig = stop_fig.rotate(-90, expand = True)
 def draw_walk_sign(orientation, safe_to_walk):
     if orientation == 'vertical':
         if safe_to_walk:
-            x, y = find_corner_coordinates(0, 0, 380, 670, 0, vertical_go_fig)
+            x, y = find_corner_coordinates(0, 0, 378, 621, 0, vertical_go_fig) # vertical top left
+            background.paste(vertical_go_fig, (int(x), int(y)), vertical_go_fig)
+            x, y = find_corner_coordinates(0, 0, 684, 90, 0, vertical_go_fig) # vertical bottom right
             background.paste(vertical_go_fig, (int(x), int(y)), vertical_go_fig)
         else:
-            x, y = find_corner_coordinates(0, 0, 380, 670, 0, vertical_stop_fig)
+            x, y = find_corner_coordinates(0, 0, 378, 621, 0, vertical_stop_fig)
+            background.paste(vertical_stop_fig, (int(x), int(y)), vertical_stop_fig)
+            x, y = find_corner_coordinates(0, 0, 684, 90, 0, vertical_stop_fig)
             background.paste(vertical_stop_fig, (int(x), int(y)), vertical_stop_fig)
     elif orientation == 'horizontal':
         if safe_to_walk:
-            x, y = find_corner_coordinates(0, 0, 260, 195, 0, horizontal_go_fig)
+            x, y = find_corner_coordinates(0, 0, 272, 193, 0, horizontal_go_fig) # horizontal bottom left
+            background.paste(horizontal_go_fig, (int(x), int(y)), horizontal_go_fig)
+            x, y = find_corner_coordinates(0, 0, 735, 565, 0, horizontal_go_fig)# horizontal top right
             background.paste(horizontal_go_fig, (int(x), int(y)), horizontal_go_fig)
         else:
-            x, y = find_corner_coordinates(0, 0, 260, 195, 0, horizontal_stop_fig)
+            x, y = find_corner_coordinates(0, 0, 272, 193, 0, horizontal_stop_fig)
+            background.paste(horizontal_stop_fig, (int(x), int(y)), horizontal_stop_fig)
+            x, y = find_corner_coordinates(0, 0, 735, 565, 0, horizontal_stop_fig)
             background.paste(horizontal_stop_fig, (int(x), int(y)), horizontal_stop_fig)
     else:
         TypeError('Orientation must be vertical or horizontal')
+
+green_light_png = dir_path + '/components/imglib/intersection_states/green_light.png'
+green_light_fig = Image.open(green_light_png)
+yellow_light_png = dir_path + '/components/imglib/intersection_states/yellow_light.png'
+yellow_light_fig = Image.open(yellow_light_png)
+red_light_png = dir_path + '/components/imglib/intersection_states/red_light.png'
+red_light_fig = Image.open(red_light_png)
+def draw_vertical_lights(light_color):
+    if light_color == 'green':
+        x, y = find_corner_coordinates(0, 0, 379, 642, 0, green_light_fig) # top left 
+        background.paste(green_light_fig, (int(x), int(y)), green_light_fig)
+        x, y = find_corner_coordinates(0, 0, 684, 112, 0, green_light_fig) # bottom right
+        background.paste(green_light_fig, (int(x), int(y)), green_light_fig)
+    elif light_color == 'yellow':
+        x, y = find_corner_coordinates(0, 0, 379, 659, 0, yellow_light_fig)
+        background.paste(yellow_light_fig, (int(x), int(y)), yellow_light_fig)
+        x, y = find_corner_coordinates(0, 0, 684, 129, 0, yellow_light_fig)
+        background.paste(yellow_light_fig, (int(x), int(y)), yellow_light_fig)
+    else:
+        x, y = find_corner_coordinates(0, 0, 379, 677, 0, red_light_fig)
+        background.paste(red_light_fig, (int(x), int(y)), red_light_fig)
+        x, y = find_corner_coordinates(0, 0, 684, 146, 0, red_light_fig)
+        background.paste(red_light_fig, (int(x), int(y)), red_light_fig)
+
+def draw_horizontal_lights(light_color):
+    if light_color == 'green':
+        x, y = find_corner_coordinates(0, 0, 294, 193, 0, green_light_fig) 
+        background.paste(green_light_fig, (int(x), int(y)), green_light_fig)
+        x, y = find_corner_coordinates(0, 0, 757, 566, 0, green_light_fig)
+        background.paste(green_light_fig, (int(x), int(y)), green_light_fig)
+    elif light_color == 'yellow':
+        x, y = find_corner_coordinates(0, 0, 311, 193, 0, yellow_light_fig)
+        background.paste(yellow_light_fig, (int(x), int(y)), yellow_light_fig)
+        x, y = find_corner_coordinates(0, 0, 774, 566, 0, yellow_light_fig)
+        background.paste(yellow_light_fig, (int(x), int(y)), yellow_light_fig)
+    else:
+        x, y = find_corner_coordinates(0, 0, 329, 193, 0, red_light_fig)
+        background.paste(red_light_fig, (int(x), int(y)), red_light_fig)
+        x, y = find_corner_coordinates(0, 0, 791, 566, 0, red_light_fig)
+        background.paste(red_light_fig, (int(x), int(y)), red_light_fig)
 
 # creates figure
 fig = plt.figure()
@@ -233,7 +281,7 @@ def path_to_primitives(path):
 
 #if true, pedestrians can cross street and cars cannot cross
 def safe_to_walk(green_duration, light_color, light_time):
-    walk_sign_delay = green_duration / 10 
+    walk_sign_delay = green_duration / 10
     return(light_color == 'green' and (light_time + walk_sign_delay) <= (green_duration / 3 + walk_sign_delay))
 
 # create traffic lights
@@ -243,7 +291,7 @@ traffic_lights = traffic_signals.TrafficLights(yellow_max = 10, green_max = 50, 
 #init_lights = {'horizontal': init_horizontal_light, 'vertical': init_vertical_light}
 horizontal_light = traffic_lights.get_states('horizontal', 'color')
 vertical_light = traffic_lights.get_states('vertical', 'color')
-background = Image.open(intersection_fig + horizontal_light + '_' + vertical_light + '.png')
+background = Image.open(intersection_fig)
 
 pedestrians = []
 pedestrian_queue = queue.Queue()
@@ -287,7 +335,6 @@ def is_between(lane, person_xy):
 def continue_walking(person, walk_sign, lane1, lane2, direction, remaining_time):
     person_xy = (person.state[0], person.state[1])
     theta = person.state[2]
-
     if person_xy in (lane1 + lane2) and walk_sign:
         prim_data, prim_progress = person.prim_queue.get_element_at_index(-2)
         start, finish, vee = prim_data
@@ -336,7 +383,7 @@ def animate(frame_idx): # update animation by dt
     horizontal_walk_safe = safe_to_walk(green_duration, horizontal_light, horizontal_light_time)
     draw_walk_sign('vertical', vertical_walk_safe)
     draw_walk_sign('horizontal', horizontal_walk_safe)
-
+ 
     """ online frame update """
     global background
     if with_probability(0.2*dt/0.1):
@@ -461,7 +508,7 @@ def animate(frame_idx): # update animation by dt
 
     # update background
     background.close()
-    background = Image.open(intersection_fig + horizontal_light + '_' + vertical_light + '.png')
+    background = Image.open(intersection_fig)
     x_lim, y_lim = background.size
 
     # if sign is true then walk, stop if false
@@ -469,6 +516,8 @@ def animate(frame_idx): # update animation by dt
     horizontal_walk_safe = safe_to_walk(green_duration, horizontal_light, horizontal_light_time)
     draw_walk_sign('vertical', vertical_walk_safe)
     draw_walk_sign('horizontal', horizontal_walk_safe)
+    draw_vertical_lights(vertical_light)
+    draw_horizontal_lights(horizontal_light)
 
     # update pedestrians
     pedestrians_to_keep = []
@@ -633,6 +682,7 @@ def animate(frame_idx): # update animation by dt
     draw_medic_signs(medic_signs)
     draw_pedestrians(pedestrians_to_keep) # draw pedestrians to background
     draw_cars(cars_to_keep)
+
 
 
     # plot traffic light walls
