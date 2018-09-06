@@ -35,7 +35,7 @@ def dijkstra(start, end, graph):
         score = {}
         predecessor = {}
         unmarked_nodes = graph._nodes.copy() # create a copy of set of nodes in graph
-        if start not in graph._nodes or end not in graph._nodes:
+        if start not in graph._nodes:
             print(start)
             raise SyntaxError("The start node is not in the graph!")
         elif end not in graph._nodes:

@@ -17,6 +17,7 @@ import prepare.graph as graph
 import prepare.queue as queue
 import assumes.params as params
 import primitives.tubes as tubes
+#from primitives.tubes import true_zero_velocity, round_node
 import primitives.load_primitives as load_primitives
 from primitives.load_primitives import get_prim_data
 from components.aux.pedestrian_names import names
@@ -120,11 +121,11 @@ def draw_pedestrians(pedestrians):
         background.paste(person_fig, (int(x_corner), int(y_corner)), person_fig)
 
 # set random seed (for debugging)
-# random.seed(99)
-# np.random.seed(99)
+random.seed(2)
+np.random.seed(400)
 
 # disable antialiasing for better performance
-antialias_enabled = True
+antialias_enabled = False
 def draw_cars(vehicles):
     for vehicle in vehicles:
         vee, theta, x, y = vehicle.state
@@ -271,10 +272,21 @@ all_wavefronts = set()
 request_queue = queue.Queue()
 waiting = dict()
 
+def flip_last_node(path): # turn last primitive to a stopping primitive
+    new_path = path[0:-1]
+    new_path.append((0, path[-1][1], path[-1][2], path[-1][3]))
+    return new_path
+
+def flip_node(node): # turn last primitive to a stopping primitive
+    new_node = (0, node[1], node[2], node[3])
+    return new_node
+
 def pause_car(the_car):
+    #the_car.new_pause = True
     the_car.prim_queue.enqueue((-1, 0))
 
 def unpause_car(the_car, plate_number):
+    #the_car.new_unpause = True
     the_car.prim_queue.remove((-1,0))
     if plate_number in waiting.keys():
         del waiting[plate_number]
@@ -358,14 +370,6 @@ def animate(frame_idx): # update animation by dt
     original_request_len = request_queue.len()
     while request_queue.len() > 0 and not deadlock: # if there is at least one request in the queue
         plate_number, prestart_node, end_node, the_car = request_queue.pop() # take the first request
-#        ii = 60
-#        for jj in range(params.num_subprims):
-#            if (ii,jj) in edge_time_stamps:
-#                print('time stamp for (' + str(ii) +  ',' + str(jj) + ')' + str(edge_time_stamps[(ii,jj)]))
-#        ii = 62
-#        for jj in range(params.num_subprims):
-#            if (ii,jj) in edge_time_stamps:
-#                print('time stamp for (' + str(ii) +  ',' + str(jj) + ')' + str(edge_time_stamps[(ii,jj)]))
         start_velocity = prestart_node[0]
         if plate_number not in effective_current_times.keys():
             effective_current_times[plate_number] = current_time
@@ -422,17 +426,33 @@ def animate(frame_idx): # update animation by dt
                     cars[plate_number] = the_car # add the car
                 if plate_number in waiting.keys(): # if plate number is already waiting
                     edge_time_stamps[wait_id].add((interval[0], effective_current_times[plate_number]))
-                partial_path = shortest_path[:first_conflict_edge_idx+1]
-                _, last_interval = planner.time_stamp_edge(path = partial_path, edge_time_stamps = edge_time_stamps, current_time = effective_current_times[plate_number], primitive_graph = G, partial=True)
-                path_prims = path_to_primitives(path=partial_path) # add primitives
-                for prim_id in path_prims:
-                    cars[plate_number].prim_queue.enqueue((prim_id, 0))
-                    prim_time = get_prim_data(prim_id, 't_end')[0]
-                    effective_current_times[plate_number] += prim_time
-                pause_car(the_car)
-                start_node = (partial_path[-1][0], partial_path[-1][1], partial_path[-1][2], partial_path[-1][3])
-                wait_id = (path_prims[-1], params.num_subprims-1)
-                waiting[plate_number] = (wait_id, last_interval) # add/update current node there
+                backtracking_idx = 0
+                partial_path = []
+                partial_end = float('inf')
+                while partial_end >= 0:
+                    partial_end = first_conflict_edge_idx - backtracking_idx
+                    try:
+                        if partial_end == 0:
+                            partial_path = [flip_node(shortest_path[partial_end])]
+                        else:
+                            _, partial_path = planner.dijkstra(start_node, flip_node(shortest_path[partial_end]), G)
+                        backtracking_idx += 1
+                    except SyntaxError:
+                        backtracking_idx += 1
+                    safety_check, _ = planner.is_safe(path = partial_path, current_time = effective_current_times[plate_number], primitive_graph = G, edge_time_stamps = edge_time_stamps, traffic_lights = traffic_lights, walk_signs = (vertical_walk_safe, horizontal_walk_safe))
+                    if len(partial_path) is not 0 and safety_check:
+                        break
+                if len(partial_path) > 1:
+                    _, last_interval = planner.time_stamp_edge(path = partial_path, edge_time_stamps = edge_time_stamps, current_time = effective_current_times[plate_number], primitive_graph = G, partial=True)
+                    path_prims = path_to_primitives(path=partial_path) # add primitives
+                    for prim_id in path_prims:
+                        cars[plate_number].prim_queue.enqueue((prim_id, 0))
+                        prim_time = get_prim_data(prim_id, 't_end')[0]
+                        effective_current_times[plate_number] += prim_time
+                    pause_car(the_car)
+                    start_node = (partial_path[-1][0], partial_path[-1][1], partial_path[-1][2], partial_path[-1][3])
+                    wait_id = (path_prims[-1], params.num_subprims-1)
+                    waiting[plate_number] = (wait_id, last_interval) # add/update current node there
             new_request = (plate_number, start_node, end_node, the_car)
             request_queue.enqueue(new_request)
         if service_count == original_request_len:
@@ -646,8 +666,6 @@ def animate(frame_idx): # update animation by dt
     draw_pedestrians(pedestrians_to_keep) # draw pedestrians to background
     draw_cars(cars_to_keep)
 
-
-
     # plot traffic light walls
     walls = [ax.plot([], [],'r')[0] for _ in range(4)]
     if options.show_traffic_light_walls:
@@ -689,7 +707,7 @@ ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval
 if options.save_video:
     Writer = animation.writers['ffmpeg']
     writer = Writer(fps = 60, metadata=dict(artist='Me'), bitrate=-1)
-    ani.save('movies/test2.avi', writer=writer, dpi=200)
+    ani.save('movies/22.avi', writer=writer, dpi=200)
 plt.show()
 t2 = time.time()
 print('Total elapsed time: ' + str(t2-t0))

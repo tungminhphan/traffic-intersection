@@ -79,8 +79,11 @@ class KinematicCar:
         self.params = (L, a_max, a_min, nu_max, nu_min, vee_max)
         self.alive_time = 0
         self.plate_number = plate_number
-        self.state = np.array(init_state, dtype='float')
+        self.init_state = np.array(init_state, dtype='float')
+        self.state = self.init_state
         self.color = color
+#        self.new_unpause = False
+#        self.new_pause = False
         # extended state required for Bastian's primitive computation
         self.extended_state = None
         self.is_honking = is_honking
@@ -182,6 +185,9 @@ class KinematicCar:
             prim_id, prim_progress = self.extract_primitive()
             # load primitive data TODO: make this portion of the code more automated
             if prim_id > -1:
+#                if self.new_unpause:
+#                    self.new_unpause = False
+#                    self.state = self.init_state
                 # the primitive corresponding to the primitive number
                 prim = mat['MA3'][prim_id, 0]
                 # extract duration of primitive
@@ -222,6 +228,9 @@ class KinematicCar:
                 prim_progress = prim_progress + dt / t_end
                 self.prim_queue.replace_top((prim_id, prim_progress))
             else:  # if is stopping primitive
+#                if self.new_pause:
+#                    self.new_pause = False
+#                    self.init_state = self.state # init is previous state
                 self.next((0, 0), dt)
 
 class DynamicCar(KinematicCar): # bicycle 5 DOF model

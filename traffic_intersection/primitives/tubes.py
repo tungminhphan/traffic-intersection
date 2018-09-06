@@ -140,12 +140,27 @@ def compute_collision_dictionary(primitive_id_set):
                     print('added crossing')
     return colsn_dict
 
+
+# convert velocity to int
+def round_node(node):
+    new_node = tuple(round(val,2) for val in node) # round to 2 decimal places
+    return new_node
+
+def true_zero_velocity(node):
+    if abs(node[0]) < 0.01: # a small number
+        new_node = (0, node[1], node[2], node[3])
+    else:
+        new_node = node
+    print(node)
+    print(new_node)
+    return new_node
+
 # computes collision_dictionary
 if make_dictionary:
     prim_id_set = [idx for idx in range(num_of_prims) if get_prim_data(idx, 'controller_found')]
     edge_to_prim_id = dict() # dictionary to convert primitive move to primitive ID
     for prim_id in prim_id_set:
-        from_node = tuple(get_prim_data(prim_id, 'x0'))
+        from_node =  tuple(get_prim_data(prim_id, 'x0'))
         to_node = tuple(get_prim_data(prim_id, 'x_f'))
         edge_to_prim_id[(from_node, to_node)] = prim_id
     collision_dictionary = compute_collision_dictionary(prim_id_set)
