@@ -148,8 +148,8 @@ medic_signs = []
 medic_sign = dir_path + '/components/imglib/medic.png'
 medic_fig = Image.open(medic_sign).convert("RGBA")
 medic_fig = medic_fig.resize((15,15))
-def draw_medic_signs(medic_signs):
-    for coordinate in medic_signs:
+def draw_medic_signs(medic_signs_coordinates):
+    for coordinate in medic_signs_coordinates:
         x, y = find_corner_coordinates(0, 0, coordinate[0], coordinate[1], 0, medic_fig)
         background.paste(medic_fig, (int(x), int(y)), medic_fig)  
 
@@ -166,31 +166,18 @@ vertical_stop_fig = stop_fig.rotate(-180, expand = False)
 horizontal_go_fig = go_fig.rotate(-90, expand = True)
 horizontal_stop_fig = stop_fig.rotate(-90, expand = True)
 
-def draw_walk_sign(orientation, safe_to_walk):
-    if orientation == 'vertical':
-        if safe_to_walk:
-            x, y = find_corner_coordinates(0, 0, 378, 621, 0, vertical_go_fig) # vertical top left
-            background.paste(vertical_go_fig, (int(x), int(y)), vertical_go_fig)
-            x, y = find_corner_coordinates(0, 0, 684, 90, 0, vertical_go_fig) # vertical bottom right
-            background.paste(vertical_go_fig, (int(x), int(y)), vertical_go_fig)
-        else:
-            x, y = find_corner_coordinates(0, 0, 378, 621, 0, vertical_stop_fig)
-            background.paste(vertical_stop_fig, (int(x), int(y)), vertical_stop_fig)
-            x, y = find_corner_coordinates(0, 0, 684, 90, 0, vertical_stop_fig)
-            background.paste(vertical_stop_fig, (int(x), int(y)), vertical_stop_fig)
-    elif orientation == 'horizontal':
-        if safe_to_walk:
-            x, y = find_corner_coordinates(0, 0, 272, 193, 0, horizontal_go_fig) # horizontal bottom left
-            background.paste(horizontal_go_fig, (int(x), int(y)), horizontal_go_fig)
-            x, y = find_corner_coordinates(0, 0, 735, 565, 0, horizontal_go_fig)# horizontal top right
-            background.paste(horizontal_go_fig, (int(x), int(y)), horizontal_go_fig)
-        else:
-            x, y = find_corner_coordinates(0, 0, 272, 193, 0, horizontal_stop_fig)
-            background.paste(horizontal_stop_fig, (int(x), int(y)), horizontal_stop_fig)
-            x, y = find_corner_coordinates(0, 0, 735, 565, 0, horizontal_stop_fig)
-            background.paste(horizontal_stop_fig, (int(x), int(y)), horizontal_stop_fig)
-    else:
-        TypeError('Orientation must be vertical or horizontal')
+vertical_walk_fig = {True: vertical_go_fig, False: vertical_stop_fig}
+horizontal_walk_fig = {True: horizontal_go_fig, False: horizontal_stop_fig}
+walk_sign_figs = {'vertical': vertical_walk_fig, 'horizontal': horizontal_walk_fig}
+walk_sign_coordinates = {'vertical': [(378, 621), (684, 90)], 'horizontal': [(272, 193), (735, 565)]}
+
+def draw_walk_signs(vertical_fig, horizontal_fig):
+    for coordinate in walk_sign_coordinates['vertical']:
+        x, y = find_corner_coordinates(0, 0, coordinate[0], coordinate[1], 0, vertical_fig) 
+        background.paste(vertical_fig, (int(x), int(y)), vertical_fig)
+    for coordinate in walk_sign_coordinates['horizontal']:
+        x, y = find_corner_coordinates(0, 0, coordinate[0], coordinate[1], 0, horizontal_fig) 
+        background.paste(horizontal_fig, (int(x), int(y)), horizontal_fig)
 
 green_light_png = dir_path + '/components/imglib/intersection_states/green_light.png'
 green_light_fig = Image.open(green_light_png)
@@ -198,39 +185,16 @@ yellow_light_png = dir_path + '/components/imglib/intersection_states/yellow_lig
 yellow_light_fig = Image.open(yellow_light_png)
 red_light_png = dir_path + '/components/imglib/intersection_states/red_light.png'
 red_light_fig = Image.open(red_light_png)
-def draw_vertical_lights(light_color):
-    if light_color == 'green':
-        x, y = find_corner_coordinates(0, 0, 379, 642, 0, green_light_fig) # top left 
-        background.paste(green_light_fig, (int(x), int(y)), green_light_fig)
-        x, y = find_corner_coordinates(0, 0, 684, 112, 0, green_light_fig) # bottom right
-        background.paste(green_light_fig, (int(x), int(y)), green_light_fig)
-    elif light_color == 'yellow':
-        x, y = find_corner_coordinates(0, 0, 379, 659, 0, yellow_light_fig)
-        background.paste(yellow_light_fig, (int(x), int(y)), yellow_light_fig)
-        x, y = find_corner_coordinates(0, 0, 684, 129, 0, yellow_light_fig)
-        background.paste(yellow_light_fig, (int(x), int(y)), yellow_light_fig)
-    else:
-        x, y = find_corner_coordinates(0, 0, 379, 677, 0, red_light_fig)
-        background.paste(red_light_fig, (int(x), int(y)), red_light_fig)
-        x, y = find_corner_coordinates(0, 0, 684, 146, 0, red_light_fig)
-        background.paste(red_light_fig, (int(x), int(y)), red_light_fig)
 
-def draw_horizontal_lights(light_color):
-    if light_color == 'green':
-        x, y = find_corner_coordinates(0, 0, 294, 193, 0, green_light_fig) 
-        background.paste(green_light_fig, (int(x), int(y)), green_light_fig)
-        x, y = find_corner_coordinates(0, 0, 757, 566, 0, green_light_fig)
-        background.paste(green_light_fig, (int(x), int(y)), green_light_fig)
-    elif light_color == 'yellow':
-        x, y = find_corner_coordinates(0, 0, 311, 193, 0, yellow_light_fig)
-        background.paste(yellow_light_fig, (int(x), int(y)), yellow_light_fig)
-        x, y = find_corner_coordinates(0, 0, 774, 566, 0, yellow_light_fig)
-        background.paste(yellow_light_fig, (int(x), int(y)), yellow_light_fig)
-    else:
-        x, y = find_corner_coordinates(0, 0, 329, 193, 0, red_light_fig)
-        background.paste(red_light_fig, (int(x), int(y)), red_light_fig)
-        x, y = find_corner_coordinates(0, 0, 791, 566, 0, red_light_fig)
-        background.paste(red_light_fig, (int(x), int(y)), red_light_fig)
+colors_of_light = {'green': green_light_fig, 'yellow': yellow_light_fig, 'red': red_light_fig}
+vertical_light_coordinates = {'green':[(379, 642), (684,112)], 'yellow': [(379, 659), (684,129)], 'red': [(379, 677), (684, 146)]}
+horizontal_light_coordinates = {'green':[(294, 193), (757, 566)], 'yellow': [(311, 193), (774, 566)], 'red': [(329, 193), (791, 566)]}
+
+# takes the light color and pastes it at the desired coordinates
+def draw_lights(light_color_fig, coordinates):
+    for coordinate in coordinates:
+        x, y = find_corner_coordinates(0, 0, coordinate[0], coordinate[1], 0, light_color_fig)
+        background.paste(light_color_fig, (int(x), int(y)), light_color_fig)
 
 # creates figure
 fig = plt.figure()
@@ -381,8 +345,8 @@ def animate(frame_idx): # update animation by dt
     # if sign is true then walk, stop if false
     vertical_walk_safe = safe_to_walk(green_duration, vertical_light, vertical_light_time)
     horizontal_walk_safe = safe_to_walk(green_duration, horizontal_light, horizontal_light_time)
-    draw_walk_sign('vertical', vertical_walk_safe)
-    draw_walk_sign('horizontal', horizontal_walk_safe)
+    
+    draw_walk_signs(walk_sign_figs['vertical'][vertical_walk_safe], walk_sign_figs['horizontal'][horizontal_walk_safe])
  
     """ online frame update """
     global background
@@ -514,10 +478,9 @@ def animate(frame_idx): # update animation by dt
     # if sign is true then walk, stop if false
     vertical_walk_safe = safe_to_walk(green_duration, vertical_light, vertical_light_time)
     horizontal_walk_safe = safe_to_walk(green_duration, horizontal_light, horizontal_light_time)
-    draw_walk_sign('vertical', vertical_walk_safe)
-    draw_walk_sign('horizontal', horizontal_walk_safe)
-    draw_vertical_lights(vertical_light)
-    draw_horizontal_lights(horizontal_light)
+    draw_walk_signs(walk_sign_figs['vertical'][vertical_walk_safe], walk_sign_figs['horizontal'][horizontal_walk_safe])
+    draw_lights(colors_of_light[vertical_light], vertical_light_coordinates[vertical_light]) # vertical lights
+    draw_lights(colors_of_light[horizontal_light], horizontal_light_coordinates[horizontal_light]) # horizontal lights
 
     # update pedestrians
     pedestrians_to_keep = []
