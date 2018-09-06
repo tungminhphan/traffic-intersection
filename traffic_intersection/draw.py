@@ -121,8 +121,8 @@ def draw_pedestrians(pedestrians):
         background.paste(person_fig, (int(x_corner), int(y_corner)), person_fig)
 
 # set random seed (for debugging)
-random.seed(2)
-np.random.seed(400)
+#random.seed(2)
+#np.random.seed(400)
 
 # disable antialiasing for better performance
 antialias_enabled = False
@@ -453,6 +453,9 @@ def animate(frame_idx): # update animation by dt
                     start_node = (partial_path[-1][0], partial_path[-1][1], partial_path[-1][2], partial_path[-1][3])
                     wait_id = (path_prims[-1], params.num_subprims-1)
                     waiting[plate_number] = (wait_id, last_interval) # add/update current node there
+                if len(partial_path) == 1 and plate_number not in cars:
+                    cars[plate_number] = the_car # add the car
+                    pause_car(the_car)
             new_request = (plate_number, start_node, end_node, the_car)
             request_queue.enqueue(new_request)
         if service_count == original_request_len:
