@@ -164,7 +164,8 @@ def crossing_safe(interval, which_light, traffic_lights, walk_signs):
         if which_light == 'crossing_west' or which_light == 'crossing_east': # if vertical
             predicted_state = traffic_lights.get_counterpart(predicted_state) # vertical light
         color, time = predicted_state
-        is_safe = not (color == 'green' and time <= traffic_lights._max_time['green']/3 or color == 'yellow' and time < traffic_lights._max_time['yellow']/10)
+        is_safe = not (color == 'green' and time <= traffic_lights._max_time['green']/3)
+        #is_safe = not (color == 'green' and time <= traffic_lights._max_time['green']/3 or color == 'yellow' and time >= traffic_lights._max_time['yellow']/5)
     return is_safe
 def backtrack(scheduled_times, path, edge_time_stamps):
     '''

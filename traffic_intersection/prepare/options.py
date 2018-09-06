@@ -4,5 +4,5 @@ show_boxes = False
 show_tubes = False
 show_honks = False
 show_ids = False
-show_prims = True
+show_prims = False
 show_traffic_light_walls = False
