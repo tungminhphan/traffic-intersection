@@ -50,11 +50,11 @@ class DirectedGraph():
     def plot_edges(self, plt, plt_src_snk = True, edge_width = 0.5, head_width = 0.5, alpha = 0.5,
             markersize = 10):
         for start_node in self._edges:
-            start_x = start_node[0]
-            start_y = start_node[1]
+            start_x = int(start_node[0]) # conver to int to avoid overflow
+            start_y = int(start_node[1])
             for end_node in self._edges[start_node]:
-                end_x = end_node[0]
-                end_y = end_node[1]
+                end_x = int(end_node[0])
+                end_y = int(end_node[1])
                 dx = end_x - start_x
                 dy = end_y - start_y
                 # plot transition

@@ -49,7 +49,7 @@ edge_to_prim_id = np.load('prepare/edge_to_prim_id.npy').item()
 for prim_id in range(0, load_primitives.num_of_prims):
     try:
         controller_found = get_prim_data(prim_id, 'controller_found')[0]
-        if controller_found and prim_id not in {29,30,31,32, 129, 130, 131}:
+        if controller_found and prim_id not in {29,30,31,32, 129, 130, 131, 152, 153, 154, 155, 53, 54, 55, 56}:
             from_node = tuple(get_prim_data(prim_id, 'x0'))
             to_node = tuple(get_prim_data(prim_id, 'x_f'))
             time_weight = get_prim_data(prim_id, 't_end')[0]
@@ -125,7 +125,7 @@ def draw_pedestrians(pedestrians):
 #np.random.seed(400)
 
 # disable antialiasing for better performance
-antialias_enabled = False
+antialias_enabled = True
 def draw_cars(vehicles):
     for vehicle in vehicles:
         vee, theta, x, y = vehicle.state
@@ -704,13 +704,13 @@ t0 = time.time()
 animate(0)
 t1 = time.time()
 interval = (t1 - t0)
-num_frames = 3000 # number of the first frames to save in video
+num_frames = 2000 # number of the first frames to save in video
 ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval, blit=True, repeat=False) # by default the animation function loops, we set repeat to False in order to limit the number of frames generated to num_frames
 
 if options.save_video:
     Writer = animation.writers['ffmpeg']
-    writer = Writer(fps = 60, metadata=dict(artist='Me'), bitrate=-1)
-    ani.save('movies/22.avi', writer=writer, dpi=200)
+    writer = Writer(fps = 20, metadata=dict(artist='Me'), bitrate=-1)
+    ani.save('movies/3hi_fi.avi', writer=writer, dpi=200)
 plt.show()
 t2 = time.time()
 print('Total elapsed time: ' + str(t2-t0))
