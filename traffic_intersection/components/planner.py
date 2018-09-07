@@ -228,16 +228,19 @@ def generate_license_plate():
     return plate_number
 
 
+def extract_destinations(request):
+    pass
+
+def find_split(start, end):
+    return shortest_path
 
 
-#def service_request():
-#    start, end = extract service
-#    while True:
-#    find_shortest_path
-#    if request is safe:
-#        add primitives
-#    else:
-#        head, tail = split(shortest_path)
+def service_request(request, graph):
+    depart, arrive = extract_destinations(request)
+    _, path = dijkstra(depart, arrive)
+    transit = find_split(path)
+    add primitives from depart to transit
+    time stamp from depart to transit
 
 
 

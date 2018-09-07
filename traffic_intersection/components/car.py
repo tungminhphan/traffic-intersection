@@ -22,12 +22,13 @@ import math
 from math import pi
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
-blue_car_fig = dir_path + "/imglib/cars/blue_car.png"
-gray_car_fig = dir_path + "/imglib/cars/gray_car.png"
-car_figs = {
-    "blue": blue_car_fig,
-    "gray": gray_car_fig
-}
+car_colors = {'blue', 'gray', 'white', 'yellow', 'brown',
+        'white1','green', 'white_cross', 'cyan', 'red1', 'orange'}
+#car_colors = {'blue', 'gray', 'black', 'white', 'yellow', 'brown', 'white1','green', 'white_cross', 'cyan', 'red1', 'orange', 'white2'}
+car_figs = dict()
+for color in car_colors:
+    car_figs[color] = dir_path + '/imglib/cars/' + color + '_car.png'
+
 mat = scipy.io.loadmat(primitive_data)
 
 
@@ -74,8 +75,8 @@ class KinematicCar:
                  # queue of primitives, each item in the queue has the form (prim_id, prim_progress) where prim_id is the primitive ID and prim_progress is the progress of the primitive)
                  prim_queue=None,
                  fuel_level=float('inf')):  # TODO: fuel level of the car - FUTURE FEATURE)
-        if color != 'blue' and color != 'gray':
-            raise Exception("Color must either be blue or gray!")
+        if color not in car_colors:
+            raise Exception("This car color doesn't exist!")
         self.params = (L, a_max, a_min, nu_max, nu_min, vee_max)
         self.alive_time = 0
         self.plate_number = plate_number
@@ -92,10 +93,7 @@ class KinematicCar:
         else:
             self.prim_queue = prim_queue
         self.fuel_level = fuel_level
-        if color == 'blue':
-            self.fig = Image.open(blue_car_fig)
-        else:
-            self.fig = Image.open(gray_car_fig)
+        self.fig = Image.open(car_figs[color])
 
     def state_dot(self,
                   state,

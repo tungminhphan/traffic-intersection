@@ -47,14 +47,14 @@ class DirectedGraph():
         for start_node in self._edges:
             print(str(start_node) + ' -> ' +  str(list(self._edges[start_node])).strip('[]'))
 
-    def plot_edges(self, plt, plt_src_snk = True, edge_width = 0.5, head_width = 0.5, alpha = 0.5,
+    def plot_edges(self, plt, plt_src_snk = False, edge_width = 0.5, head_width = 0.5, alpha = 0.5,
             markersize = 10):
         for start_node in self._edges:
-            start_x = int(start_node[0]) # conver to int to avoid overflow
-            start_y = int(start_node[1])
+            start_x = int(start_node[2]) # conver to int to avoid overflow
+            start_y = int(start_node[3])
             for end_node in self._edges[start_node]:
-                end_x = int(end_node[0])
-                end_y = int(end_node[1])
+                end_x = int(end_node[2])
+                end_y = int(end_node[3])
                 dx = end_x - start_x
                 dy = end_y - start_y
                 # plot transition
@@ -65,17 +65,16 @@ class DirectedGraph():
             node_y = np.zeros(len(self._sources))
             k = 0
             for node in self._sources:
-                print(node)
-                node_x[k] = node[0]
-                node_y[k] = node[1]
+                node_x[k] = node[2]
+                node_y[k] = node[3]
                 k += 1
             plt.plot(node_x, node_y, 'ro', alpha = alpha, markersize=10)
             node_x = np.zeros(len(self._sinks))
             node_y = np.zeros(len(self._sinks))
             k = 0
             for node in self._sinks:
-                node_x[k] = node[0]
-                node_y[k] = node[1]
+                node_x[k] = node[2]
+                node_y[k] = node[3]
                 k += 1
             plt.plot(node_x, node_y, 'bo', alpha = alpha, markersize=10)
             plt.legend(['sources', 'sinks'])

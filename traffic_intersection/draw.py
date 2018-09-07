@@ -43,34 +43,8 @@ import matplotlib.pyplot as plt
 dir_path = os.path.dirname(os.path.realpath(__file__))
 intersection_fig = dir_path + "/components/imglib/intersection_states/intersection_lights.png"
 
-G = graph.WeightedDirectedGraph() # primitive graph
+G = car_graph.G # primitive graph
 edge_to_prim_id = np.load('prepare/edge_to_prim_id.npy').item()
-
-for prim_id in range(0, load_primitives.num_of_prims):
-    try:
-        controller_found = get_prim_data(prim_id, 'controller_found')[0]
-        if controller_found and prim_id not in {29,30,31,32, 129, 130, 131, 152, 153, 154, 155, 53, 54, 55, 56}:
-            from_node = tuple(get_prim_data(prim_id, 'x0'))
-            to_node = tuple(get_prim_data(prim_id, 'x_f'))
-            time_weight = get_prim_data(prim_id, 't_end')[0]
-            new_edge = (from_node, to_node, time_weight)
-            new_edge_set = [new_edge] # convert to tuple otherwise, not hashable (can't check set membership)
-
-            G.add_edges(new_edge_set, use_euclidean_weight=False)
-            G.add_edges(new_edge_set, use_euclidean_weight=False)
-
-            from_x = from_node[2]
-            from_y = from_node[3]
-
-            to_x = to_node[2]
-            to_y = to_node[3]
-
-            if (from_x, from_y) in car_graph.G._sources:
-                G.add_source(from_node)
-            if (to_x, to_y) in car_graph.G._sinks:
-                G.add_sink(to_node)
-    except ValueError:
-        pass
 
 def find_corner_coordinates(x_state_center_before, y_state_center_before, x_desired, y_desired, theta, square_fig):
     """
@@ -152,7 +126,7 @@ medic_fig = medic_fig.resize((15,15))
 def draw_medic_signs(medic_signs_coordinates):
     for coordinate in medic_signs_coordinates:
         x, y = find_corner_coordinates(0, 0, coordinate[0], coordinate[1], 0, medic_fig)
-        background.paste(medic_fig, (int(x), int(y)), medic_fig)  
+        background.paste(medic_fig, (int(x), int(y)), medic_fig)
 
 walk_sign_go = dir_path + '/components/imglib/go.png'
 go_fig = Image.open(walk_sign_go).convert("RGBA")
@@ -174,10 +148,10 @@ walk_sign_coordinates = {'vertical': [(378, 621), (684, 90)], 'horizontal': [(27
 
 def draw_walk_signs(vertical_fig, horizontal_fig):
     for coordinate in walk_sign_coordinates['vertical']:
-        x, y = find_corner_coordinates(0, 0, coordinate[0], coordinate[1], 0, vertical_fig) 
+        x, y = find_corner_coordinates(0, 0, coordinate[0], coordinate[1], 0, vertical_fig)
         background.paste(vertical_fig, (int(x), int(y)), vertical_fig)
     for coordinate in walk_sign_coordinates['horizontal']:
-        x, y = find_corner_coordinates(0, 0, coordinate[0], coordinate[1], 0, horizontal_fig) 
+        x, y = find_corner_coordinates(0, 0, coordinate[0], coordinate[1], 0, horizontal_fig)
         background.paste(horizontal_fig, (int(x), int(y)), horizontal_fig)
 
 green_light_png = dir_path + '/components/imglib/intersection_states/green_light.png'
@@ -206,7 +180,7 @@ show_axes = False
 if not show_axes:
     plt.axis('off')
 # sampling time
-dt = 0.1
+dt = 0.2
 # create car
 def spawn_car():
     def generate_license_plate():
@@ -220,7 +194,7 @@ def spawn_car():
     rand_num = np.random.choice(10)
     start_node = random.sample(G._sources, 1)[0]
     end_node = random.sample(G._sinks, 1)[0]
-    color = np.random.choice(['gray','blue'])
+    color = np.random.choice(tuple(car.car_colors))
     the_car = car.KinematicCar(init_state=start_node, color=color, plate_number=plate_number)
     return plate_number, start_node, end_node, the_car
 
@@ -357,9 +331,8 @@ def animate(frame_idx): # update animation by dt
     # if sign is true then walk, stop if false
     vertical_walk_safe = safe_to_walk(green_duration, vertical_light, vertical_light_time)
     horizontal_walk_safe = safe_to_walk(green_duration, horizontal_light, horizontal_light_time)
-    
     draw_walk_signs(walk_sign_figs['vertical'][vertical_walk_safe], walk_sign_figs['horizontal'][horizontal_walk_safe])
- 
+
     """ online frame update """
     global background
     if with_probability(0.2*dt/0.1):
@@ -709,8 +682,8 @@ ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval
 
 if options.save_video:
     Writer = animation.writers['ffmpeg']
-    writer = Writer(fps = 20, metadata=dict(artist='Me'), bitrate=-1)
-    ani.save('movies/3hi_fi.avi', writer=writer, dpi=200)
+    writer = Writer(fps = 60, metadata=dict(artist='Me'), bitrate=-1)
+    ani.save('movies/4hi_fi.avi', writer=writer, dpi=200)
 plt.show()
 t2 = time.time()
 print('Total elapsed time: ' + str(t2-t0))
