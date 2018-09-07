@@ -39,7 +39,10 @@ class TrafficLights():
             other_color = 'red'
             other_time = self._max_time['green'] + time
         else: # color == 'red'
-            if time // self._max_time['green'] >= 1:
+            if time <= 1: # both lights are red 
+                other_color = 'red'
+                other_time = time
+            elif time // self._max_time['green'] >= 1:
                 other_color = 'yellow'
                 other_time = time - self._max_time['green']
             else:
