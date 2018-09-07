@@ -143,7 +143,7 @@ def update(self, dt):
     self._state['horizontal'] = new_horizontal_state
     self._state['vertical'] = self.get_counterpart(new_horizontal_state)
 
-def crossing_safe(interval, which_light, traffic_lights, walk_signs):
+def crossing_safe(interval, which_light, traffic_lights):
     interval_length = interval[1] - interval[0]
     first_time = interval[0]
     is_safe = False
@@ -167,6 +167,7 @@ def crossing_safe(interval, which_light, traffic_lights, walk_signs):
         is_safe = not (color == 'green' and time <= traffic_lights._max_time['green']/3)
         #is_safe = not (color == 'green' and time <= traffic_lights._max_time['green']/3 or color == 'yellow' and time >= traffic_lights._max_time['yellow']/5)
     return is_safe
+
 def backtrack(scheduled_times, path, edge_time_stamps):
     '''
     find the furthest node to stop at (potentially forever)
@@ -190,7 +191,7 @@ def backtrack(scheduled_times, path, edge_time_stamps):
             return False, last_index
     return False, None
 
-def is_safe(path, current_time, primitive_graph, edge_time_stamps, traffic_lights, walk_signs):
+def is_safe(path, current_time, primitive_graph, edge_time_stamps, traffic_lights):
     now = current_time
     scheduled_times = [now]
     current_edge_idx = 0
@@ -205,7 +206,7 @@ def is_safe(path, current_time, primitive_graph, edge_time_stamps, traffic_light
             ego_interval = left_time + (ii)/params.num_subprims * delta_t, left_time + (ii+1)/params.num_subprims * delta_t
             for box in collision_dictionary[(curr_prim_id, ii)]:
                 if isinstance(box, str):
-                    if not crossing_safe(ego_interval, box, traffic_lights, walk_signs):
+                    if not crossing_safe(ego_interval, box, traffic_lights):
                         return backtrack(scheduled_times, path, edge_time_stamps)
                 else:
                     colliding_id, jj = box
@@ -227,22 +228,74 @@ def generate_license_plate():
         plate_number = plate_number + random.choice(choices)
     return plate_number
 
+#########################################################################
 
 def extract_destinations(request):
-    pass
+    depart, arrive = request[1], request[2]
+    return depart, arrive
 
-def find_split(start, end):
+def extract_car_info(request):
+    plate_number, the_car = request[0], request[3]
+    return plate_number, the_car
+
+def find_transit(path):
     return shortest_path
 
+def subprim_is_safe(subprim_id, subprim_interval, traffic_lights):
+    for box in collision_dictionary[subprim_id]:
+        if isinstance(box, str):
+            if not crossing_safe(subprim_interval, box, traffic_lights):
+                return False
+        else:
+            if box in edge_time_stamps: # if current loc is already stamped
+                for interval in edge_time_stamps[box]:
+                    if is_overlapping(subprim_interval, interval): # if the two intervals overlap
+                        return False
+    return True # if all checks pass
 
-def service_request(request, graph):
+def get_scheduled_times_and_prim_ids(path, current_time, graph):
+    now = current_time
+    scheduled_times = [now]
+    prim_ids = []
+    for prev, curr in zip(path[0::1], path[1::1]):
+        scheduled_times.append(scheduled_times[-1] + graph._weights[(prev, curr)])
+        prim_ids.append(edge_to_prim_id[(prev,curr)])
+    return scheduled_times, prim_ids
+
+def full_path_is_safe(path, current_time, graph, edge_time_stamps, traffic_lights):
+    now = current_time
+    scheduled_times = [now]
+    current_edge_idx = 0
+    scheduled_times, prim_ids = get_scheduled_times_and_prim_ids(path, current_time, graph)
+    for idx in range(len(prim_ids)):
+        delta_t = scheduled_times[idx+1] - scheduled_times[idx]
+        for ii in range(params.num_subprims):
+            subprim_interval = (left_time + (ii) / params.num_subprims * delta_t, left_time + (ii + 1)/params.num_subprims * delta_t)
+            subprim_id = (curr_prim_id, ii)
+            if not subprim_is_safe(subprim_id, subprim_interval, traffic_lights):
+                return False
+    return True # if all checks pass
+
+
+def service_car(plate_number, the_car, cars, effective_current_times, path_prims):
+    if plate_number not in cars:
+        cars[plate_number] = the_car # add the car
+    if plate_number in waiting.keys():
+        edge_time_stamps[wait_id].add((interval[0], effective_current_times[plate_number]))
+        edge_time_stamps[wait_id].add((interval[0], effective_current_times[plate_number]))
+    time_stamp_edge(path = shortest_path, edge_time_stamps = edge_time_stamps, current_time = effective_current_times[plate_number], primitive_graph = G)
+    path_prims = path_to_primitives(shortest_path) # add primitives
+    for prim_id in path_prims:
+        cars[plate_number].prim_queue.enqueue((prim_id, 0))
+        prim_time = get_prim_data(prim_id, 't_end')[0]
+        effective_current_times[plate_number] += prim_time
+
+def service_request(request, graph, current_time, edge_time_stamps, traffic_lights):
     depart, arrive = extract_destinations(request)
-    _, path = dijkstra(depart, arrive)
-    transit = find_split(path)
-    add primitives from depart to transit
-    time stamp from depart to transit
-
-
-
-
+    _, path = dijkstra(depart, arrive, graph)
+    if full_path_is_safe(path, current_time, primitive_path, edge_time_stamps, traffic_lights):
+        service_car(plate_number, the_car, cars, effective_current_times, path_prims)
+    else:
+        transit = find_transit(path)
+        service_car_to_transit()
 

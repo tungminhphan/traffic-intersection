@@ -359,7 +359,7 @@ def animate(frame_idx): # update animation by dt
             edge_time_stamps[wait_id].remove(interval)
         _, shortest_path = planner.dijkstra(start_node, end_node, G)
 
-        safety_check, first_conflict_edge_idx = planner.is_safe(path = shortest_path, current_time = effective_current_times[plate_number], primitive_graph = G, edge_time_stamps = edge_time_stamps, traffic_lights = traffic_lights, walk_signs = (vertical_walk_safe, horizontal_walk_safe))
+        safety_check, first_conflict_edge_idx = planner.is_safe(path = shortest_path, current_time = effective_current_times[plate_number], primitive_graph = G, edge_time_stamps = edge_time_stamps, traffic_lights = traffic_lights)
         if safety_check:
             if plate_number not in cars:
                 cars[plate_number] = the_car # add the car
@@ -412,7 +412,7 @@ def animate(frame_idx): # update animation by dt
                         backtracking_idx += 1
                     except SyntaxError:
                         backtracking_idx += 1
-                    safety_check, _ = planner.is_safe(path = partial_path, current_time = effective_current_times[plate_number], primitive_graph = G, edge_time_stamps = edge_time_stamps, traffic_lights = traffic_lights, walk_signs = (vertical_walk_safe, horizontal_walk_safe))
+                    safety_check, _ = planner.is_safe(path = partial_path, current_time = effective_current_times[plate_number], primitive_graph = G, edge_time_stamps = edge_time_stamps, traffic_lights = traffic_lights)
                     if len(partial_path) is not 0 and safety_check:
                         break
                 if len(partial_path) > 1:
