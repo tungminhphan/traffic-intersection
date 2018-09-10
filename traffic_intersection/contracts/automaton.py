@@ -21,7 +21,6 @@ class State:
         if composite_list == None:
             self.composite_list = list()
             self.composite_list.append(self)
-
         else:
             self.composite_list = composite_list
 
@@ -34,7 +33,8 @@ def product(state1, state2):
     new_name += ')'
     return State(new_name, composite_list)
 
-#test case
+# test case for state class
+
 #s1 = State(1)
 #s2 = State(2)
 #s3 = State(3)
@@ -43,10 +43,10 @@ def product(state1, state2):
 
 # General transition class. Transition is a string from the alphabet.
 class Transition:
-    def __init__(self, start = None, end = None, transition = None):
+    def __init__(self, start = None, end = None, label = None):
         self.startState = start
         self.endState = end
-        self.transition = transition
+        self.label = label
 
     def set_start_state(self, start):
         self.startState = start
@@ -54,42 +54,69 @@ class Transition:
     def set_end_state(self, end):
         self.endState = end
 
-    def set_transition(self, transition):
-        self.transition = transition
+    def set_label(self, label):
+        self.label = label
+
+    def get_start(self):
+        return '(' + self.startState.name + ')'
+
+    def get_end(self):
+        return '(' + self.endState.name + ')'
+
+    def get_label(self):
+        return self.label
+
+    def print_transition(self):
+        print(self.get_start() + ' ----> ' + self.get_end())
 
     def show(self):
-        return self.transition
+        return self.label
+
+# test case for general transition class
+#s1 = State(1)
+#s2 = State(2)
+#t = Transition(s1,s2, 'a')
+#t.print_transition()
+#print(t.show())
 
 # General transition class for guard (where the guard is a set of inequalities.)
 class guardTransition(Transition):
-    def __init__(self, start = None, end = None, guard = True, action = '', actionType = ''):
-        Transition.__init__(self, start, end)
+    def __init__(self, start = None, end = None, label = None, guard = True, action = None, actionType = None):
+        Transition.__init__(self, start, end, label)
         self.guard = guard # guard should be a dictionary of inequalities
         # actually, now guard is a string representing a boolean
-        self.action = action
 
         # actionType is ?, !, or #, corresponding to input, output, and internal respectively
+        if actionType not in {'?', '!', '#', ''}:
+            TypeError('actionType must be either ?, !, or #!')
         self.actionType = actionType
 
+        if self.actionType == '':
+            self.action = ''
+        elif isinstance(action, str):
+            TypeError('action must be of type str!')
+        self.action = action
 
     def show(self):
         transtext = ''
         # guard can be string
         if isinstance(self.guard, str):
             transtext = self.guard
-
         elif self.guard == False:
             return transtext
-
         elif self.guard == True:
             transtext += 'True'
-            transtext = transtext[:-2] # deletes last comma and space
-
-        transtext += ' / '
-
-        transtext += actionType + action
-
+        transtext += ' | ' + self.actionType + self.action
         return transtext
+
+    def print_transition(self):
+        print(self.get_start() + ' --[' + self.show() + ']--> ' + self.get_end())
+
+# test case for the guard transition class
+#s1 = State(1)
+#s2 = State(2)
+#t = guardTransition(start = s1, end = s2, guard = 'x > 3', label = 'test', action = 'a', actionType = '?')
+#t.print_transition()
 
 # General finite automaton. 
 class Automaton:
