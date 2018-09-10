@@ -25,7 +25,7 @@ import prepare.options as options
 from  prepare.collision_check import collision_free, get_bounding_box
 import numpy as np
 from numpy import cos, sin, tan, pi
-from PIL import Image
+from PIL import Image, ImageDraw
 import scipy.io
 if platform.system() == 'Darwin': # if the operating system is MacOS
     matplotlib.use('macosx')
@@ -343,7 +343,6 @@ def animate(frame_idx): # update animation by dt
     # if sign is true then walk, stop if false
     vertical_walk_safe = safe_to_walk(green_duration, vertical_light, vertical_light_time)
     horizontal_walk_safe = safe_to_walk(green_duration, horizontal_light, horizontal_light_time)
-    draw_walk_signs(walk_sign_figs['vertical'][vertical_walk_safe], walk_sign_figs['horizontal'][horizontal_walk_safe])
  
     """ online frame update """
     global background
@@ -483,9 +482,20 @@ def animate(frame_idx): # update animation by dt
     background = Image.open(intersection_fig)
     x_lim, y_lim = background.size
 
-    # if sign is true then walk, stop if false
-    vertical_walk_safe = safe_to_walk(green_duration, vertical_light, vertical_light_time)
-    horizontal_walk_safe = safe_to_walk(green_duration, horizontal_light, horizontal_light_time)
+    alpha = 120 # transparency 
+    green = (34,139,34,alpha)
+    red = (200,0,0,alpha)
+    vertical_lane_color = green if vertical_walk_safe else red
+    horizontal_lane_color = green if horizontal_walk_safe else red
+    
+    img1 = Image.open(intersection_fig) # highlighted walk lanes will be drawn on this image
+    draw = ImageDraw.Draw(img1)
+    draw.rectangle([(345,209),(366,550)], fill = vertical_lane_color)
+    draw.rectangle([(697,209),(718,550)], fill = vertical_lane_color)
+    draw.rectangle([(392,580),(670,602)], fill = horizontal_lane_color)
+    draw.rectangle([(392,158),(670,180)], fill = horizontal_lane_color)
+    img = Image.alpha_composite(background, img1) # image with highlighted walk lanes
+    background.paste(img)
     draw_walk_signs(walk_sign_figs['vertical'][vertical_walk_safe], walk_sign_figs['horizontal'][horizontal_walk_safe])
 
     vertical_lights = ax.scatter(None,None)
@@ -507,6 +517,7 @@ def animate(frame_idx): # update animation by dt
     # update pedestrians
     pedestrians_to_keep = []
     pedestrians_waiting = []
+
     lane1 = [(355, 195), (355, 565)] # left vertical path, (bottom node, top node)
     lane2 = [(705, 195), (705, 565)] # right vertical path, (bottom node, top node)
     lane3 = [(380, 590), (680, 590)] # top horizontal path (left node, right node)
@@ -668,6 +679,7 @@ def animate(frame_idx): # update animation by dt
     draw_pedestrians(pedestrians_to_keep) # draw pedestrians to background
     draw_cars(cars_to_keep)
 
+
     # plot traffic light walls
     walls = [ax.plot([], [],'r')[0] for _ in range(4)]
     if options.show_traffic_light_walls:
@@ -697,7 +709,7 @@ def animate(frame_idx): # update animation by dt
     # show artists
     global stage # set up a global stage
     stage = ax.imshow(background, origin="lower") # update the stage
-    return  [stage] + [honk_waves] + boxes + curr_tubes + ids + plot_prims + walls + [vertical_lights] + [horizontal_lights]
+    return  [stage] + [honk_waves] + boxes + curr_tubes + ids + plot_prims + walls + [vertical_lights] + [horizontal_lights] 
 
 t0 = time.time()
 animate(0)
