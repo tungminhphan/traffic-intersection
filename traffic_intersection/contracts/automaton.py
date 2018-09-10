@@ -3,6 +3,7 @@
 from random import sample
 import inequality as iq
 import numpy as np
+import math
 import itertools
 from graphviz import Digraph
 import graph
@@ -50,15 +51,16 @@ class Transition:
 
 # General transition class for guard (where the guard is a set of inequalities.)
 class guardTransition(Transition):
-    def __init__(self, start = None, end = None, guard = True, inp = set(), out = set(), inter = set()):
+    def __init__(self, start = None, end = None, guard = True, action = '', actionType = ''):
         Transition.__init__(self, start, end)
         self.guard = guard # guard should be a dictionary of inequalities
         # actually, now guard is a string representing a boolean
-        self.inputs = inp # set of inputs on the transition
-        self.outputs = out
-        self.internals = inter
+        self.action = action
 
-        # transition reads guard/?inputs, !outputs, #internals
+        # actionType is ?, !, or #, corresponding to input, output, and internal respectively
+        self.actionType = actionType
+
+
     def show(self):
         transtext = ''
         # guard can be string
@@ -70,6 +72,8 @@ class guardTransition(Transition):
 
         elif self.guard == True:
             transtext += 'True'
+
+        # this next part is obsolete
         else:
             for key in self.guard:
                 ineq = self.guard[key]
@@ -79,12 +83,7 @@ class guardTransition(Transition):
 
         transtext += ' / '
 
-        if len(self.inputs) > 0:
-            transtext += ' ?' + ', '.join(self.inputs)
-        if len(self.outputs) > 0:
-            transtext += ' !' + ', '.join(self.outputs) 
-        if len(self.internals) > 0:
-            transtext += ' #' + ', '.join(self.internals)
+        transtext += actionType + action
 
         return transtext
 
@@ -128,11 +127,11 @@ class Automaton:
 
         for state in self.states:
             # adds nodes
-            automata.attr('node', shape = 'circle', color='green', style='filled', fixedsize='false', width='1')
+            automata.attr('node', shape = 'circle', color='green', style='filled', fixedsize='false')
             if state in self.endStates:
-                automata.attr('node', shape = 'doublecircle')
+                automata.attr('node', shape = 'doublecircle', fixedsize = 'false')
             if state == self.startState:
-                automata.attr('node', color = 'yellow')
+                automata.attr('node', color = 'yellow', fixedsize = 'false')
             automata.node(state.text, state.text)
 
         # adds transitions
@@ -176,12 +175,12 @@ class ComponentAutomaton(Automaton):
 
         inp = tr1.inputs.union(tr2.inputs) - inter
         out = tr1.outputs.union(tr2.outputs) - inter
-        if len(inp.union(out).union(inter)) == 0:
-            return False
+        # if len(inp.union(out).union(inter)) == 0:
+        #     return False
 
         return guardTransition(newstart, newend, guard, inp, out, inter)
 
-    # in the final composition, delete all transitions that are still waiting for input/output, since we can't take them
+    # in the final composition, delete all transitions that are still waiting for input, since we can't take them
     # also removes all states without transitions
     def trim(self):
         for key in self.transitions_dict:
@@ -189,7 +188,7 @@ class ComponentAutomaton(Automaton):
             # removes transitions
             to_remove = set()
             for trans in self.transitions_dict[key]:
-                if trans == False or len(trans.inputs) > 0 or len(trans.outputs) > 0:
+                if trans == False or len(trans.inputs) > 0:
                     to_remove.add(trans)
 
             self.transitions_dict[key] = self.transitions_dict[key] - to_remove
@@ -265,15 +264,20 @@ class ContractAutomaton(Automaton):
 
         def convert_to_digraph(self):
             automata = Digraph(comment = 'insert description parameter later?')
+            maxlen = 0
+            for state in self.states:
+                if len(state.text) > maxlen:
+                    maxlen = len(state.text)
 
             for state in self.states:
                 # adds nodes
-                automata.attr('node', shape = 'circle', color='green', style='filled', fixedsize='false', width='1')
+                automata.attr('node', shape = 'circle', color='yellow', style='filled', fixedsize='true')
                 if state in self.endStates:
-                    automata.attr('node', shape = 'doublecircle')
+                    automata.attr('node', shape = 'doublecircle', fixedsize = 'true')
                 if state == self.startState:
-                    automata.attr('node', color = 'yellow')
-                automata.node(state.text, state.text)
+                    automata.attr('node', color = 'yellow', fixedsize = 'true')
+                newtext = ' ' * math.floor((maxlen - len(state.text))/2) + state.text + ' ' * math.ceil((maxlen - len(state.text))/2)
+                automata.node(newtext, newtext)
 
             # adds transitions
             for state in self.states:
