@@ -1,7 +1,6 @@
 # Try 2!
 
 from random import sample
-import inequality as iq
 import numpy as np
 import math
 import itertools
@@ -72,13 +71,6 @@ class guardTransition(Transition):
 
         elif self.guard == True:
             transtext += 'True'
-
-        # this next part is obsolete
-        else:
-            for key in self.guard:
-                ineq = self.guard[key]
-                transtext += ineq.show() + ', '
-
             transtext = transtext[:-2] # deletes last comma and space
 
         transtext += ' / '
@@ -92,8 +84,8 @@ class guardTransition(Transition):
 class Automaton:
     def __init__(self):
         self.alphabet = set()
-        self.transitions_dict = {} # transitions_dict[state] is the set of transitions from that state's TEXT
-        self.startState = None
+        self.transitions_dict = {} # transitions_dict[state] is the set of transitions from that state
+        self.startStates = None
         self.endStates = set()
         self.states = set()
 
@@ -101,16 +93,13 @@ class Automaton:
         if end_state:
             self.endStates.add(state)
         if start_state:
-            self.startState = state
+            self.startStates.add(state)
 
         self.states.add(state)
         self.transitions_dict[state] = set()
 
     def add_transition(self, transition):
         self.transitions_dict[transition.startState].add(transition)
-
-    def set_start_state(self, state):
-        self.startState = state
 
     def simulate(self, is_printing = False):
         state = self.startState
@@ -130,7 +119,7 @@ class Automaton:
             automata.attr('node', shape = 'circle', color='green', style='filled', fixedsize='false')
             if state in self.endStates:
                 automata.attr('node', shape = 'doublecircle', fixedsize = 'false')
-            if state == self.startState:
+            if state in self.startStates:
                 automata.attr('node', color = 'yellow', fixedsize = 'false')
             automata.node(state.text, state.text)
 
@@ -145,15 +134,18 @@ class Automaton:
 
         return automata
 
-class ComponentAutomaton(Automaton):
-    def __init__(self, inputAlphabet = set(), outputAlphabet = set()):
+class InterfaceAutomaton(Automaton):
+    def __init__(self, inputAlphabet = set(), outputAlphabet = set(), internalAlphabet = set()):
         Automaton.__init__(self)
         self.input_alphabet = inputAlphabet
         self.output_alphabet = outputAlphabet
-        self.alphabet = self.input_alphabet.union(self.output_alphabet)
+        self.internal_alphabet = internalAlphabet
+        self.alphabet = self.input_alphabet.union(self.output_alphabet).union(self.internal_alphabet)
 
         # takes two guard transitions and returns their composition
     def compose_guard_trans(self, tr1, tr2):
+        if tr1.action != tr2.action and '' not in [tr1.actionType, tr2.actionType]:
+            return False
 
         if tr1.guard == True:
             guard = tr2.guard
@@ -164,21 +156,36 @@ class ComponentAutomaton(Automaton):
             guard = tr1.guard + ' ∧ ' + tr2.guard
 
         # assumption is that either both are inequalities or strings
+
+        newStart = product(tr1.startState, tr2.startState)
+        newEnd = product(tr1.endState, tr2.endState)
+
+        if tr1.actionType == '':
+            newType = tr2.actionType
+            action = tr2.action
+
+        elif tr2.actionType = '':
+            newType = tr1.actionType
+            action = tr1.action
+
         else:
-            guard = iq.conjunct(tr1.guard, tr2.guard)
+            action = tr1.action
+            if tr1.actionType == '?':
+                if tr2.actionType == '?':
+                    newType = '?'
+                elif tr2.actionType in {'!', '#'}:
+                    newType = '#'
 
-        newstart = product(tr1.startState, tr2.startState)
-        newend = product(tr1.endState, tr2.endState)
+            elif tr1.actionType == '!':
+                if tr2.actionType == '!':
+                    newType = '!'
+                elif tr2.actionType in {'?', '#'}:
+                    newType = '#'
 
-        inter = (tr1.inputs.intersection(tr2.outputs)).union(
-            tr1.outputs.intersection(tr2.inputs)).union(tr1.internals).union(tr2.internals)
+            elif tr1.actionType == '#':
+                newType = '#'
 
-        inp = tr1.inputs.union(tr2.inputs) - inter
-        out = tr1.outputs.union(tr2.outputs) - inter
-        # if len(inp.union(out).union(inter)) == 0:
-        #     return False
-
-        return guardTransition(newstart, newend, guard, inp, out, inter)
+        return guardTransition(newStart, newEnd, guard, action, newType)
 
     # in the final composition, delete all transitions that are still waiting for input, since we can't take them
     # also removes all states without transitions
@@ -205,49 +212,45 @@ class ComponentAutomaton(Automaton):
 
 
 
-def compose_components(component_1, component_2):
-    new_component = ComponentAutomaton()
-    newalphabet = component_1.alphabet.union(component_2.alphabet)
-    # figure out what to do with input/output alphabets? 
-    dict1 = component_1.transitions_dict
-    dict2 = component_2.transitions_dict
+def compose_interface(c_1, c_2):
+    newInput = c_1.input_alphabet.union(c_2.inputAlphabet)
+    newOutput = c_1.output_alphabet.union(c_2.output_alphabet)
+
+    newInternal = c_1.internal_alphabet.union(c_2.internal_alphabet).union(newInput.intersection(newOutput))
+
+    new_interface = InterfaceAutomaton(inputAlphabet = newInput, outputAlphabet = newOutput, internalAlphabet = newInternal)
+
+    dict1 = c_1.transitions_dict
+    dict2 = c_2.transitions_dict
     for key1 in dict1:
         for key2 in dict2:
             newstate = product(key1, key2)
 
-            new_component.add_state(newstate, key1 in component_1.endStates and key2 in component_2.endStates
-                , key1 == component_1.startState and key2 == component_2.startState)
+            new_interface.add_state(newstate, key1 in c_1.endStates and key2 in c_2.endStates
+                , key1 in c_1.startStates and key2 in c_2.startStates)
 
             for trans1 in dict1[key1]:
                 for trans2 in dict2[key2]:
-                    new_component.transitions_dict[newstate].add(new_component.compose_guard_trans(trans1, trans2))
+                    new_interface.transitions_dict[newstate].add(new_interface.compose_guard_trans(trans1, trans2))
 
-    new_component.alphabet = newalphabet
-    return new_component
+    new_interface.alphabet = newalphabet
+    return new_interface
 
-def compose_multiple_components(list_components):
-    curr_component = list_components[0]
-    for comp in list_components[1:]:
-        curr_component = compose_components(curr_component, comp)
+def compose_multiple_interfaces(list_interfaces):
+    curr_interface = list_interfaces[0]
+    for comp in list_interfaces[1:]:
+        curr_interface = compose_interface(curr_interface, comp)
 
-    return curr_component
+    return curr_interface
 
 class ContractAutomaton(Automaton):
-    def __init__(self, must = {}, may = {}):
+    def __init__(self, must = InterfaceAutomaton(), may = InterfaceAutomaton()):
         Automaton.__init__(self)
         self.must = must
         self.may = may
         # may and must are transition dictionaries
 
     def check_validity(self):
-        # checks that the states are equal
-        for key in may.states:
-            for key2 in must.states:
-                if key not in must.states:
-                    return False
-                if key2 not in may.states:
-                    return False
-
         # checks every may transition is a must transition
         for key in may.transitions_dict:
             trans = may.transitions_dict[key]
@@ -274,7 +277,7 @@ class ContractAutomaton(Automaton):
                 automata.attr('node', shape = 'circle', color='yellow', style='filled', fixedsize='true')
                 if state in self.endStates:
                     automata.attr('node', shape = 'doublecircle', fixedsize = 'true')
-                if state == self.startState:
+                if state in self.startStates:
                     automata.attr('node', color = 'yellow', fixedsize = 'true')
                 newtext = ' ' * math.floor((maxlen - len(state.text))/2) + state.text + ' ' * math.ceil((maxlen - len(state.text))/2)
                 automata.node(newtext, newtext)
@@ -299,7 +302,7 @@ class ContractAutomaton(Automaton):
 
 # assumes weight on a graph is a string of the form "guard / ?input, !output, #internal separated by , "
 def convert_graph_to_automaton(digraph):
-    new_component = ComponentAutomaton()
+    new_interface = InterfaceAutomaton()
     nodes = digraph._nodes
     edges = digraph._edges
     stringstatedict = {}
@@ -309,14 +312,14 @@ def convert_graph_to_automaton(digraph):
 
     for node in nodes:
         newstate = State(node)
-        new_component.add_state(node)
+        new_interface.add_state(node)
         stringstatedict[node] = newstate
 
     for source in sources:
-        new_component.set_start_state(stringstatedict[source])
+        new_interface.set_start_state(stringstatedict[source])
 
     for sink in sinks:
-        new_component.endStates.add(stringstatedict[sink])
+        new_interface.endStates.add(stringstatedict[sink])
 
 
     for trans in edges:
@@ -357,26 +360,26 @@ def convert_graph_to_automaton(digraph):
             else:
                 raise SyntaxError('Input, output or internals in wrong format.')
 
-        new_component.add_transition(guardTransition(state1, state2, guard, inp, out, inter))
+        new_interface.add_transition(guardTransition(state1, state2, guard, inp, out, inter))
 
-    return new_component
+    return new_interface
 
 
 # # Add this later to make testing easier
 # currently only works if the guard text is a single inequality
 def construct_automaton(statelist, translist, start, ends):
-    new_component = ComponentAutomaton()
+    new_interface = InterfaceAutomaton()
     stringstatedict = {}
     # statelist is a list of strings representing state names
     for state in statelist:
         newstate = State(state)
-        new_component.add_state(newstate)
+        new_interface.add_state(newstate)
         stringstatedict[state] = newstate
 
-    new_component.set_start_state(stringstatedict[start])
+    new_interface.set_start_state(stringstatedict[start])
 
     for end in ends:
-        new_component.endStates.add(stringstatedict[end])
+        new_interface.endStates.add(stringstatedict[end])
 
     # translist is a dictionary; the key is a tuple of strings representing the states of the transition, and the value is a tuple:
     # (guardtext, inputs, outputs, internal actions)
@@ -411,6 +414,6 @@ def construct_automaton(statelist, translist, start, ends):
         else:
             guard = translist[key][0]
 
-        new_component.add_transition(guardTransition(state1, state2, guard, inp, out, inter))
+        new_interface.add_transition(guardTransition(state1, state2, guard, inp, out, inter))
 
-    return new_component
+    return new_interface
