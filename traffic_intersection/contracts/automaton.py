@@ -8,31 +8,42 @@
 from random import sample
 import inequality as iq
 import numpy as np
-import math
-import itertools
+import math, itertools
 from graphviz import Digraph
 
-# General state class. Has a 'set' property for the purposes of composition.
+# General state class.
 class State:
-    def __init__(self, text, newset = None):
-        self.text = text.upper()
-        if newset == None:
-            self.set = set()
-            self.set.add(self)
+    def __init__(self, name, composite_list = None):
+        if isinstance(name, str) or isinstance(name, int):
+            TypeError('state name must be of type string or int!')
+        if isinstance(name, int):
+            name = str(name) # convert name to string
+        self.name = name.upper() # convert name to uppercase
+        if composite_list == None:
+            self.composite_list = list()
+            self.composite_list.append(self)
+
         else:
-            self.set = newset
+            self.composite_list = composite_list
 
 def product(state1, state2):
-    newset = state1.set.union(state2.set)
-    newtext = '('
-    for state in state1.set:
-        newtext += state.text + ', '
-    for state in state2.set:
-        newtext += state.text + ', '
-    newtext = newtext[:-2]
-    newtext += ')'
-    return State(newtext, newset)
+    composite_list = state1.composite_list + state2.composite_list
+    new_name = '('
+    for state in state1.composite_list:
+        new_name += state.name + ', '
+    for state in state2.composite_list:
+        new_name += state.name + ', '
+    new_name = new_name[:-2]
+    new_name += ')'
+    return State(new_name, composite_list)
 
+#test case
+
+#s1 = State(1)
+#s2 = State(2)
+#s3 = State(3)
+#z = product(s3,product(s1,s2))
+#print(z.name)
 
 # General transition class. Transition is a string from the alphabet.
 class Transition:
@@ -377,7 +388,6 @@ def construct_automaton(statelist, translist, start, ends):
 
     for end in ends:
         new_component.endStates.add(stringstatedict[end])
-
     # translist is a dictionary; the key is a tuple of strings representing the states of the transition, and the value is a tuple:
     # (guardtext, inputs, outputs, internal actions)
     # inputs, outputs, internal action are sets of strings
