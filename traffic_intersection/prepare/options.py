@@ -6,3 +6,4 @@ show_honks = False
 show_ids = False
 show_prims = False
 show_traffic_light_walls = False
+highlight_crossings = True

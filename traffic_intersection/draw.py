@@ -482,20 +482,22 @@ def animate(frame_idx): # update animation by dt
     background = Image.open(intersection_fig)
     x_lim, y_lim = background.size
 
-    alpha = 120 # transparency 
-    green = (34,139,34,alpha)
-    red = (200,0,0,alpha)
-    vertical_lane_color = green if vertical_walk_safe else red
-    horizontal_lane_color = green if horizontal_walk_safe else red
+    if options.highlight_crossings:
+        alpha = 120 # transparency 
+        green = (34,139,34,alpha)
+        red = (200,0,0,alpha)
+        vertical_lane_color = green if vertical_walk_safe else red
+        horizontal_lane_color = green if horizontal_walk_safe else red
     
-    img1 = Image.open(intersection_fig) # highlighted walk lanes will be drawn on this image
-    draw = ImageDraw.Draw(img1)
-    draw.rectangle([(345,209),(366,550)], fill = vertical_lane_color)
-    draw.rectangle([(697,209),(718,550)], fill = vertical_lane_color)
-    draw.rectangle([(392,580),(670,602)], fill = horizontal_lane_color)
-    draw.rectangle([(392,158),(670,180)], fill = horizontal_lane_color)
-    img = Image.alpha_composite(background, img1) # image with highlighted walk lanes
-    background.paste(img)
+        img1 = Image.open(intersection_fig) # highlighted crossings will be drawn on this image
+        draw = ImageDraw.Draw(img1)
+        draw.rectangle([(345,209),(366,550)], fill = vertical_lane_color)
+        draw.rectangle([(697,209),(718,550)], fill = vertical_lane_color)
+        draw.rectangle([(392,580),(670,602)], fill = horizontal_lane_color)
+        draw.rectangle([(392,158),(670,180)], fill = horizontal_lane_color)
+        img = Image.alpha_composite(background, img1) # image with highlighted walk lanes
+        background.paste(img)
+
     draw_walk_signs(walk_sign_figs['vertical'][vertical_walk_safe], walk_sign_figs['horizontal'][horizontal_walk_safe])
 
     vertical_lights = ax.scatter(None,None)
