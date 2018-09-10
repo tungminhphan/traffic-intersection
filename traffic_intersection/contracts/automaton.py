@@ -1,32 +1,45 @@
-# Try 2!
+#!/usr/local/bin/python
+# coding: utf-8
+# Automaton Class
+# Steve Guo, Tung M. Phan
+# California Institute of Technology
+# July 12, 2018
 
 from random import sample
 import numpy as np
-import math
-import itertools
+import math, itertools
 from graphviz import Digraph
 
-# General state class. Has a 'set' property for the purposes of composition.
+# General state class.
 class State:
-    def __init__(self, text, newset = None):
-        self.text = text.upper()
-        if newset == None:
-            self.set = set()
-            self.set.add(self)
+    def __init__(self, name, composite_list = None):
+        if isinstance(name, str) or isinstance(name, int):
+            TypeError('state name must be of type string or int!')
+        if isinstance(name, int):
+            name = str(name) # convert name to string
+        self.name = name.upper() # convert name to uppercase
+        if composite_list == None:
+            self.composite_list = list()
+            self.composite_list.append(self)
+
         else:
-            self.set = newset
+            self.composite_list = composite_list
 
 def product(state1, state2):
-    newset = state1.set.union(state2.set)
-    newtext = '('
-    for state in state1.set:
-        newtext += state.text + ', '
-    for state in state2.set:
-        newtext += state.text + ', '
-    newtext = newtext[:-2]
-    newtext += ')'
-    return State(newtext, newset)
+    composite_list = state1.composite_list + state2.composite_list
+    new_name = '('
+    for state in composite_list:
+        new_name += state.name + ', '
+    new_name = new_name[:-2]
+    new_name += ')'
+    return State(new_name, composite_list)
 
+#test case
+#s1 = State(1)
+#s2 = State(2)
+#s3 = State(3)
+#z = product(s3,product(s1,s2))
+#print(z.name)
 
 # General transition class. Transition is a string from the alphabet.
 class Transition:
@@ -78,24 +91,20 @@ class guardTransition(Transition):
 
         return transtext
 
-
 # General finite automaton. 
 class Automaton:
-    def __init__(self, alphabet = set(), transitions = {}, startStates = set(), endStates = set(), failStates = set(), states = set()):
-        self.alphabet = alphabet
-        self.transitions_dict = transitions # transitions_dict[state] is the set of transitions from that state
-        self.startStates = startStates
-        self.endStates = endStates
-        self.failStates = failStates
-        self.states = states
+    def __init__(self):
+        self.alphabet = set()
+        self.transitions_dict = {} # transitions_dict[state] is the set of transitions from that state
+        self.startStates = None
+        self.endStates = set()
+        self.states = set()
 
-    def add_state(self, state, end_state = 0, start_state = 0, fail_state = 0):
+    def add_state(self, state, end_state = 0, start_state = 0):
         if end_state:
             self.endStates.add(state)
         if start_state:
             self.startStates.add(state)
-        if fail_state:
-            self.failStates.add(state)
 
         self.states.add(state)
         self.transitions_dict[state] = set()
@@ -111,7 +120,7 @@ class Automaton:
             else:
                 print("taking transitions, output, input")
             state, = sample(self.transitions_dict[state], 1).endState # sample from set of all transistions uniformly at random
-        print("simulation has terminated or deadlocked!")           
+        print("simulation has terminated or deadlocked!")
 
     def convert_to_digraph(self):
         automata = Digraph(comment = 'insert description parameter later?')
@@ -154,7 +163,6 @@ class InterfaceAutomaton(Automaton):
             guard = tr2.guard
         elif tr2.guard == True:
             guard = tr1.guard
-        
         elif isinstance(tr1.guard, str) and isinstance(tr2.guard, str):
             guard = tr1.guard + ' ∧ ' + tr2.guard
 
@@ -166,11 +174,9 @@ class InterfaceAutomaton(Automaton):
         if tr1.actionType == '':
             newType = tr2.actionType
             action = tr2.action
-
-        elif tr2.actionType = '':
+        elif tr2.actionType == '':
             newType = tr1.actionType
             action = tr1.action
-
         else:
             action = tr1.action
             if tr1.actionType == '?':
@@ -214,34 +220,38 @@ class InterfaceAutomaton(Automaton):
             self.transitions_dict.pop(key, None)
 
 
-def compose_interface(c_1, c_2):
-    newInput = c_1.input_alphabet.union(c_2.inputAlphabet)
-    newOutput = c_1.output_alphabet.union(c_2.output_alphabet)
+# # Add this later to make testing easier
+# need to change
+def construct_automaton(statelist, translist, start, ends):
+    new_interface = InterfaceAutomaton()
+    stringstatedict = {}
+    # statelist is a list of strings representing state names
+    for state in statelist:
+        newstate = State(state)
+        new_interface.add_state(newstate)
+        stringstatedict[state] = newstate
 
-    newInternal = c_1.internal_alphabet.union(c_2.internal_alphabet).union(newInput.intersection(newOutput))
+    new_interface.set_start_state(stringstatedict[start])
 
-    new_interface = InterfaceAutomaton(inputAlphabet = newInput, outputAlphabet = newOutput, internalAlphabet = newInternal)
+    for end in ends:
+        new_interface.endStates.add(stringstatedict[end])
+    # translist is a dictionary; the key is a tuple of strings representing the states of the transition, and the value is a tuple:
+    # (guardtext, inputs, outputs, internal actions)
+    # inputs, outputs, internal action are sets of strings
+    for key in translist:
+        state1 = stringstatedict[key[0]]
+        state2 = stringstatedict[key[1]]
 
-    dict1 = c_1.transitions_dict
-    dict2 = c_2.transitions_dict
-    for key1 in dict1:
-        for key2 in dict2:
-            newstate = product(key1, key2)
+        words = translist[key][0].split()
+        inp = translist[key][1]
+        out = translist[key][2]
+        inter = translist[key][3]
 
-            new_interface.add_state(newstate, key1 in c_1.endStates and key2 in c_2.endStates
-                , key1 in c_1.startStates and key2 in c_2.startStates, key1 in c_1.failStates
-                or key2 in c_2.failStates)
+        if words[0] == 'True':
+            guard = True
+        else:
+            guard = translist[key][0]
 
-            for trans1 in dict1[key1]:
-                for trans2 in dict2[key2]:
-                    new_interface.transitions_dict[newstate].add(new_interface.compose_guard_trans(trans1, trans2))
+        new_interface.add_transition(guardTransition(state1, state2, guard, inp, out, inter))
 
-    new_interface.alphabet = newalphabet
     return new_interface
-
-def compose_multiple_interfaces(list_interfaces):
-    curr_interface = list_interfaces[0]
-    for comp in list_interfaces[1:]:
-        curr_interface = compose_interface(curr_interface, comp)
-
-    return curr_interface
