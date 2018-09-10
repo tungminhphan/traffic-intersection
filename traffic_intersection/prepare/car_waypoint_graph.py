@@ -42,7 +42,8 @@ for prim_id in range(load_primitives.num_of_prims):
         to_node = tuple(get_prim_data(prim_id, 'x_f'))
         time_weight = get_prim_data(prim_id, 't_end')[0]
         new_edge = (from_node, to_node, time_weight)
-        G.add_edges([new_edge], use_euclidean_weight = False)
+        label_set = [prim_id]
+        G.add_edges([new_edge], use_euclidean_weight = False, label_edges = True, edge_label_set = label_set)
         add_source_sink(new_edge)
 
 if visualize:
@@ -60,5 +61,5 @@ if visualize:
     markersize = 1
     edge_width = 3
     head_width = 20
-    G.plot_edges(plt, plt_src_snk=True, edge_width = edge_width, head_width = head_width, markersize=markersize)
+    G.plot_edges(plt, plt_src_snk = True, plt_labels = True, edge_width = edge_width, head_width = head_width, markersize=markersize)
     plt.show()
