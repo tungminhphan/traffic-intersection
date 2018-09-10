@@ -1,4 +1,9 @@
-# Try 2!
+#!/usr/local/bin/python
+# coding: utf-8
+# Automaton Class
+# Steve Guo, Tung M. Phan
+# California Institute of Technology
+# July 12, 2018
 
 from random import sample
 import inequality as iq
@@ -6,7 +11,6 @@ import numpy as np
 import math
 import itertools
 from graphviz import Digraph
-import graph
 
 # General state class. Has a 'set' property for the purposes of composition.
 class State:
@@ -87,7 +91,6 @@ class guardTransition(Transition):
 
         return transtext
 
-
 # General finite automaton. 
 class Automaton:
     def __init__(self):
@@ -120,7 +123,7 @@ class Automaton:
             else:
                 print("taking transitions, output, input")
             state, = sample(self.transitions_dict[state], 1).endState # sample from set of all transistions uniformly at random
-        print("simulation has terminated or deadlocked!")           
+        print("simulation has terminated or deadlocked!")
 
     def convert_to_digraph(self):
         automata = Digraph(comment = 'insert description parameter later?')
@@ -159,7 +162,6 @@ class ComponentAutomaton(Automaton):
             guard = tr2.guard
         elif tr2.guard == True:
             guard = tr1.guard
-        
         elif isinstance(tr1.guard, str) and isinstance(tr2.guard, str):
             guard = tr1.guard + ' ∧ ' + tr2.guard
 
@@ -202,8 +204,6 @@ class ComponentAutomaton(Automaton):
 
         for key in to_remove:
             self.transitions_dict.pop(key, None)
-
-
 
 def compose_components(component_1, component_2):
     new_component = ComponentAutomaton()
@@ -392,7 +392,6 @@ def construct_automaton(statelist, translist, start, ends):
 
         if words[0] == 'True':
             guard = True
-        
         elif len(words) > 3 and words[1] == '≤' and words[3] == '≤':
             lwrbnd = float(words[0])
             var = words[2]
