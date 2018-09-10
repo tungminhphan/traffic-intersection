@@ -28,9 +28,7 @@ class State:
 def product(state1, state2):
     composite_list = state1.composite_list + state2.composite_list
     new_name = '('
-    for state in state1.composite_list:
-        new_name += state.name + ', '
-    for state in state2.composite_list:
+    for state in composite_list:
         new_name += state.name + ', '
     new_name = new_name[:-2]
     new_name += ')'
@@ -176,11 +174,9 @@ class InterfaceAutomaton(Automaton):
         if tr1.actionType == '':
             newType = tr2.actionType
             action = tr2.action
-
-        elif tr2.actionType = '':
+        elif tr2.actionType == '':
             newType = tr1.actionType
             action = tr1.action
-
         else:
             action = tr1.action
             if tr1.actionType == '?':
