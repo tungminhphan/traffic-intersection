@@ -81,18 +81,21 @@ class guardTransition(Transition):
 
 # General finite automaton. 
 class Automaton:
-    def __init__(self):
-        self.alphabet = set()
-        self.transitions_dict = {} # transitions_dict[state] is the set of transitions from that state
-        self.startStates = None
-        self.endStates = set()
-        self.states = set()
+    def __init__(self, alphabet = set(), transitions = {}, startStates = set(), endStates = set(), failStates = set(), states = set()):
+        self.alphabet = alphabet
+        self.transitions_dict = transitions # transitions_dict[state] is the set of transitions from that state
+        self.startStates = startStates
+        self.endStates = endStates
+        self.failStates = failStates
+        self.states = states
 
-    def add_state(self, state, end_state = 0, start_state = 0):
+    def add_state(self, state, end_state = 0, start_state = 0, fail_state = 0):
         if end_state:
             self.endStates.add(state)
         if start_state:
             self.startStates.add(state)
+        if fail_state:
+            self.failStates.add(state)
 
         self.states.add(state)
         self.transitions_dict[state] = set()
@@ -226,7 +229,8 @@ def compose_interface(c_1, c_2):
             newstate = product(key1, key2)
 
             new_interface.add_state(newstate, key1 in c_1.endStates and key2 in c_2.endStates
-                , key1 in c_1.startStates and key2 in c_2.startStates)
+                , key1 in c_1.startStates and key2 in c_2.startStates, key1 in c_1.failStates
+                or key2 in c_2.failStates)
 
             for trans1 in dict1[key1]:
                 for trans2 in dict2[key2]:
