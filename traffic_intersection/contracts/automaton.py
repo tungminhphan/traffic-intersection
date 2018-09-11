@@ -142,6 +142,20 @@ class Automaton:
     def add_transition(self, transition):
         self.transitions_dict[transition.startState].add(transition)
 
+    def remove_state(self, state):
+        # deletes all transitions leading to that state
+        for key in self.transitions_dict:
+            transitions = transitions_dict[key]
+            for trans in transitions:
+                if trans.endState == state:
+                    transitions_dict[key].remove(trans)
+
+        # deletes the state
+        self.transitions_dict.pop(state)
+        self.states.remove(state)
+        self.startStates.remove(state)
+        self.endStates.remove(state)
+
     def convert_to_digraph(self):
         automata = Digraph(format='png')
         for state in self.states:
