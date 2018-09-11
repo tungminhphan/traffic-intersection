@@ -175,22 +175,22 @@ class Automaton:
         return automata
 
     # BFS algorithm to find reachable nodes
-    def find_reachable_set(self):
-        reachable_set = set()
-        search_queue = queue.Queue()
-        # initialize queue
-        for start in self.startStates:
-            search_queue.enqueue(start)
-            reachable_set.add(start)
+def find_reachable_set(automaton):
+    reachable_set = set()
+    search_queue = queue.Queue()
+    # initialize queue
+    for start in automaton.startStates:
+        search_queue.enqueue(start)
+        reachable_set.add(start)
 
-        while search_queue.len() > 0:
-            top = search_queue.pop()
-            for trans in self.transitions_dict[top]:
-                if not(trans == False):
-                    if not (trans.endState in reachable_set):
-                        reachable_set.add(trans.endState)
-                        search_queue.enqueue(trans.endState)
-        return reachable_set
+    while search_queue.len() > 0:
+        top = search_queue.pop()
+        for trans in automaton.transitions_dict[top]:
+            if not(trans == False):
+                if not (trans.endState in reachable_set):
+                    reachable_set.add(trans.endState)
+                    search_queue.enqueue(trans.endState)
+    return reachable_set
 
 class InterfaceAutomaton(Automaton):
     def __init__(self, inputAlphabet = set(), outputAlphabet = set(), internalAlphabet = set()):
@@ -205,7 +205,7 @@ class InterfaceAutomaton(Automaton):
     # in the final composition, delete all transitions that are still waiting for input, since we can't take them
     # also removes all states without transitions
     def trim(self):
-        reachable_set = self.find_reachable_set()
+        reachable_set = find_reachable_set(self)
         for key in self.transitions_dict:
             # removes transitions
             to_remove = set()
@@ -269,6 +269,7 @@ def compose_interfaces(interface_1, interface_2):
             for trans1 in dict1[key1]:
                 for trans2 in dict2[key2]:
                     new_interface.transitions_dict[newstate].add(compose_guard_trans(trans1, trans2, node_dict))
+    new_interface.trim()
     return new_interface
 
 def construct_automaton(state_set, translist, starts):
@@ -291,6 +292,7 @@ def construct_automaton(state_set, translist, starts):
         action = translist[key][1]
         action_type = translist[key][2]
         new_interface.add_transition(guardTransition(start = state1, end = state2,  guard = guard, action = action, actionType = action_type))
+    new_interface.trim()
     return new_interface
 
 #construct_automaton(state_set, translist, starts).convert_to_digraph().render('test', view = True)
@@ -320,5 +322,4 @@ def construct_automaton(state_set, translist, starts):
 #B = construct_automaton(state_set, translist, starts)
 #B.convert_to_digraph().render('B', view = True)
 #C = compose_interfaces(A,B)
-#C.trim()
 #C.convert_to_digraph().render('C', view = True)

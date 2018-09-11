@@ -1,3 +1,9 @@
+#!/usr/local/bin/python
+# coding: utf-8
+# Automaton Class
+# Steve Guo, Tung M. Phan
+# California Institute of Technology
+# July 12, 2018
 from automaton import *
 class ContractAutomaton(InterfaceAutomaton):
     def __init__(self, must = {}, may = {}):
@@ -42,40 +48,42 @@ class ContractAutomaton(InterfaceAutomaton):
             self.states = interface.states
             self.startStates = interface.startStates
             self.endStates = interface.endStates
-            self.failStates = interface.failStates
+            self.fail_state = interface.fail_state
 
     def convert_to_digraph(self):
         automata = Digraph(comment = 'insert description parameter later?')
         maxlen = 0
         for state in self.states:
-            if len(state.text) > maxlen:
-                maxlen = len(state.text)
+            if len(state.name) > maxlen:
+                maxlen = len(state.name)
 
         for state in self.states:
             # adds nodes
-            automata.attr('node', shape = 'circle', color='yellow', style='filled', fixedsize='true')
+            automata.attr('node', shape = 'circle', color= 'gray', style = 'filled', fixedsize = 'true')
             if state in self.endStates:
                 automata.attr('node', shape = 'doublecircle', fixedsize = 'true')
             if state in self.startStates:
-                automata.attr('node', color = 'yellow', fixedsize = 'true')
-            newtext = ' ' * math.floor((maxlen - len(state.text))/2) + state.text + ' ' * math.ceil((maxlen - len(state.text))/2)
+                automata.attr('node', color = 'gray', shape = 'invhouse', fixedsize = 'true')
+            newtext = ' ' * math.floor((maxlen - len(state.name))/2) + state.name + ' ' * math.ceil((maxlen - len(state.name))/2)
             automata.node(newtext, newtext)
 
         # adds transitions
-        for state in self.states:
-            maytransit = self.may[state] # this is a set of may transitions from the state
-            musttransit = self.must[state]
-            for trans in maytransit:
-                if trans is not False:
-                    state2 = trans.endState
-                    transtext = trans.show()
-                    automata.edge(state.text, state2.text, label = transtext, style = 'dotted')
+        for state in self.states.union({self.fail_state}):
+            if state in self.may:
+                maytransit = self.may[state] # this is a set of may transitions from the state
+                for trans in maytransit:
+                    if trans is not False:
+                        state2 = trans.endState
+                        transtext = trans.show()
+                        automata.edge(state.name, state.name, label = transtext, style = 'dotted')
 
-            for trans in musttransit:
-                if trans is not False:
-                    state2 = trans.endState
-                    transtext = trans.show()
-                    automata.edge(state.text, state2.text, label = transtext)
+            if state in self.must:
+                musttransit = self.must[state]
+                for trans in musttransit:
+                    if trans is not False:
+                        state2 = trans.endState
+                        transtext = trans.show()
+                        automata.edge(state.name, state2.name, label = transtext)
 
         return automata
 
@@ -113,6 +121,16 @@ class ContractAutomaton(InterfaceAutomaton):
             for letter in alphabetDifference:
                 selfloop = guardTransition(state, state, 'True', letter, '#')
                 self.add_transition(selfloop, 1)
+
+may = dict()
+state_set = {'0', '1', '2', '3'}
+starts = {'0', '1'}
+may = {('0', '1'): ('x > 5', 'a', '?')}
+may[('1', '2')] = ('True', 'c', '!')
+may[('2', '0')] = ('True', 'a', '!')
+D =  construct_automaton(state_set=state_set, starts=starts, translist=may)
+D.convert_to_digraph().render('D', view = True)
+
 
 def compose_contract(cr_1, cr_2):
 	cr_1 = cr_1.strongAlphabetProjection(cr_2)
