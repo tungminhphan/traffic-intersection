@@ -154,15 +154,13 @@ class Automaton:
         self.endStates.remove(state)
 
     def convert_to_digraph(self):
-        automata = Digraph(comment = 'insert description parameter later?')
-
+        automata = Digraph(format='png')
         for state in self.states:
             # adds nodes
             automata.attr('node', shape = 'circle', style='filled', fixedsize='true')
             if state in self.startStates:
                 automata.attr('node', color = 'gray', shape = 'doublecircle', fixedsize = 'true')
             automata.node(state.name, state.name)
-
         # adds transitions
         for state in self.states:
             transit = self.transitions_dict[state] # this is a set of transitions from the state
@@ -175,13 +173,14 @@ class Automaton:
 
 
 class InterfaceAutomaton(Automaton):
-    def __init__(self, inputAlphabet = set(), outputAlphabet = set(), internalAlphabet = set(), failStates = set()):
+    def __init__(self, inputAlphabet = set(), outputAlphabet = set(), internalAlphabet = set()):
         Automaton.__init__(self)
+        self.fail_state = State('fail')
+        self.add_state(self.fail_state)
         self.input_alphabet = inputAlphabet
         self.output_alphabet = outputAlphabet
         self.internal_alphabet = internalAlphabet
         self.alphabet = self.input_alphabet.union(self.output_alphabet).union(self.internal_alphabet)
-        self.failStates = failStates
 
         # takes two guard transitions and returns their composition
     def compose_guard_trans(tr1, tr2):
@@ -228,11 +227,13 @@ class InterfaceAutomaton(Automaton):
         for key in keys_to_remove:
             self.transitions_dict.pop(key, None)
 
-def construct_automaton(statelist, translist, starts):
+def construct_automaton(state_set, translist, starts):
     new_interface = InterfaceAutomaton()
-    string_state_dict = {}
-    # statelist is a list of strings representing state names
-    for state in statelist:
+    state_set = state_set
+    string_state_dict = dict()
+    string_state_dict['fail'] = new_interface.fail_state # add failure state manually
+    # state_set is a list of strings representing state names
+    for state in state_set:
         newstate = State(state)
         new_interface.add_state(newstate)
         string_state_dict[state] = newstate
@@ -250,11 +251,13 @@ def construct_automaton(statelist, translist, starts):
     return new_interface
 
 # testing
-statelist = {'0', '1', '2', '3'}
-starts = {'0', '1'}
-translist = {('0', '1'): ('x > 5', 'a', '?')}
-translist[('1', '2')] = ('True', 'c', '!')
-translist[('2', '0')] = ('True', 'a', '!')
-translist[('3', '0')] = ('y >= 3', 'b', '!')
-translist[('1', '0')] = ('z >= 3', 'b', '#')
-construct_automaton(statelist, translist, starts).convert_to_digraph().render('test', view = True)
+#state_set = {'0', '1', '2', '3'}
+#starts = {'0', '1'}
+#translist = {('0', '1'): ('x > 5', 'a', '?')}
+#translist[('1', '2')] = ('True', 'c', '!')
+#translist[('2', '0')] = ('True', 'a', '!')
+#translist[('3', '0')] = ('y >= 3', 'b', '!')
+#translist[('1', '0')] = ('z >= 3', 'b', '#')
+#translist[('0', '3')] = ('z >= 3', 'b', '#')
+#translist[('0', 'fail')] = ('z >= 3', 'b', '#')
+#construct_automaton(state_set, translist, starts).convert_to_digraph().render('test', view = True)
