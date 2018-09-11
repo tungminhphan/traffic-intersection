@@ -157,12 +157,12 @@ class Automaton:
         self.endStates.remove(state)
 
     def convert_to_digraph(self):
-        automata = Digraph(format='png')
-        for state in self.states:
+        automata = Digraph(format='pdf')
+        for state in self.states.union({self.fail_state}):
             # adds nodes
-            automata.attr('node', shape = 'circle', style='filled', fixedsize='false')
+            automata.attr('node', color = 'gray', shape = 'circle', style='filled', fixedsize='false')
             if state in self.startStates:
-                automata.attr('node', color = 'gray', shape = 'doublecircle', fixedsize = 'false')
+                automata.attr('node', color = 'gray', style='filled', shape = 'doublecircle', fixedsize = 'false')
             automata.node(state.name, state.name)
         # adds transitions
         for state in self.states:
@@ -228,7 +228,7 @@ class InterfaceAutomaton(Automaton):
             self.transitions_dict.pop(node, None)
 
     # takes two guard transitions and returns their composition
-def compose_guard_trans(tr1, tr2):
+def compose_guard_trans(tr1, tr2, node_dict):
     if tr1.action != tr2.action and '' not in [tr1.actionType, tr2.actionType] or tr1.guard == False or tr2.guard == False:
         return False
     if tr1.guard == True:
@@ -238,8 +238,8 @@ def compose_guard_trans(tr1, tr2):
     elif isinstance(tr1.guard, str) and isinstance(tr2.guard, str):
         guard = tr1.guard + ' ∧ ' + tr2.guard
 
-    newStart = product(tr1.startState, tr2.startState)
-    newEnd = product(tr1.startState, tr2.startState)
+    newStart = node_dict[(tr1.startState, tr2.startState)]
+    newEnd = node_dict[(tr1.endState, tr2.endState)]
 
     # assumption is that either both are inequalities or strings
     if tr1.actionType == '':
@@ -256,13 +256,22 @@ def compose_interfaces(interface_1, interface_2):
     new_interface = InterfaceAutomaton()
     dict1 = interface_1.transitions_dict
     dict2 = interface_2.transitions_dict
+    node_dict = dict() # maintain references to states being composed
     for key1 in dict1:
         for key2 in dict2:
             newstate = product(key1, key2)
+            if key1 == interface_1.fail_state or key2 == interface_2.fail_state:
+                node_dict[(key1, key2)] = new_interface.fail_state
+            else:
+                node_dict[(key1, key2)] = product(key1,key2)
+
+    for key1 in dict1:
+        for key2 in dict2:
+            newstate = node_dict[(key1, key2)]
             new_interface.add_state(newstate, start_state = key1 in interface_1.startStates and key2 in interface_2.startStates)
             for trans1 in dict1[key1]:
                 for trans2 in dict2[key2]:
-                    new_interface.transitions_dict[newstate].add(compose_guard_trans(trans1, trans2))
+                    new_interface.transitions_dict[newstate].add(compose_guard_trans(trans1, trans2, node_dict))
     return new_interface
 
 def construct_automaton(state_set, translist, starts):
@@ -302,13 +311,16 @@ translist[('0', 'fail')] = ('z >= 3', 'b', '#')
 A = construct_automaton(state_set, translist, starts)
 A.trim()
 state_set = {'4','5','6', '7'}
-starts = {'4'}
+starts = {'4', '7'}
 translist = dict()
-translist[('4', '6')] = ('z >= 3', 'b', '#')
-translist[('5', '6')] = ('z >= 3', 'b', '#')
-translist[('6', '4')] = ('z >= 3', 'b', '#')
-translist[('4', 'fail')] = ('z >= 3', 'b', '#')
+translist[('4', '6')] = ('z <= 9', 'a', '!')
+translist[('7', '6')] = ('z <= 9', 'b', '?')
+translist[('5', '7')] = ('z <= 9', 'c', '!')
+translist[('7', '4')] = ('z <= 9', 'b', '!')
+translist[('5', '6')] = ('z <= 10', 'b', '#')
+translist[('6', '4')] = ('z <= 9', 'b', '?')
+translist[('4', 'fail')] = ('z <= 5', 'c', '?')
 B = construct_automaton(state_set, translist, starts)
 C = compose_interfaces(A,B)
-#C.trim()
+C.trim()
 C.convert_to_digraph().render('test', view = True)
