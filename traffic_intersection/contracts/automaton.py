@@ -81,8 +81,8 @@ class Transition:
 
 # General transition class for guard (where the guard is a set of inequalities.)
 class guardTransition(Transition):
-    def __init__(self, start = None, end = None, label = None, guard = True, action = None, actionType = None):
-        Transition.__init__(self, start, end, label)
+    def __init__(self, start = None, end = None, guard = True, action = None, actionType = None):
+        Transition.__init__(self, start, end)
         self.guard = guard # guard should be a dictionary of inequalities
         # actually, now guard is a string representing a boolean
 
@@ -101,12 +101,12 @@ class guardTransition(Transition):
         transtext = ''
         # guard can be string
         if isinstance(self.guard, str):
-            transtext = self.guard
+            transtext = '[' + self.guard
         elif self.guard == False:
             return transtext
         elif self.guard == True:
             transtext += 'True'
-        transtext += ' | ' + self.actionType + self.action
+        transtext += ' | ' + self.actionType + self.action + ']'
         return transtext
 
     def print_transition(self):
@@ -144,12 +144,10 @@ class Automaton:
 
         for state in self.states:
             # adds nodes
-            automata.attr('node', shape = 'circle', color='green', style='filled', fixedsize='true')
-            if state in self.endStates:
-                automata.attr('node', shape = 'doublecircle', fixedsize = 'false')
+            automata.attr('node', shape = 'circle', style='filled', fixedsize='true')
             if state in self.startStates:
-                automata.attr('node', color = 'yellow', fixedsize = 'false')
-            automata.node(state.text, state.text)
+                automata.attr('node', color = 'gray', shape = 'doublecircle', fixedsize = 'true')
+            automata.node(state.name, state.name)
 
         # adds transitions
         for state in self.states:
@@ -158,21 +156,22 @@ class Automaton:
                 if trans != False:
                     state2 = trans.endState
                     transtext = trans.show()
-                    automata.edge(state.text, state2.text, label = transtext)
+                    automata.edge(state.name, state2.name, label = transtext)
         return automata
 
 
 class InterfaceAutomaton(Automaton):
-    def __init__(self, inputAlphabet = set(), outputAlphabet = set(), internalAlphabet = set()):
+    def __init__(self, inputAlphabet = set(), outputAlphabet = set(), internalAlphabet = set(), failStates = set()):
         Automaton.__init__(self)
         self.input_alphabet = inputAlphabet
         self.output_alphabet = outputAlphabet
         self.internal_alphabet = internalAlphabet
         self.alphabet = self.input_alphabet.union(self.output_alphabet).union(self.internal_alphabet)
+        self.failStates = failStates
 
         # takes two guard transitions and returns their composition
     def compose_guard_trans(tr1, tr2):
-        if tr1.action != tr2.action and '' not in [tr1.actionType, tr2.actionType]:
+        if tr1.action != tr2.action and '' not in [tr1.actionType, tr2.actionType] or tr1.guard == False or tr2.guard == False:
             return False
         if tr1.guard == True:
             guard = tr2.guard
@@ -182,7 +181,6 @@ class InterfaceAutomaton(Automaton):
             guard = tr1.guard + ' ∧ ' + tr2.guard
 
         newStart = product(tr1.startState, tr2.startState)
-        newEnd = product(tr1.endState, tr2.endState)
 
         # assumption is that either both are inequalities or strings
         if tr1.actionType == '':
@@ -202,53 +200,47 @@ class InterfaceAutomaton(Automaton):
             # removes transitions
             to_remove = set()
             for trans in self.transitions_dict[key]:
-                if trans == False or len(trans.inputs) > 0:
+                if trans == False:
                     to_remove.add(trans)
             self.transitions_dict[key] = self.transitions_dict[key] - to_remove
 
         # removes states without transitions
         for key in self.transitions_dict:
-            to_remove = set()
+            keys_to_remove = set()
             if len(self.transitions_dict[key]) == 0:
                 to_remove.add(key)
                 self.states.remove(key)
 
-        for key in to_remove:
+        for key in keys_to_remove:
             self.transitions_dict.pop(key, None)
 
-
-# # Add this later to make testing easier
-# need to change
-def construct_automaton(statelist, translist, start, ends):
+def construct_automaton(statelist, translist, starts):
     new_interface = InterfaceAutomaton()
-    stringstatedict = {}
+    string_state_dict = {}
     # statelist is a list of strings representing state names
     for state in statelist:
         newstate = State(state)
         new_interface.add_state(newstate)
-        stringstatedict[state] = newstate
-
-    new_interface.set_start_state(stringstatedict[start])
-
-    for end in ends:
-        new_interface.endStates.add(stringstatedict[end])
-    # translist is a dictionary; the key is a tuple of strings representing the states of the transition, and the value is a tuple:
-    # (guardtext, inputs, outputs, internal actions)
-    # inputs, outputs, internal action are sets of strings
+        string_state_dict[state] = newstate
+    for start in starts:
+        new_interface.startStates.add(string_state_dict[start])
+    # translist is a dictionary; the key is a tuple of strings representing the states of the transition, and the value is a list:
+    # (guardtext, action, action_type)
     for key in translist:
-        state1 = stringstatedict[key[0]]
-        state2 = stringstatedict[key[1]]
-
-        words = translist[key][0].split()
-        inp = translist[key][1]
-        out = translist[key][2]
-        inter = translist[key][3]
-
-        if words[0] == 'True':
-            guard = True
-        else:
-            guard = translist[key][0]
-
-        new_interface.add_transition(guardTransition(state1, state2, guard, inp, out, inter))
-
+        state1 = string_state_dict[key[0]]
+        state2 = string_state_dict[key[1]]
+        guard = translist[key][0]
+        action = translist[key][1]
+        action_type = translist[key][2]
+        new_interface.add_transition(guardTransition(state1, state2, guard, action, action_type))
     return new_interface
+
+# testing
+statelist = {'0', '1', '2', '3'}
+starts = {'0', '1'}
+translist = {('0', '1'): ('x > 5', 'a', '?')}
+translist[('1', '2')] = ('True', 'c', '!')
+translist[('2', '0')] = ('True', 'a', '!')
+translist[('3', '0')] = ('y >= 3', 'b', '!')
+translist[('1', '0')] = ('z >= 3', 'b', '#')
+construct_automaton(statelist, translist, starts).convert_to_digraph().render('test', view = True)
