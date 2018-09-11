@@ -113,21 +113,21 @@ class guardTransition(Transition):
         print(self.get_start() + ' --[' + self.show() + ']--> ' + self.get_end())
 
 # test case for the guard transition class
-#s1 = State(1)
-#s2 = State(2)
-#t = guardTransition(start = s1, end = s2, guard = 'x > 3', label = 'test', action = 'a', actionType = '?')
-#t.print_transition()
+# s1 = State(1)
+# s2 = State(2)
+# t = guardTransition(start = s1, end = s2, guard = 'x > 3', label = 'test', action = 'a', actionType = '?')
+# t.print_transition()
 
 # General finite automaton. 
 class Automaton:
     def __init__(self):
         self.alphabet = set()
         self.transitions_dict = {} # transitions_dict[state] is the set of transitions from that state
-        self.startStates = None
+        self.startStates = set()
         self.endStates = set()
         self.states = set()
 
-    def add_state(self, state, end_state = 0, start_state = 0):
+    def add_state(self, state, end_state = False, start_state = False):
         if end_state:
             self.endStates.add(state)
         if start_state:
@@ -139,22 +139,12 @@ class Automaton:
     def add_transition(self, transition):
         self.transitions_dict[transition.startState].add(transition)
 
-    def simulate(self, is_printing = False):
-        state = self.startState
-        while state not in self.endStates:
-            if is_printing:
-                print(state + "  taking transitions, output, input")
-            else:
-                print("taking transitions, output, input")
-            state, = sample(self.transitions_dict[state], 1).endState # sample from set of all transistions uniformly at random
-        print("simulation has terminated or deadlocked!")
-
     def convert_to_digraph(self):
         automata = Digraph(comment = 'insert description parameter later?')
 
         for state in self.states:
             # adds nodes
-            automata.attr('node', shape = 'circle', color='green', style='filled', fixedsize='false')
+            automata.attr('node', shape = 'circle', color='green', style='filled', fixedsize='true')
             if state in self.endStates:
                 automata.attr('node', shape = 'doublecircle', fixedsize = 'false')
             if state in self.startStates:
@@ -169,7 +159,6 @@ class Automaton:
                     state2 = trans.endState
                     transtext = trans.show()
                     automata.edge(state.text, state2.text, label = transtext)
-
         return automata
 
 
@@ -182,10 +171,9 @@ class InterfaceAutomaton(Automaton):
         self.alphabet = self.input_alphabet.union(self.output_alphabet).union(self.internal_alphabet)
 
         # takes two guard transitions and returns their composition
-    def compose_guard_trans(self, tr1, tr2):
+    def compose_guard_trans(tr1, tr2):
         if tr1.action != tr2.action and '' not in [tr1.actionType, tr2.actionType]:
             return False
-
         if tr1.guard == True:
             guard = tr2.guard
         elif tr2.guard == True:
@@ -193,47 +181,29 @@ class InterfaceAutomaton(Automaton):
         elif isinstance(tr1.guard, str) and isinstance(tr2.guard, str):
             guard = tr1.guard + ' ∧ ' + tr2.guard
 
-        # assumption is that either both are inequalities or strings
-
         newStart = product(tr1.startState, tr2.startState)
         newEnd = product(tr1.endState, tr2.endState)
 
+        # assumption is that either both are inequalities or strings
         if tr1.actionType == '':
             newType = tr2.actionType
             action = tr2.action
-        elif tr2.actionType == '':
-            newType = tr1.actionType
-            action = tr1.action
         else:
             action = tr1.action
-            if tr1.actionType == '?':
-                if tr2.actionType == '?':
-                    newType = '?'
-                elif tr2.actionType in {'!', '#'}:
-                    newType = '#'
-
-            elif tr1.actionType == '!':
-                if tr2.actionType == '!':
-                    newType = '!'
-                elif tr2.actionType in {'?', '#'}:
-                    newType = '#'
-
-            elif tr1.actionType == '#':
+            newType = tr1.actionType
+            if {tr1.actionType, tr2.actionType} == {'!', '?'} or tr2.actionType == '#':
                 newType = '#'
-
         return guardTransition(newStart, newEnd, guard, action, newType)
 
     # in the final composition, delete all transitions that are still waiting for input, since we can't take them
     # also removes all states without transitions
     def trim(self):
         for key in self.transitions_dict:
-
             # removes transitions
             to_remove = set()
             for trans in self.transitions_dict[key]:
                 if trans == False or len(trans.inputs) > 0:
                     to_remove.add(trans)
-
             self.transitions_dict[key] = self.transitions_dict[key] - to_remove
 
         # removes states without transitions
