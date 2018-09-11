@@ -19,7 +19,7 @@ class ContractAutomaton(InterfaceAutomaton):
                     if check_simulation(must, may):
                         check = True
 
-                if !check:
+                if not check:
                     return False
 
         return True
@@ -70,13 +70,13 @@ class ContractAutomaton(InterfaceAutomaton):
             maytransit = self.may[state] # this is a set of may transitions from the state
             musttransit = self.must[state]
             for trans in maytransit:
-                if trans != False:
+                if trans is not False:
                     state2 = trans.endState
                     transtext = trans.show()
                     automata.edge(state.text, state2.text, label = transtext, style = 'dotted')
 
             for trans in musttransit:
-                if trans != False:
+                if trans is not False:
                     state2 = trans.endState
                     transtext = trans.show()
                     automata.edge(state.text, state2.text, label = transtext)
@@ -86,7 +86,7 @@ class ContractAutomaton(InterfaceAutomaton):
     def prune_illegal_state(self):
     	# remove any states such that must does not imply may
         finished = False
-        while !finished:
+        while not finished:
             finished = True
             for key in self.must:
                 musttrans = must[key]
@@ -97,9 +97,12 @@ class ContractAutomaton(InterfaceAutomaton):
                         if check_simulation(must, may):
                             check = True
 
-                    if !check:
+                    if not check:
                         self.remove_state(key)
                         finished = False
+
+
+
 
     def weakAlphabetProjection(self, contract):
     	# adds may self-loops
@@ -140,7 +143,7 @@ def check_simulation(trans1, trans2):
     # TODO
 
 
-# assumes weight on a graph is a string of the form "guard / ?input, !output, #internal separated by , "
+# assumes weight on a graph is a string of the form "guard / ?input, not output, #internal separated by , "
 def convert_graph_to_automaton(digraph):
     new_interface = InterfaceAutomaton()
     nodes = digraph._nodes
@@ -189,11 +192,11 @@ def convert_graph_to_automaton(digraph):
 
         guard = iq.dictionarize(iq.Inequality(var, lwrbnd, uprbnd))
 
-        # Each action in form ?(input), !(output), or #(internal)
+        # Each action in form ?(input), not (output), or #(internal)
         for action in actions:
             if action[0] == '?':
                 inp.add(action[1:])
-            elif action[0] == '!':
+            elif action[0] == 'not ':
                 out.add(action[1:])
             elif action[0] == '#':
                 inter.add(action[1:])
