@@ -1,6 +1,6 @@
 # traffic-intersection
 ## Authors and Contributors
-Tung M. Phan (Caltech) <br />
+Tung M. Phan (Caltech), Anhminh Nguyen, Steve Guo <br />
 ## Description
 This project involves the contract-based design and implementation of an autonomous traffic intersection system that may be extended and composed with other systems of the same class.
 ## Requirements
