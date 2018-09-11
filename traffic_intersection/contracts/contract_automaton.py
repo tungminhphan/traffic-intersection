@@ -10,10 +10,16 @@ class ContractAutomaton(InterfaceAutomaton):
 
     def check_validity(self):
         # checks every must transition is a may transition
-        for key in must.transitions_dict:
-            trans = must.transitions_dict[key]
-            for transition in trans:
-                if transitions not in may.transitions_dict[key]:
+        for key in self.must:
+            musttrans = self.must[key]
+            maytrans = self.may[key]
+            for must in musttrans:
+                check = False
+                for may in maytrans:
+                    if check_simulation(must, may):
+                        check = True
+
+                if !check:
                     return False
 
         return True
@@ -78,16 +84,38 @@ class ContractAutomaton(InterfaceAutomaton):
         return automata
 
     def prune_illegal_state(self):
-    	# TODO
     	# remove any states such that must does not imply may
+        finished = False
+        while !finished:
+            finished = True
+            for key in self.must:
+                musttrans = must[key]
+                maytrans = may[key]
+                for must in musttrans:
+                    check = False
+                    for may in maytrans:
+                        if check_simulation(must, may):
+                            check = True
+
+                    if !check:
+                        self.remove_state(key)
+                        finished = False
 
     def weakAlphabetProjection(self, contract):
-    	# TODO 
     	# adds may self-loops
+        alphabetDifference = contract.alphabet - self.alphabet
+        for state in self.states:
+            for letter in alphabetDifference:
+                selfloop = guardTransition(state, state, 'True', letter, '#')
+                self.add_transition(selfloop, 0)
 
     def strongAlphabetProjection(self, contract):
-    	# TODO
     	# adds must self-loops
+        alphabetDifference = contract.alphabet - self.alphabet
+        for state in self.states:
+            for letter in alphabetDifference:
+                selfloop = guardTransition(state, state, 'True', letter, '#')
+                self.add_transition(selfloop, 1)
 
 def compose_contract(cr_1, cr_2):
 	cr_1 = cr_1.strongAlphabetProjection(cr_2)
@@ -106,6 +134,10 @@ def compose_contract(cr_1, cr_2):
 	contract = ContractAutomaton(must = mustAuto.transitions_dict, may = mayAuto.transitions_dict)
 	contract.set_interface_automaton(mayAuto)
 	return contract
+
+def check_simulation(trans1, trans2):
+    # checks if trans1 <= trans2, ie they have the same action, action type, and g_1 => g_2
+    # TODO
 
 
 # assumes weight on a graph is a string of the form "guard / ?input, !output, #internal separated by , "
