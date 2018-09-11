@@ -1,5 +1,4 @@
 from automaton import *
-
 class ContractAutomaton(InterfaceAutomaton):
     def __init__(self, must = {}, may = {}):
         InterfaceAutomaton.__init__(self)
@@ -21,7 +20,6 @@ class ContractAutomaton(InterfaceAutomaton):
 
                 if not check:
                     return False
-
         return True
 
     def add_transition(self, transition, must = 0):
@@ -30,23 +28,21 @@ class ContractAutomaton(InterfaceAutomaton):
             self.must[transition.startState].add(transition)
 
     def get_must_interface(self):
-    	return InterfaceAutomaton(self.alphabet, self.must, self.startStates, self.endStates, self.failStates,
-    		self.states, self.input_alphabet, self.output_alphabet, self.internal_alphabet)
+        return InterfaceAutomaton(self.alphabet, self.must, self.startStates, self.endStates, self.failStates,
+                self.states, self.input_alphabet, self.output_alphabet, self.internal_alphabet)
 
     def get_may_interface(self):
-		return InterfaceAutomaton(self.alphabet, self.may, self.startStates, self.endStates, self.failStates,
-			self.states, self.input_alphabet, self.output_alphabet, self.internal_alphabet)
-
-	def set_interface_automaton(self, interface):
-		self.alphabet = interface.alphabet
-		self.input_alphabet = interface.input_alphabet
-		self.output_alphabet = interface.output_alphabet
-		self.internal_alphabet = interface.internal_alphabet
-		self.transitions_dict = interface.transitions_dict
-		self.states = interface.states
-		self.startStates = interface.startStates
-		self.endStates = interface.endStates
-		self.failStates = interface.failStates
+        return InterfaceAutomaton(self.alphabet, self.may, self.startStates, self.endStates, self.failStates, self.states, self.input_alphabet, self.output_alphabet, self.internal_alphabet)
+    def set_interface_automaton(self, interface):
+            self.alphabet = interface.alphabet
+            self.input_alphabet = interface.input_alphabet
+            self.output_alphabet = interface.output_alphabet
+            self.internal_alphabet = interface.internal_alphabet
+            self.transitions_dict = interface.transitions_dict
+            self.states = interface.states
+            self.startStates = interface.startStates
+            self.endStates = interface.endStates
+            self.failStates = interface.failStates
 
     def convert_to_digraph(self):
         automata = Digraph(comment = 'insert description parameter later?')
@@ -84,7 +80,8 @@ class ContractAutomaton(InterfaceAutomaton):
         return automata
 
     def prune_illegal_state(self):
-    	# remove any states such that must does not imply may
+        #remove any states such that must does not imply may
+
         finished = False
         while not finished:
             finished = True
@@ -101,11 +98,8 @@ class ContractAutomaton(InterfaceAutomaton):
                         self.remove_state(key)
                         finished = False
 
-
-
-
     def weakAlphabetProjection(self, contract):
-    	# adds may self-loops
+        # adds may self-loops
         alphabetDifference = contract.alphabet - self.alphabet
         for state in self.states:
             for letter in alphabetDifference:
@@ -113,7 +107,7 @@ class ContractAutomaton(InterfaceAutomaton):
                 self.add_transition(selfloop, 0)
 
     def strongAlphabetProjection(self, contract):
-    	# adds must self-loops
+        # adds must self-loops
         alphabetDifference = contract.alphabet - self.alphabet
         for state in self.states:
             for letter in alphabetDifference:
@@ -141,6 +135,7 @@ def compose_contract(cr_1, cr_2):
 def check_simulation(trans1, trans2):
     # checks if trans1 <= trans2, ie they have the same action, action type, and g_1 => g_2
     # TODO
+    pass
 
 
 # assumes weight on a graph is a string of the form "guard / ?input, not output, #internal separated by , "
@@ -237,7 +232,6 @@ def construct_automaton(statelist, translist, start, ends):
 
         if words[0] == 'True':
             guard = True
-        
         else:
             guard = translist[key][0]
 

@@ -162,7 +162,7 @@ class Automaton:
             # adds nodes
             automata.attr('node', color = 'gray', shape = 'circle', style='filled', fixedsize='false')
             if state in self.startStates:
-                automata.attr('node', color = 'gray', style='filled', shape = 'doublecircle', fixedsize = 'false')
+                automata.attr('node', color = 'gray', style='filled',  fixedsize = 'false', shape='invhouse')
             automata.node(state.name, state.name)
         # adds transitions
         for state in self.states:
@@ -183,11 +183,8 @@ class Automaton:
             search_queue.enqueue(start)
             reachable_set.add(start)
 
-
-        print([x.name for x in tuple(search_queue._queue.copy())])
         while search_queue.len() > 0:
             top = search_queue.pop()
-            print([x.name for x in tuple(search_queue._queue.copy())])
             for trans in self.transitions_dict[top]:
                 if not(trans == False):
                     if not (trans.endState in reachable_set):
@@ -299,28 +296,29 @@ def construct_automaton(state_set, translist, starts):
 #construct_automaton(state_set, translist, starts).convert_to_digraph().render('test', view = True)
 # testing
 
-state_set = {'0', '1', '2', '3'}
-starts = {'0', '1'}
-translist = {('0', '1'): ('x > 5', 'a', '?')}
-translist[('1', '2')] = ('True', 'c', '!')
-translist[('2', '0')] = ('True', 'a', '!')
-translist[('3', '0')] = ('y >= 3', 'b', '!')
-translist[('1', '0')] = ('z >= 3', 'b', '#')
-translist[('0', '3')] = ('z >= 3', 'b', '#')
-translist[('0', 'fail')] = ('z >= 3', 'b', '#')
-A = construct_automaton(state_set, translist, starts)
-A.trim()
-state_set = {'4','5','6', '7'}
-starts = {'4', '7'}
-translist = dict()
-translist[('4', '6')] = ('z <= 9', 'a', '!')
-translist[('7', '6')] = ('z <= 9', 'b', '?')
-translist[('5', '7')] = ('z <= 9', 'c', '!')
-translist[('7', '4')] = ('z <= 9', 'b', '!')
-translist[('5', '6')] = ('z <= 10', 'b', '#')
-translist[('6', '4')] = ('z <= 9', 'b', '?')
-translist[('4', 'fail')] = ('z <= 5', 'c', '?')
-B = construct_automaton(state_set, translist, starts)
-C = compose_interfaces(A,B)
-C.trim()
-C.convert_to_digraph().render('test', view = True)
+#state_set = {'0', '1', '2', '3'}
+#starts = {'0', '1'}
+#translist = {('0', '1'): ('x > 5', 'a', '?')}
+#translist[('1', '2')] = ('True', 'c', '!')
+#translist[('2', '0')] = ('True', 'a', '!')
+#translist[('3', '0')] = ('y >= 3', 'b', '!')
+#translist[('1', '0')] = ('z >= 3', 'b', '#')
+#translist[('0', '3')] = ('z >= 3', 'b', '#')
+#translist[('0', 'fail')] = ('z >= 3', 'b', '#')
+#A = construct_automaton(state_set, translist, starts)
+#A.convert_to_digraph().render('A', view = True)
+#state_set = {'4','5','6', '7'}
+#starts = {'4', '7'}
+#translist = dict()
+#translist[('4', '6')] = ('z <= 9', 'a', '!')
+#translist[('7', '6')] = ('z <= 9', 'b', '?')
+#translist[('5', '7')] = ('z <= 9', 'c', '!')
+#translist[('7', '4')] = ('z <= 9', 'b', '!')
+#translist[('5', '6')] = ('z <= 10', 'b', '#')
+#translist[('6', '4')] = ('z <= 9', 'b', '?')
+#translist[('4', 'fail')] = ('z <= 5', 'c', '?')
+#B = construct_automaton(state_set, translist, starts)
+#B.convert_to_digraph().render('B', view = True)
+#C = compose_interfaces(A,B)
+#C.trim()
+#C.convert_to_digraph().render('C', view = True)
