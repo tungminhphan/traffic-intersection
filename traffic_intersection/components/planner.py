@@ -99,7 +99,7 @@ def find_transit(path, graph, effective_time, time_table, traffic_lights):
                     return head
     return None
 
-def is_overlapping(interval_A, interval_B):
+def is_disjoint(interval_A, interval_B):
     '''
     this subroutine checks if two intervals intersect with each other; it returns True if
     they do and False otherwise
@@ -107,8 +107,8 @@ def is_overlapping(interval_A, interval_B):
             interval_B - second interval
     output: is_intersecting - True if interval_A intersects interval_B, False otherwise
     '''
-    is_disjoint = (interval_A[0] > interval_B[1]) or (interval_B[0] > interval_A[1])
-    return not is_disjoint
+    disjoint = (interval_A[0] > interval_B[1]) or (interval_B[0] > interval_A[1])
+    return disjoint
 
 def extract_destinations(request):
     depart, arrive = request[1], request[2]
@@ -125,7 +125,7 @@ def subprim_is_safe(subprim_id, subprim_interval, time_table, traffic_lights):
                 return False
         elif box in time_table: # if current conflicting prim is already scheduled
             for interval in time_table[box]:
-                if is_overlapping(subprim_interval, interval): # if the two intervals overlap
+                if not is_disjoint(subprim_interval, interval): # if the two intervals overlap
                     return False
     return True
 
@@ -152,11 +152,11 @@ def crossing_safe(interval, which_light, traffic_lights):
         #is_safe = not (color == 'green' and time <= traffic_lights._max_time['green']/3 or color == 'yellow' and time >= traffic_lights._max_time['yellow']/5)
     return is_safe
 
-def get_scheduled_intervals(path, current_time, graph):
-    now = current_time
+def get_scheduled_intervals(path, effective_time, graph, complete_path=True):
+    now = effective_time
     path_prims = path_to_primitives(path)
     scheduled_intervals = dict()
-    time_shift = current_time
+    time_shift = effective_time
     DT = 0
     for prim_id in path_prims:
         prim_time = get_prim_data(prim_id, 't_end')[0]
@@ -167,9 +167,13 @@ def get_scheduled_intervals(path, current_time, graph):
             subprim_interval = shift_interval((0, dt), time_shift)
             scheduled_intervals[subprim] = subprim_interval
             time_shift += DT
+    if not complete_path:
+        last_subprim = (path_prims[-1], params.num_subprims-1)
+        last_interval = scheduled_intervals[last_subprim]
+        scheduled_intervals[last_subprim] = (last_interval[0], float('inf'))
     return scheduled_intervals
 
-def full_path_is_safe(path, effective_time, graph, time_table, traffic_lights):
+def complete_path_is_safe(path, effective_time, graph, time_table, traffic_lights):
     scheduled_intervals = get_scheduled_intervals(path, effective_time, graph)
     for subprim in scheduled_intervals:
         if not subprim_is_safe(subprim, scheduled_intervals[subprim], time_table, traffic_lights):
@@ -177,10 +181,7 @@ def full_path_is_safe(path, effective_time, graph, time_table, traffic_lights):
     return True
 
 def head_is_safe(path, effective_time, graph, time_table, traffic_lights):
-    scheduled_intervals = get_scheduled_intervals(path, effective_time, graph)
-    last_subprim = (path_to_primitives(path)[-1], params.num_subprims-1)
-    last_interval = scheduled_intervals[last_subprim]
-    scheduled_intervals[last_subprim] = (last_interval[0], np.float('inf'))
+    scheduled_intervals = get_scheduled_intervals(path=path, effective_time=effective_time, graph=graph, complete_path=False)
     for subprim in scheduled_intervals:
         if not subprim_is_safe(subprim, scheduled_intervals[subprim], time_table, traffic_lights):
             return False
@@ -199,15 +200,14 @@ def refresh_effective_times(plate_number, current_time, effective_times):
     else:
         effective_times[plate_number] = current_time
 
-def send_prims_and_update_effective_times(plate_number, the_car, cars, effective_times, path_prims,waiting):
+def send_prims_and_update_effective_times(plate_number, the_car, cars, effective_times, path_prims, waiting):
     if plate_number not in cars:
         cars[plate_number] = the_car # add the car
     if plate_number in waiting.keys():
         time_table[wait_id].add((interval[0], effective_times[plate_number]))
     for prim_id in path_prims:
         cars[plate_number].prim_queue.enqueue((prim_id, 0))
-        prim_time = get_prim_data(prim_id, 't_end')[0]
-        effective_times[plate_number] += prim_time
+        effective_times[plate_number] += get_prim_data(prim_id, 't_end')[0]
 
 def update_time_table(time_table, scheduled_intervals):
     for sub_prim in scheduled_intervals:
@@ -216,13 +216,16 @@ def update_time_table(time_table, scheduled_intervals):
         else:
             time_table[sub_prim].add(scheduled_intervals[sub_prim])
 
-def serve_request(request, graph, current_time, effective_times, time_table, cars, waiting, traffic_lights):
+def make_wait(the_car):
+    the_car.prim_queue.enqueue((-1, 0))
+
+def serve_request(request, graph, current_time, effective_times, time_table, cars, waiting, traffic_lights, request_queue):
     depart, arrive = extract_destinations(request)
     plate_number, the_car = extract_car_info(request)
     refresh_effective_times(plate_number, current_time, effective_times)
     effective_time = effective_times[plate_number]
     _, path = dijkstra(depart, arrive, graph)
-    if full_path_is_safe(path=path, effective_time=effective_time, graph=graph, time_table=time_table, traffic_lights=traffic_lights):
+    if complete_path_is_safe(path=path, effective_time=effective_time, graph=graph, time_table=time_table, traffic_lights=traffic_lights):
         scheduled_intervals = get_scheduled_intervals(path, effective_time, graph)
         update_time_table(time_table = time_table, scheduled_intervals = scheduled_intervals)
         path_prims = path_to_primitives(path)
@@ -230,7 +233,11 @@ def serve_request(request, graph, current_time, effective_times, time_table, car
     else:
         head = find_transit(path, graph, effective_time, time_table, traffic_lights)
         if head != None:
-            scheduled_intervals = get_scheduled_intervals(path, effective_time, graph)
+            transit = head[-1]
+            scheduled_intervals = get_scheduled_intervals(path=path, effective_time=effective_time, graph=graph, complete_path=False)
             update_time_table(time_table = time_table, scheduled_intervals = scheduled_intervals)
             path_prims = path_to_primitives(head)
             send_prims_and_update_effective_times(plate_number, the_car, cars, effective_times, path_prims, waiting)
+            make_wait(the_car)
+        else:
+            request_queue.enqueue((plate_number, depart, arrive, the_car))

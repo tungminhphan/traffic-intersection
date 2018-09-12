@@ -334,7 +334,7 @@ def animate(frame_idx): # update animation by dt
     original_request_len = request_queue.len()
     while request_queue.len() > 0 and not deadlocked: # if there is at least one live request in the queue
         request = request_queue.pop() # take the first request
-        planner.serve_request(request=request,graph=G,current_time=current_time,effective_times=effective_times, time_table=time_table,cars=cars,traffic_lights=traffic_lights,waiting=waiting)
+        planner.serve_request(request=request,graph=G,current_time=current_time,effective_times=effective_times, time_table=time_table,cars=cars,waiting=waiting,traffic_lights=traffic_lights,request_queue=request_queue)
         service_count += 1
         if service_count == original_request_len:
             service_count = 0 # reset service count
