@@ -159,7 +159,7 @@ def compose_contract(cr_1, cr_2):
                 if may.action == must.action and may.actionType == must.actionType:
                     if is_satisfiable(may.guard + ' ∧ ' + must.guard):
                         notFound = True
-            if notFound:
+            if not notFound:
                 mayAuto.remove_state(key)
                 mustAuto.remove_state(key)
 
@@ -168,7 +168,7 @@ def compose_contract(cr_1, cr_2):
                 if may.action == must.action and may.actionType == must.actionType:
                     if is_satisfiable(may.guard + ' ∧ ' + must.guard):
                         notFound = True
-            if notFound:
+            if not notFound:
                 mayAuto.remove_state(key)
                 mustAuto.remove_state(key)
 
