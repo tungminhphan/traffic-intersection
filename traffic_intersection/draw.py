@@ -99,7 +99,7 @@ def draw_pedestrians(pedestrians):
 #np.random.seed(400)
 
 # disable antialiasing for better performance
-antialias_enabled = True
+antialias_enabled = False
 def draw_cars(vehicles):
     for vehicle in vehicles:
         vee, theta, x, y = vehicle.state
@@ -122,7 +122,7 @@ def draw_cars(vehicles):
 medic_signs = []
 medic_sign = dir_path + '/components/imglib/medic.png'
 medic_fig = Image.open(medic_sign).convert("RGBA")
-medic_fig = medic_fig.resize((15,15))
+medic_fig = medic_fig.resize((25,25))
 def draw_medic_signs(medic_signs_coordinates):
     for coordinate in medic_signs_coordinates:
         x, y = find_corner_coordinates(0, 0, coordinate[0], coordinate[1], 0, medic_fig)
@@ -180,7 +180,7 @@ show_axes = False
 if not show_axes:
     plt.axis('off')
 # sampling time
-dt = 0.2
+dt = 0.1
 # create car
 def spawn_car():
     def generate_license_plate():
@@ -344,7 +344,8 @@ def animate(frame_idx): # update animation by dt
                 original_request_len = request_queue.len()
 
 ######## pedestrian implementation ########
-    if with_probability(0.02*dt/0.1):
+#    if with_probability(0.02*dt/0.1):
+    if with_probability(0.2):
         new_name, new_begin_node, new_final_node, new_pedestrian = spawn_pedestrian()
         if new_begin_node == new_final_node:
             # print("Request Denied")
@@ -581,13 +582,13 @@ t0 = time.time()
 animate(0)
 t1 = time.time()
 interval = (t1 - t0)
-num_frames = 3000 # number of the first frames to save in video
+num_frames = 2000 # number of the first frames to save in video
 ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval, blit=True, repeat=False) # by default the animation function loops, we set repeat to False in order to limit the number of frames generated to num_frames
 
 if options.save_video:
     Writer = animation.writers['ffmpeg']
     writer = Writer(fps = 60, metadata=dict(artist='Me'), bitrate=-1)
-    ani.save('movies/new_prims.avi', writer=writer, dpi=200)
+    ani.save('movies/test.avi', writer=writer, dpi=200)
 plt.show()
 t2 = time.time()
 print('Total elapsed time: ' + str(t2-t0))

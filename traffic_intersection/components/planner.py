@@ -94,8 +94,9 @@ def find_transit(path, graph, effective_time, time_table, traffic_lights):
                 _, head = dijkstra(depart, transit, graph)
                 # check if head is safe
                 if len(head) > 0:
-                    head_ok = head_is_safe(head, effective_time, graph, time_table, traffic_lights)
+                    head_ok = head_is_safe(path=head, effective_time=effective_time, graph=graph, time_table=time_table, traffic_lights=traffic_lights)
                 if tail_ok and head_ok:
+                    print(head)
                     return head
     return None
 
@@ -157,16 +158,14 @@ def get_scheduled_intervals(path, effective_time, graph, complete_path=True):
     path_prims = path_to_primitives(path)
     scheduled_intervals = dict()
     time_shift = effective_time
-    DT = 0
     for prim_id in path_prims:
         prim_time = get_prim_data(prim_id, 't_end')[0]
         dt = prim_time / params.num_subprims
-        DT += dt
         for subprim_id in range(params.num_subprims):
             subprim = (prim_id, subprim_id)
             subprim_interval = shift_interval((0, dt), time_shift)
             scheduled_intervals[subprim] = subprim_interval
-            time_shift += DT
+            time_shift += dt
     if not complete_path:
         last_subprim = (path_prims[-1], params.num_subprims-1)
         last_interval = scheduled_intervals[last_subprim]
@@ -211,13 +210,16 @@ def send_prims_and_update_effective_times(plate_number, the_car, cars, effective
 
 def update_time_table(time_table, scheduled_intervals):
     for sub_prim in scheduled_intervals:
-        if sub_prim not in time_table:
+        if not sub_prim in time_table:
             time_table[sub_prim] = {scheduled_intervals[sub_prim]}
         else:
             time_table[sub_prim].add(scheduled_intervals[sub_prim])
 
 def make_wait(the_car):
-    the_car.prim_queue.enqueue((-1, 0))
+    the_car.prim_queue.enqueue((-1,0))
+
+def unwait(the_car):
+    the_car.prim_queue.remove((-1,0))
 
 def serve_request(request, graph, current_time, effective_times, time_table, cars, waiting, traffic_lights, request_queue):
     depart, arrive = extract_destinations(request)
@@ -234,10 +236,10 @@ def serve_request(request, graph, current_time, effective_times, time_table, car
         head = find_transit(path, graph, effective_time, time_table, traffic_lights)
         if head != None:
             transit = head[-1]
-            scheduled_intervals = get_scheduled_intervals(path=path, effective_time=effective_time, graph=graph, complete_path=False)
+            scheduled_intervals = get_scheduled_intervals(path=head, effective_time=effective_time, graph=graph, complete_path=False)
             update_time_table(time_table = time_table, scheduled_intervals = scheduled_intervals)
             path_prims = path_to_primitives(head)
             send_prims_and_update_effective_times(plate_number, the_car, cars, effective_times, path_prims, waiting)
             make_wait(the_car)
         else:
-            request_queue.enqueue((plate_number, depart, arrive, the_car))
+            request_queue.enqueue(request)
