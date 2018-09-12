@@ -1,6 +1,6 @@
-custom = False
+custom = True
 if custom:
-    save_video = True
+    save_video = False
     create_collision_dictionary = False
     show_boxes = False
     show_tubes = False

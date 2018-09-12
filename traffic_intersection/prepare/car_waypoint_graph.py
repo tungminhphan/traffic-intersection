@@ -19,8 +19,7 @@ import primitives.load_primitives as load_primitives
 
 G = WeightedDirectedGraph()
 
-ignore_set = {29,30,31,32, 129, 130, 131, 152, 153, 154, 155, 53, 54, 55, 56, 91, 93}
-ignore_set = {}
+ignore_set = {29,30,31,32, 129, 130, 131, 152, 153, 154, 155, 53, 54, 55, 56, 87, 88, 89, 90, 91, 92, 93}
 
 def add_source_sink(edge):
     start, end, weight = edge

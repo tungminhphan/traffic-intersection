@@ -180,7 +180,7 @@ show_axes = False
 if not show_axes:
     plt.axis('off')
 # sampling time
-dt = 0.1
+dt = 0.2
 # create car
 def spawn_car():
     def generate_license_plate():
@@ -259,12 +259,13 @@ def unpause_car(the_car, plate_number):
         del waiting[plate_number]
 
 def clean_stamps(time_table, current_time):
-    for key in time_table.copy():
-        for interval in time_table[key].copy():
+    for sub_prim in time_table.copy():
+        for plate_number in time_table[sub_prim].copy():
+            interval = time_table[sub_prim][plate_number]
             if interval[1] < current_time:
-                time_table[key].remove(interval)
-            if len(time_table[key]) == 0:
-                del time_table[key]
+                del time_table[sub_prim][plate_number]
+        if len(time_table[sub_prim]) == 0:
+            del time_table[sub_prim]
 
 effective_times = dict()
 # checks if pedestrian is crossing street
@@ -588,7 +589,7 @@ ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval
 if options.save_video:
     Writer = animation.writers['ffmpeg']
     writer = Writer(fps = 60, metadata=dict(artist='Me'), bitrate=-1)
-    ani.save('movies/test.avi', writer=writer, dpi=200)
+    ani.save('movies/new_test.avi', writer=writer, dpi=200)
 plt.show()
 t2 = time.time()
 print('Total elapsed time: ' + str(t2-t0))
