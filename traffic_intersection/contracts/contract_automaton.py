@@ -102,8 +102,6 @@ class ContractAutomaton(InterfaceAutomaton):
                         finished = False
 
 
-
-
     def weakAlphabetProjection(self, contract):
     	# adds may self-loops
         alphabetDifference = contract.alphabet - self.alphabet
