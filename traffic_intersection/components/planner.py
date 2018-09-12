@@ -10,6 +10,7 @@ import components.traffic_signals as traffic_signals
 import prepare.queue as queue
 import prepare.car_waypoint_graph as waypoint_graph
 import primitives.tubes
+from primitives.load_primitives import get_prim_data
 import numpy as np
 import assumes.params as params
 if __name__ == '__main__':
@@ -85,11 +86,11 @@ def get_scheduled_times(path, current_time, primitive_graph):
         scheduled_times.append(scheduled_times[-1] + primitive_graph._weights[(prev, curr)])
     return scheduled_times
 
-def time_stamp_edge(path, edge_time_stamps, current_time, primitive_graph, partial = False):
+def time_stamp_edge(path, time_table, current_time, primitive_graph, partial = False):
     '''
-    given a weighted path, this function updates the edge_time_stamps set according to the given path.
+    given a weighted path, this function updates the time_table set according to the given path.
     input:   path - weighted path
-    output:  modifies edge_time_stamps
+    output:  modifies time_table
     '''
     scheduled_times = get_scheduled_times(path=path, current_time=current_time, primitive_graph=primitive_graph)
     for k in range(0,len(path)-1):
@@ -106,13 +107,13 @@ def time_stamp_edge(path, edge_time_stamps, current_time, primitive_graph, parti
             else:
                 stamp = (start_time + segment_id/params.num_subprims * delta_t, start_time + (segment_id + 1)/(params.num_subprims) * delta_t) # stamp for subedge
             try:
-                edge_time_stamps[(edge_to_prim_id[edge], segment_id)].add(stamp)
+                time_table[(edge_to_prim_id[edge], segment_id)].add(stamp)
             except KeyError:
-                edge_time_stamps[(edge_to_prim_id[edge], segment_id)] = {stamp}
+                time_table[(edge_to_prim_id[edge], segment_id)] = {stamp}
     if partial:
-        return edge_time_stamps, last_int
+        return time_table, last_int
     else:
-        return edge_time_stamps
+        return time_table
 
 def is_overlapping(interval_A, interval_B):
     '''
@@ -125,23 +126,23 @@ def is_overlapping(interval_A, interval_B):
     is_disjoint = (interval_A[0] > interval_B[1]) or (interval_B[0] > interval_A[1])
     return not is_disjoint
 
-def update(self, dt):
-    full_cycle = sum(self._max_time[k] for k in self._max_time)
-    horizontal_time = (self._state['horizontal'][1] + dt) % full_cycle # update and trim time
-    current_color = self._state['horizontal'][0]
-    next_color = self.successor(current_color)
-    last_color = self.successor(next_color)
-    if horizontal_time // self._max_time[current_color] < 1:
-        horizontal_color = current_color
-    elif horizontal_time // (full_cycle - self._max_time[last_color]) < 1:
-        horizontal_color = next_color
-        horizontal_time = horizontal_time - self._max_time[current_color]
-    else:
-        horizontal_color = last_color
-        horizontal_time = horizontal_time - self._max_time[current_color] - self._max_time[next_color]
-    new_horizontal_state = [horizontal_color, horizontal_time]
-    self._state['horizontal'] = new_horizontal_state
-    self._state['vertical'] = self.get_counterpart(new_horizontal_state)
+#def update(self, dt):
+#    full_cycle = sum(self._max_time[k] for k in self._max_time)
+#    horizontal_time = (self._state['horizontal'][1] + dt) % full_cycle # update and trim time
+#    current_color = self._state['horizontal'][0]
+#    next_color = self.successor(current_color)
+#    last_color = self.successor(next_color)
+#    if horizontal_time // self._max_time[current_color] < 1:
+#        horizontal_color = current_color
+#    elif horizontal_time // (full_cycle - self._max_time[last_color]) < 1:
+#        horizontal_color = next_color
+#        horizontal_time = horizontal_time - self._max_time[current_color]
+#    else:
+#        horizontal_color = last_color
+#        horizontal_time = horizontal_time - self._max_time[current_color] - self._max_time[next_color]
+#    new_horizontal_state = [horizontal_color, horizontal_time]
+#    self._state['horizontal'] = new_horizontal_state
+#    self._state['vertical'] = self.get_counterpart(new_horizontal_state)
 
 def crossing_safe(interval, which_light, traffic_lights):
     interval_length = interval[1] - interval[0]
@@ -168,7 +169,7 @@ def crossing_safe(interval, which_light, traffic_lights):
         #is_safe = not (color == 'green' and time <= traffic_lights._max_time['green']/3 or color == 'yellow' and time >= traffic_lights._max_time['yellow']/5)
     return is_safe
 
-def backtrack(scheduled_times, path, edge_time_stamps):
+def backtrack(scheduled_times, path, time_table):
     '''
     find the furthest node to stop at (potentially forever)
     '''
@@ -184,14 +185,14 @@ def backtrack(scheduled_times, path, edge_time_stamps):
         for conflict_box in collision_dictionary[(last_prim_id, last_subprim)]:
             if not isinstance(conflict_box,str):
                 col_id, col_sub_prim = conflict_box
-            if conflict_box in edge_time_stamps: # if current loc is already stamped
-                for inner_interval in edge_time_stamps[(col_id, col_sub_prim)]:
+            if conflict_box in time_table: # if current loc is already stamped
+                for inner_interval in time_table[(col_id, col_sub_prim)]:
                     overlapping = overlapping or is_overlapping(last_interval, inner_interval) # if the two intervals overlap
         if not overlapping:
             return False, last_index
     return False, None
 
-def is_safe(path, current_time, primitive_graph, edge_time_stamps, traffic_lights):
+def is_safe(path, current_time, primitive_graph, time_table, traffic_lights):
     now = current_time
     scheduled_times = [now]
     current_edge_idx = 0
@@ -207,13 +208,13 @@ def is_safe(path, current_time, primitive_graph, edge_time_stamps, traffic_light
             for box in collision_dictionary[(curr_prim_id, ii)]:
                 if isinstance(box, str):
                     if not crossing_safe(ego_interval, box, traffic_lights):
-                        return backtrack(scheduled_times, path, edge_time_stamps)
+                        return backtrack(scheduled_times, path, time_table)
                 else:
                     colliding_id, jj = box
-                    if box in edge_time_stamps: # if current loc is already stamped
-                        for interval in edge_time_stamps[(colliding_id, jj)]:
+                    if box in time_table: # if current loc is already stamped
+                        for interval in time_table[(colliding_id, jj)]:
                             if is_overlapping(ego_interval, interval): # if the two intervals overlap
-                                return backtrack(scheduled_times, path, edge_time_stamps)
+                                return backtrack(scheduled_times, path, time_table)
     return True, None
 
 def print_state():
@@ -230,14 +231,6 @@ def generate_license_plate():
 
 #########################################################################
 
-#def extract_destinations(request):
-#    depart, arrive = request[1], request[2]
-#    return depart, arrive
-#
-#def extract_car_info(request):
-#    plate_number, the_car = request[0], request[3]
-#    return plate_number, the_car
-#
 #def find_transit(path, graph):
 #    depart = path[0]
 #    arrive = path[-1]
@@ -249,24 +242,12 @@ def generate_license_plate():
 #        if len(head) > 0 and len(tail) > 0:
 #            # if head is safe (with stopping)
 #            break
-#        if transit_idx + > len(path):
+#        if transit_idx > len(path):
 #            break
 #        transit_idx -= 1
 #    return transit
 #
-#def subprim_is_safe(subprim_id, subprim_interval, traffic_lights):
-#    for box in collision_dictionary[subprim_id]:
-#        if isinstance(box, str):
-#            if not crossing_safe(subprim_interval, box, traffic_lights):
-#                return False
-#        else:
-#            if box in edge_time_stamps: # if current loc is already stamped
-#                for interval in edge_time_stamps[box]:
-#                    if is_overlapping(subprim_interval, interval): # if the two intervals overlap
-#                        return False
-#    return True # if all checks pass
-#
-#def head_is_safe(path, current_time, graph, edge_time_stamps, traffic_lights):
+#def head_is_safe(path, current_time, graph, time_table, traffic_lights):
 #    now = current_time
 #    scheduled_times = [now]
 #    current_edge_idx = 0
@@ -276,51 +257,99 @@ def generate_license_plate():
 #        for ii in range(params.num_subprims):
 #            subprim_interval = (left_time + (ii) / params.num_subprims * delta_t, left_time + (ii + 1)/params.num_subprims * delta_t)
 #            subprim_id = (curr_prim_id, ii)
-#            if not subprim_is_safe(subprim_id, subprim_interval, traffic_lights):
+#            if not subprim_is_safe(subprim_id, subprim_interval, time_table, traffic_lights):
 #                return False
 #    return True # if all checks pass
-#
-#def get_scheduled_times_and_prim_ids(path, current_time, graph):
-#    now = current_time
-#    scheduled_times = [now]
-#    prim_ids = []
-#    for prev, curr in zip(path[0::1], path[1::1]):
-#        scheduled_times.append(scheduled_times[-1] + graph._weights[(prev, curr)])
-#        prim_ids.append(edge_to_prim_id[(prev,curr)])
-#    return scheduled_times, prim_ids
-#
-#def full_path_is_safe(path, current_time, graph, edge_time_stamps, traffic_lights):
-#    now = current_time
-#    scheduled_times = [now]
-#    current_edge_idx = 0
-#    scheduled_times, prim_ids = get_scheduled_times_and_prim_ids(path, current_time, graph)
-#    for idx in range(len(prim_ids)):
-#        delta_t = scheduled_times[idx+1] - scheduled_times[idx]
-#        for ii in range(params.num_subprims):
-#            subprim_interval = (left_time + (ii) / params.num_subprims * delta_t, left_time + (ii + 1)/params.num_subprims * delta_t)
-#            subprim_id = (curr_prim_id, ii)
-#            if not subprim_is_safe(subprim_id, subprim_interval, traffic_lights):
-#                return False
-#    return True # if all checks pass
-#
-#def service_car(plate_number, the_car, cars, effective_current_times, path_prims):
-#    if plate_number not in cars:
-#        cars[plate_number] = the_car # add the car
-#    if plate_number in waiting.keys():
-#        edge_time_stamps[wait_id].add((interval[0], effective_current_times[plate_number]))
-#    time_stamp_edge(path = shortest_path, edge_time_stamps = edge_time_stamps, current_time = effective_current_times[plate_number], primitive_graph = G)
-#    path_prims = path_to_primitives(shortest_path) # add primitives
-#    for prim_id in path_prims:
-#        cars[plate_number].prim_queue.enqueue((prim_id, 0))
-#        prim_time = get_prim_data(prim_id, 't_end')[0]
-#        effective_current_times[plate_number] += prim_time
-#
-#def service_request(request, graph, current_time, edge_time_stamps, traffic_lights):
-#    depart, arrive = extract_destinations(request)
-#    _, path = dijkstra(depart, arrive, graph)
-#    if full_path_is_safe(path, current_time, primitive_path, edge_time_stamps, traffic_lights):
-#        service_car(plate_number, the_car, cars, effective_current_times, path_prims)
-#    else:
-#        transit = find_transit(path)
-#        service_car_to_transit()
-#
+
+def extract_destinations(request):
+    depart, arrive = request[1], request[2]
+    return depart, arrive
+
+def extract_car_info(request):
+    plate_number, the_car = request[0], request[3]
+    return plate_number, the_car
+
+def subprim_is_safe(subprim_id, subprim_interval, time_table, traffic_lights):
+    for box in collision_dictionary[subprim_id]:
+        if isinstance(box, str):
+            if not crossing_safe(subprim_interval, box, traffic_lights):
+                return False
+        else:
+            if box in time_table: # if current loc is already stamped
+                for interval in time_table[box]:
+                    if is_overlapping(subprim_interval, interval): # if the two intervals overlap
+                        return False
+    return True # if all checks pass
+
+
+def shift_interval(interval, dt):
+    return (interval[0] + dt, interval[1] + dt)
+
+def get_scheduled_intervals(path, current_time, graph):
+    now = current_time
+    path_prims = path_to_primitives(path)
+    scheduled_intervals = dict()
+    time_shift = current_time
+    DT = 0
+    for prim_id in path_prims:
+        prim_time = get_prim_data(prim_id, 't_end')[0]
+        dt = prim_time / params.num_subprims
+        DT += dt
+        for subprim_id in range(params.num_subprims):
+            subprim = (prim_id, subprim_id)
+            subprim_interval = shift_interval((0, dt), time_shift)
+            scheduled_intervals[subprim] = subprim_interval
+            time_shift += DT
+    return scheduled_intervals
+
+def full_path_is_safe(path, effective_current_time, graph, time_table, traffic_lights):
+    scheduled_intervals = get_scheduled_intervals(path, effective_current_time, graph)
+    for subprim in scheduled_intervals:
+        if not subprim_is_safe(subprim, scheduled_intervals[subprim], time_table, traffic_lights):
+            return False
+    return True
+
+def path_to_primitives(path):
+    primitives = []
+    for node_s, node_e  in zip(path[:-1], path[1:]):
+            next_prim_id = edge_to_prim_id[(node_s, node_e)]
+            primitives.append(next_prim_id)
+    return primitives
+
+def update_effective_times(plate_number, current_time, effective_current_times):
+    if plate_number in effective_current_times.keys():
+        effective_current_times[plate_number] = max(current_time, effective_current_times[plate_number])
+    else:
+        effective_current_times[plate_number] = current_time
+
+def drive_car(plate_number, the_car, cars, effective_current_times, path_prims,waiting):
+    if plate_number not in cars:
+        cars[plate_number] = the_car # add the car
+    if plate_number in waiting.keys():
+        time_table[wait_id].add((interval[0], effective_current_times[plate_number]))
+    for prim_id in path_prims:
+        cars[plate_number].prim_queue.enqueue((prim_id, 0))
+        prim_time = get_prim_data(prim_id, 't_end')[0]
+        effective_current_times[plate_number] += prim_time
+
+def update_time_table(path_prims, time_table, scheduled_intervals):
+    for sub_prim in scheduled_intervals:
+        if sub_prim not in time_table:
+            time_table[sub_prim] = {scheduled_intervals[sub_prim]}
+        else:
+            time_table[sub_prim].add(scheduled_intervals[sub_prim])
+
+def serve_request(request, graph, current_time, effective_current_times, time_table, cars, waiting, traffic_lights):
+    depart, arrive = extract_destinations(request)
+    plate_number, the_car = extract_car_info(request)
+    update_effective_times(plate_number, current_time, effective_current_times)
+    _, path = dijkstra(depart, arrive, graph)
+    if full_path_is_safe(path=path, effective_current_time=effective_current_times[plate_number], graph=graph, time_table=time_table, traffic_lights=traffic_lights):
+        scheduled_intervals = get_scheduled_intervals(path, effective_current_times[plate_number], graph)
+        path_prims = path_to_primitives(path)
+        drive_car(plate_number, the_car, cars, effective_current_times, path_prims, waiting)
+        update_time_table(path_prims = path_prims, time_table = time_table, scheduled_intervals = scheduled_intervals)
+    else:
+        pass
+        #transit = find_transit(path)
+        #service_car_to_transit()

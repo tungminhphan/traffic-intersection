@@ -15,7 +15,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 intersection_fig = os.path.dirname(dir_path) + "/components/imglib/intersection.png"
 
 # prim_id to visualize
-prim_id = 76
+prim_id = 93
 fig = plt.figure()
 plt.axis("on") # turn on/off axes
 background = Image.open(intersection_fig)

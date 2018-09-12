@@ -211,12 +211,6 @@ def spawn_pedestrian():
     the_pedestrian = pedestrian.Pedestrian(init_state=init_state, pedestrian_type=pedestrian_type, name=name, age=age)
     return name, start_node, end_node, the_pedestrian
 
-def path_to_primitives(path):
-    primitives = []
-    for node_s, node_e  in zip(path[:-1], path[1:]):
-            next_prim_id = edge_to_prim_id[(node_s, node_e)]
-            primitives.append(next_prim_id)
-    return primitives
 
 #if true, pedestrians can cross street and cars cannot cross
 def safe_to_walk(green_duration, light_color, light_time):
@@ -236,8 +230,7 @@ pedestrians = []
 pedestrian_queue = queue.Queue()
 
 cars = dict()
-edge_time_stamps = dict()
-time_stamps = dict()
+time_table = dict()
 request_queue = queue.Queue()
 honk_x = []
 honk_y = []
@@ -265,13 +258,13 @@ def unpause_car(the_car, plate_number):
     if plate_number in waiting.keys():
         del waiting[plate_number]
 
-def clean_stamps(edge_time_stamps, current_time):
-    for key in edge_time_stamps.copy():
-        for interval in edge_time_stamps[key].copy():
+def clean_stamps(time_table, current_time):
+    for key in time_table.copy():
+        for interval in time_table[key].copy():
             if interval[1] < current_time:
-                edge_time_stamps[key].remove(interval)
-            if len(edge_time_stamps[key]) == 0:
-                del edge_time_stamps[key]
+                time_table[key].remove(interval)
+            if len(time_table[key]) == 0:
+                del time_table[key]
 
 effective_current_times = dict()
 
@@ -335,106 +328,113 @@ def animate(frame_idx): # update animation by dt
 
     """ online frame update """
     global background
-    if with_probability(0.2*dt/0.1):
+    #if with_probability(0.2*dt/0.1):
+    if with_probability(1):
 #    if with_probability(min(1,10/(frame_idx+1))):
         new_plate_number, new_start_node, new_end_node, new_car = spawn_car()
         request_queue.enqueue((new_plate_number, new_start_node, new_end_node, new_car))
     service_count = 0
     original_request_len = request_queue.len()
     while request_queue.len() > 0 and not deadlock: # if there is at least one request in the queue
-        plate_number, prestart_node, end_node, the_car = request_queue.pop() # take the first request
-        start_velocity = prestart_node[0]
-        if plate_number not in effective_current_times.keys():
-            effective_current_times[plate_number] = current_time
-        else:
-            effective_current_times[plate_number] = max(current_time, effective_current_times[plate_number])
-        if the_car.prim_queue.len() > 1:
-            if the_car.prim_queue.top()[0] == -1:
-                start_velocity = 0
-        start_node = (start_velocity, prestart_node[1], prestart_node[2], prestart_node[3])
-        service_count += 1
-        # consider the case where the plate number is already in the waiting set
-        if plate_number in waiting.keys(): # if plate number is already waiting
-            wait_id, interval = waiting[plate_number]
-            edge_time_stamps[wait_id].remove(interval)
-        _, shortest_path = planner.dijkstra(start_node, end_node, G)
+        request = request_queue.pop() # take the first request
+        planner.serve_request(request=request,graph=G,current_time=current_time,effective_current_times=effective_current_times, time_table=time_table,cars=cars,traffic_lights=traffic_lights,waiting=waiting)
 
-        safety_check, first_conflict_edge_idx = planner.is_safe(path = shortest_path, current_time = effective_current_times[plate_number], primitive_graph = G, edge_time_stamps = edge_time_stamps, traffic_lights = traffic_lights)
-        if safety_check:
-            if plate_number not in cars:
-                cars[plate_number] = the_car # add the car
-            if plate_number in waiting.keys():
-                edge_time_stamps[wait_id].add((interval[0], effective_current_times[plate_number]))
-            unpause_car(the_car, plate_number)
-            planner.time_stamp_edge(path = shortest_path, edge_time_stamps = edge_time_stamps, current_time = effective_current_times[plate_number], primitive_graph = G)
-            path_prims = path_to_primitives(shortest_path) # add primitives
-            for prim_id in path_prims:
-                cars[plate_number].prim_queue.enqueue((prim_id, 0))
-                prim_time = get_prim_data(prim_id, 't_end')[0]
-                effective_current_times[plate_number] += prim_time
-        elif first_conflict_edge_idx == None:
-            if plate_number in waiting.keys():
-                edge_time_stamps[wait_id].add(interval) # add temporarily removed interval back
-            new_request = (plate_number, start_node, end_node, the_car)
-            request_queue.enqueue(new_request)
-        else:
-            if first_conflict_edge_idx == 0 and plate_number not in cars:
-                cars[plate_number] = the_car # add the car
-                pause_car(the_car)
-                prim_id = path_to_primitives(shortest_path[:2])[0]
-                wait_interval = (effective_current_times[plate_number], float('inf'))
-                wait_id = (prim_id, 0)
-                waiting[plate_number] = (wait_id, wait_interval) # add/update current node there
-                try:
-                    edge_time_stamps[wait_id].add(wait_interval)
-                except KeyError:
-                    edge_time_stamps[wait_id] = {wait_interval}
-            elif first_conflict_edge_idx == 0 and plate_number in cars:
-                if plate_number in waiting:
-                    wait_id, wait_interval = waiting[plate_number]
-                    edge_time_stamps[wait_id].add(wait_interval) # add temporarily removed interval back
-            else: # if first_conflict_edge_idx > 0
-                unpause_car(the_car, plate_number)
-                if plate_number not in cars:
-                    cars[plate_number] = the_car # add the car
-                if plate_number in waiting.keys(): # if plate number is already waiting
-                    edge_time_stamps[wait_id].add((interval[0], effective_current_times[plate_number]))
-                backtracking_idx = 0
-                partial_path = []
-                partial_end = float('inf')
-                while partial_end >= 0:
-                    partial_end = first_conflict_edge_idx - backtracking_idx
-                    try:
-                        if partial_end == 0:
-                            partial_path = [flip_node(shortest_path[partial_end])]
-                        else:
-                            _, partial_path = planner.dijkstra(start_node, flip_node(shortest_path[partial_end]), G)
-                        backtracking_idx += 1
-                    except SyntaxError:
-                        backtracking_idx += 1
-                    safety_check, _ = planner.is_safe(path = partial_path, current_time = effective_current_times[plate_number], primitive_graph = G, edge_time_stamps = edge_time_stamps, traffic_lights = traffic_lights)
-                    if len(partial_path) is not 0 and safety_check:
-                        break
-                if len(partial_path) > 1:
-                    _, last_interval = planner.time_stamp_edge(path = partial_path, edge_time_stamps = edge_time_stamps, current_time = effective_current_times[plate_number], primitive_graph = G, partial=True)
-                    path_prims = path_to_primitives(path=partial_path) # add primitives
-                    for prim_id in path_prims:
-                        cars[plate_number].prim_queue.enqueue((prim_id, 0))
-                        prim_time = get_prim_data(prim_id, 't_end')[0]
-                        effective_current_times[plate_number] += prim_time
-                    pause_car(the_car)
-                    start_node = (partial_path[-1][0], partial_path[-1][1], partial_path[-1][2], partial_path[-1][3])
-                    wait_id = (path_prims[-1], params.num_subprims-1)
-                    waiting[plate_number] = (wait_id, last_interval) # add/update current node there
-                if len(partial_path) == 1 and plate_number not in cars:
-                    cars[plate_number] = the_car # add the car
-                    pause_car(the_car)
-            new_request = (plate_number, start_node, end_node, the_car)
-            request_queue.enqueue(new_request)
+
+############################################################################
+############################################################################
+#        start_velocity = prestart_node[0]
+#        if plate_number not in effective_current_times.keys():
+#            effective_current_times[plate_number] = current_time
+#        else:
+#            effective_current_times[plate_number] = max(current_time, effective_current_times[plate_number])
+#        if the_car.prim_queue.len() > 1:
+#            if the_car.prim_queue.top()[0] == -1:
+#                start_velocity = 0
+#        start_node = (start_velocity, prestart_node[1], prestart_node[2], prestart_node[3])
+#        service_count += 1
+#        # consider the case where the plate number is already in the waiting set
+#        if plate_number in waiting.keys(): # if plate number is already waiting
+#            wait_id, interval = waiting[plate_number]
+#            time_table[wait_id].remove(interval)
+#        _, shortest_path = planner.dijkstra(start_node, end_node, G)
+#
+#        safety_check, first_conflict_edge_idx = planner.is_safe(path = shortest_path, current_time = effective_current_times[plate_number], primitive_graph = G, time_table = time_table, traffic_lights = traffic_lights)
+#        if safety_check:
+#            if plate_number not in cars:
+#                cars[plate_number] = the_car # add the car
+#            if plate_number in waiting.keys():
+#                time_table[wait_id].add((interval[0], effective_current_times[plate_number]))
+#            unpause_car(the_car, plate_number)
+#            planner.time_stamp_edge(path = shortest_path, time_table = time_table, current_time = effective_current_times[plate_number], primitive_graph = G)
+#            path_prims = path_to_primitives(shortest_path) # add primitives
+#            for prim_id in path_prims:
+#                cars[plate_number].prim_queue.enqueue((prim_id, 0))
+#                prim_time = get_prim_data(prim_id, 't_end')[0]
+#                effective_current_times[plate_number] += prim_time
+#        elif first_conflict_edge_idx == None:
+#            if plate_number in waiting.keys():
+#                time_table[wait_id].add(interval) # add temporarily removed interval back
+#            new_request = (plate_number, start_node, end_node, the_car)
+#            request_queue.enqueue(new_request)
+#        else:
+#            if first_conflict_edge_idx == 0 and plate_number not in cars:
+#                cars[plate_number] = the_car # add the car
+#                pause_car(the_car)
+#                prim_id = path_to_primitives(shortest_path[:2])[0]
+#                wait_interval = (effective_current_times[plate_number], float('inf'))
+#                wait_id = (prim_id, 0)
+#                waiting[plate_number] = (wait_id, wait_interval) # add/update current node there
+#                try:
+#                    time_table[wait_id].add(wait_interval)
+#                except KeyError:
+#                    time_table[wait_id] = {wait_interval}
+#            elif first_conflict_edge_idx == 0 and plate_number in cars:
+#                if plate_number in waiting:
+#                    wait_id, wait_interval = waiting[plate_number]
+#                    time_table[wait_id].add(wait_interval) # add temporarily removed interval back
+#            else: # if first_conflict_edge_idx > 0
+#                unpause_car(the_car, plate_number)
+#                if plate_number not in cars:
+#                    cars[plate_number] = the_car # add the car
+#                if plate_number in waiting.keys(): # if plate number is already waiting
+#                    time_table[wait_id].add((interval[0], effective_current_times[plate_number]))
+#                backtracking_idx = 0
+#                partial_path = []
+#                partial_end = float('inf')
+#                while partial_end >= 0:
+#                    partial_end = first_conflict_edge_idx - backtracking_idx
+#                    try:
+#                        if partial_end == 0:
+#                            partial_path = [flip_node(shortest_path[partial_end])]
+#                        else:
+#                            _, partial_path = planner.dijkstra(start_node, flip_node(shortest_path[partial_end]), G)
+#                        backtracking_idx += 1
+#                    except SyntaxError:
+#                        backtracking_idx += 1
+#                    safety_check, _ = planner.is_safe(path = partial_path, current_time = effective_current_times[plate_number], primitive_graph = G, time_table = time_table, traffic_lights = traffic_lights)
+#                    if len(partial_path) is not 0 and safety_check:
+#                        break
+#                if len(partial_path) > 1:
+#                    _, last_interval = planner.time_stamp_edge(path = partial_path, time_table = time_table, current_time = effective_current_times[plate_number], primitive_graph = G, partial=True)
+#                    path_prims = path_to_primitives(path=partial_path) # add primitives
+#                    for prim_id in path_prims:
+#                        cars[plate_number].prim_queue.enqueue((prim_id, 0))
+#                        prim_time = get_prim_data(prim_id, 't_end')[0]
+#                        effective_current_times[plate_number] += prim_time
+#                    pause_car(the_car)
+#                    start_node = (partial_path[-1][0], partial_path[-1][1], partial_path[-1][2], partial_path[-1][3])
+#                    wait_id = (path_prims[-1], params.num_subprims-1)
+#                    waiting[plate_number] = (wait_id, last_interval) # add/update current node there
+#                if len(partial_path) == 1 and plate_number not in cars:
+#                    cars[plate_number] = the_car # add the car
+#                    pause_car(the_car)
+#            new_request = (plate_number, start_node, end_node, the_car)
+#            request_queue.enqueue(new_request)
+############################################################################
+############################################################################
         if service_count == original_request_len:
             service_count = 0 # reset service count
             if request_queue.len() == original_request_len:
-#                print('deadlock!!')
                 deadlock = True
             else:
                 original_request_len = request_queue.len()
@@ -532,7 +532,7 @@ def animate(frame_idx): # update animation by dt
         del cars[plate_number]
 
     ax.cla() # clear Axes before plotting
-    clean_stamps(edge_time_stamps, current_time)
+    clean_stamps(time_table, current_time)
     if not show_axes:
         plt.axis('off')
     ## STAGE UPDATE HAPPENS AFTER THIS COMMENT
@@ -677,13 +677,13 @@ t0 = time.time()
 animate(0)
 t1 = time.time()
 interval = (t1 - t0)
-num_frames = 2000 # number of the first frames to save in video
+num_frames = 3000 # number of the first frames to save in video
 ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval, blit=True, repeat=False) # by default the animation function loops, we set repeat to False in order to limit the number of frames generated to num_frames
 
 if options.save_video:
     Writer = animation.writers['ffmpeg']
     writer = Writer(fps = 60, metadata=dict(artist='Me'), bitrate=-1)
-    ani.save('movies/4hi_fi.avi', writer=writer, dpi=200)
+    ani.save('movies/new_prims.avi', writer=writer, dpi=200)
 plt.show()
 t2 = time.time()
 print('Total elapsed time: ' + str(t2-t0))
