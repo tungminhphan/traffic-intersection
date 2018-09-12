@@ -5,10 +5,13 @@
 # California Institute of Technology
 # July 12, 2018
 
+import sys
+sys.path.append('..')
 from random import sample
 import numpy as np
 import math, itertools
 from graphviz import Digraph
+from prepare import queue
 
 # General state class.
 class State:
@@ -154,12 +157,12 @@ class Automaton:
         self.endStates.remove(state)
 
     def convert_to_digraph(self):
-        automata = Digraph(format='png')
-        for state in self.states:
+        automata = Digraph(format='pdf')
+        for state in self.states.union({self.fail_state}):
             # adds nodes
-            automata.attr('node', shape = 'circle', style='filled', fixedsize='true')
+            automata.attr('node', color = 'gray', shape = 'circle', style='filled', fixedsize='false')
             if state in self.startStates:
-                automata.attr('node', color = 'gray', shape = 'doublecircle', fixedsize = 'true')
+                automata.attr('node', color = 'gray', style='filled',  fixedsize = 'false', shape='invhouse')
             automata.node(state.name, state.name)
         # adds transitions
         for state in self.states:
@@ -171,6 +174,23 @@ class Automaton:
                     automata.edge(state.name, state2.name, label = transtext)
         return automata
 
+    # BFS algorithm to find reachable nodes
+def find_reachable_set(automaton):
+    reachable_set = set()
+    search_queue = queue.Queue()
+    # initialize queue
+    for start in automaton.startStates:
+        search_queue.enqueue(start)
+        reachable_set.add(start)
+
+    while search_queue.len() > 0:
+        top = search_queue.pop()
+        for trans in automaton.transitions_dict[top]:
+            if not(trans == False):
+                if not (trans.endState in reachable_set):
+                    reachable_set.add(trans.endState)
+                    search_queue.enqueue(trans.endState)
+    return reachable_set
 
 class InterfaceAutomaton(Automaton):
     def __init__(self, inputAlphabet = set(), outputAlphabet = set(), internalAlphabet = set()):
@@ -182,33 +202,10 @@ class InterfaceAutomaton(Automaton):
         self.internal_alphabet = internalAlphabet
         self.alphabet = self.input_alphabet.union(self.output_alphabet).union(self.internal_alphabet)
 
-        # takes two guard transitions and returns their composition
-    def compose_guard_trans(tr1, tr2):
-        if tr1.action != tr2.action and '' not in [tr1.actionType, tr2.actionType] or tr1.guard == False or tr2.guard == False:
-            return False
-        if tr1.guard == True:
-            guard = tr2.guard
-        elif tr2.guard == True:
-            guard = tr1.guard
-        elif isinstance(tr1.guard, str) and isinstance(tr2.guard, str):
-            guard = tr1.guard + ' ∧ ' + tr2.guard
-
-        newStart = product(tr1.startState, tr2.startState)
-
-        # assumption is that either both are inequalities or strings
-        if tr1.actionType == '':
-            newType = tr2.actionType
-            action = tr2.action
-        else:
-            action = tr1.action
-            newType = tr1.actionType
-            if {tr1.actionType, tr2.actionType} == {'!', '?'} or tr2.actionType == '#':
-                newType = '#'
-        return guardTransition(newStart, newEnd, guard, action, newType)
-
     # in the final composition, delete all transitions that are still waiting for input, since we can't take them
     # also removes all states without transitions
     def trim(self):
+        reachable_set = find_reachable_set(self)
         for key in self.transitions_dict:
             # removes transitions
             to_remove = set()
@@ -217,19 +214,66 @@ class InterfaceAutomaton(Automaton):
                     to_remove.add(trans)
             self.transitions_dict[key] = self.transitions_dict[key] - to_remove
 
-        # removes states without transitions
-        for key in self.transitions_dict:
-            keys_to_remove = set()
-            if len(self.transitions_dict[key]) == 0:
-                to_remove.add(key)
-                self.states.remove(key)
+        # removes states that are not reachable
+        for node in self.transitions_dict:
+            nodes_to_remove = set()
+            if not (node in reachable_set):
+                to_remove.add(node)
+                self.states.remove(node)
 
-        for key in keys_to_remove:
-            self.transitions_dict.pop(key, None)
+        for node in nodes_to_remove:
+            self.transitions_dict.pop(node, None)
+
+    # takes two guard transitions and returns their composition
+def compose_guard_trans(tr1, tr2, node_dict):
+    if tr1.action != tr2.action and '' not in [tr1.actionType, tr2.actionType] or tr1.guard == False or tr2.guard == False:
+        return False
+    if tr1.guard == True:
+        guard = tr2.guard
+    elif tr2.guard == True:
+        guard = tr1.guard
+    elif isinstance(tr1.guard, str) and isinstance(tr2.guard, str):
+        guard = tr1.guard + ' ∧ ' + tr2.guard
+
+    newStart = node_dict[(tr1.startState, tr2.startState)]
+    newEnd = node_dict[(tr1.endState, tr2.endState)]
+
+    # assumption is that either both are inequalities or strings
+    if tr1.actionType == '':
+        newType = tr2.actionType
+        action = tr2.action
+    else:
+        action = tr1.action
+        newType = tr1.actionType
+        if {tr1.actionType, tr2.actionType} == {'!', '?'} or tr2.actionType == '#':
+            newType = '#'
+    return guardTransition(newStart, newEnd, guard, action, newType)
+
+def compose_interfaces(interface_1, interface_2):
+    new_interface = InterfaceAutomaton()
+    dict1 = interface_1.transitions_dict
+    dict2 = interface_2.transitions_dict
+    node_dict = dict() # maintain references to states being composed
+    for key1 in dict1:
+        for key2 in dict2:
+            newstate = product(key1, key2)
+            if key1 == interface_1.fail_state or key2 == interface_2.fail_state:
+                node_dict[(key1, key2)] = new_interface.fail_state
+            else:
+                node_dict[(key1, key2)] = product(key1,key2)
+
+    for key1 in dict1:
+        for key2 in dict2:
+            newstate = node_dict[(key1, key2)]
+            new_interface.add_state(newstate, start_state = key1 in interface_1.startStates and key2 in interface_2.startStates)
+            for trans1 in dict1[key1]:
+                for trans2 in dict2[key2]:
+                    new_interface.transitions_dict[newstate].add(compose_guard_trans(trans1, trans2, node_dict))
+    new_interface.trim()
+    return new_interface
 
 def construct_automaton(state_set, translist, starts):
     new_interface = InterfaceAutomaton()
-    state_set = state_set
     string_state_dict = dict()
     string_state_dict['fail'] = new_interface.fail_state # add failure state manually
     # state_set is a list of strings representing state names
@@ -247,10 +291,13 @@ def construct_automaton(state_set, translist, starts):
         guard = translist[key][0]
         action = translist[key][1]
         action_type = translist[key][2]
-        new_interface.add_transition(guardTransition(state1, state2, guard, action, action_type))
+        new_interface.add_transition(guardTransition(start = state1, end = state2,  guard = guard, action = action, actionType = action_type))
+    new_interface.trim()
     return new_interface
 
+#construct_automaton(state_set, translist, starts).convert_to_digraph().render('test', view = True)
 # testing
+
 #state_set = {'0', '1', '2', '3'}
 #starts = {'0', '1'}
 #translist = {('0', '1'): ('x > 5', 'a', '?')}
@@ -260,4 +307,19 @@ def construct_automaton(state_set, translist, starts):
 #translist[('1', '0')] = ('z >= 3', 'b', '#')
 #translist[('0', '3')] = ('z >= 3', 'b', '#')
 #translist[('0', 'fail')] = ('z >= 3', 'b', '#')
-#construct_automaton(state_set, translist, starts).convert_to_digraph().render('test', view = True)
+#A = construct_automaton(state_set, translist, starts)
+#A.convert_to_digraph().render('A', view = True)
+#state_set = {'4','5','6', '7'}
+#starts = {'4', '7'}
+#translist = dict()
+#translist[('4', '6')] = ('z <= 9', 'a', '!')
+#translist[('7', '6')] = ('z <= 9', 'b', '?')
+#translist[('5', '7')] = ('z <= 9', 'c', '!')
+#translist[('7', '4')] = ('z <= 9', 'b', '!')
+#translist[('5', '6')] = ('z <= 10', 'b', '#')
+#translist[('6', '4')] = ('z <= 9', 'b', '?')
+#translist[('4', 'fail')] = ('z <= 5', 'c', '?')
+#B = construct_automaton(state_set, translist, starts)
+#B.convert_to_digraph().render('B', view = True)
+#C = compose_interfaces(A,B)
+#C.convert_to_digraph().render('C', view = True)
