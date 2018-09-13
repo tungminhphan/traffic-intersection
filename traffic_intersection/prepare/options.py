@@ -1,9 +1,8 @@
-custom = False
+custom = True
 if custom:
+    save_video = False
     dt = 0.1
-    fps = 20
-    duration = 200
-    save_video = True
+    duration = 400
     highlight_crossings = False
     create_collision_dictionary = False
     show_boxes = False
@@ -12,9 +11,10 @@ if custom:
     show_plates = False
     show_prims = False
     show_traffic_light_walls = False
+    new_car_probability = 1
+    new_pedestrian_probability = 0.1
 else:
     dt = 0.1
-    fps = 20
     duration = 200
     save_video = False
     highlight_crossings = False
@@ -25,3 +25,5 @@ else:
     show_plates = False
     show_prims = False
     show_traffic_light_walls = False
+    new_car_probability = 0.1
+    new_pedestrian_probability = 0.1

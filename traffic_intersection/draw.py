@@ -298,7 +298,7 @@ def walk_faster(person, remaining_time):
 def animate(frame_idx): # update animation by dt
     deadlocked = False
     current_time = frame_idx * dt # compute current time from frame index and dt
-    print('{:.2f}'.format(current_time)) # print out current time to 2 decimal places
+    print('{:.2f}'.format(current_time)+'/'+str(options.duration)) # print out current time to 2 decimal places
 
     horizontal_light = traffic_lights.get_states('horizontal', 'color')
     vertical_light = traffic_lights.get_states('vertical', 'color')
@@ -314,7 +314,7 @@ def animate(frame_idx): # update animation by dt
 
     """ online frame update """
     global background
-    if with_probability(0.2*dt/0.1):
+    if with_probability(options.new_car_probability):
         new_plate_number, new_start_node, new_end_node, new_car = spawn_car()
         request_queue.enqueue((new_plate_number, new_start_node, new_end_node, new_car))
     service_count = 0
@@ -331,8 +331,7 @@ def animate(frame_idx): # update animation by dt
                 original_request_len = request_queue.len()
 
 ######## pedestrian implementation ########
-#    if with_probability(0.02*dt/0.1):
-    if with_probability(0.2):
+    if with_probability(options.new_pedestrian_probability):
         new_name, new_begin_node, new_final_node, new_pedestrian = spawn_pedestrian()
         if new_begin_node == new_final_node:
             # print("Request Denied")
@@ -598,14 +597,12 @@ t0 = time.time()
 animate(0)
 t1 = time.time()
 interval = (t1 - t0)
-movie_duration = options.duration
-fps = options.fps
-num_frames = int(movie_duration/dt) # number of the first frames to save in video
-ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval, blit=True, repeat=False) # by default the animation function loops, we set repeat to False in order to limit the number of frames generated to num_frames
+
+ani = animation.FuncAnimation(fig, animate, frames=int(options.duration/options.dt), interval=interval, blit=True, repeat=False) # by default the animation function loops, we set repeat to False in order to limit the number of frames generated to num_frames
 
 if options.save_video:
     Writer = animation.writers['ffmpeg']
-    writer = Writer(fps = fps, metadata=dict(artist='Me'), bitrate=-1)
+    writer = Writer(fps = int(1/options.dt), metadata=dict(artist='Me'), bitrate=-1)
     ani.save('movies/working_planner.avi', writer=writer, dpi=200)
 plt.show()
 t2 = time.time()
