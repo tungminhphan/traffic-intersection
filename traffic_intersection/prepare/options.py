@@ -1,9 +1,10 @@
-custom = True
+custom = False
 if custom:
     dt = 0.1
     fps = 20
     duration = 200
     save_video = True
+    highlight_crossings = False
     create_collision_dictionary = False
     show_boxes = False
     show_tubes = False
@@ -16,6 +17,7 @@ else:
     fps = 20
     duration = 200
     save_video = False
+    highlight_crossings = False
     create_collision_dictionary = False
     show_boxes = False
     show_tubes = False
