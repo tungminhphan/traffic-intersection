@@ -215,7 +215,7 @@ def update_time_table(time_table, scheduled_intervals, plate_number):
         else:
             time_table[sub_prim][plate_number] = interval
 
-def make_wait(the_car, plate_number, waiting, wait_subprim,time_table):
+def make_wait(the_car, plate_number, waiting, wait_subprim):
     the_car.prim_queue.enqueue((-1,0))
     waiting[plate_number] = wait_subprim
 
@@ -231,7 +231,6 @@ def serve_request(request, graph, current_time, effective_times, time_table, car
     plate_number, the_car = extract_car_info(request)
     refresh_effective_times(plate_number, current_time, effective_times)
     effective_time = effective_times[plate_number]
-#    wait_subprim = unwait(the_car=the_car,plate_number=plate_number,waiting=waiting,time_table=time_table)
     _, path = dijkstra(depart, arrive, graph)
     if complete_path_is_safe(path=path, effective_time=effective_time, graph=graph, time_table=time_table, plate_number=plate_number, traffic_lights=traffic_lights):
         unwait(the_car, plate_number, waiting, time_table)
@@ -249,7 +248,18 @@ def serve_request(request, graph, current_time, effective_times, time_table, car
             path_prims = path_to_primitives(head)
             send_prims_and_update_effective_times(plate_number=plate_number,the_car=the_car,cars=cars,effective_times=effective_times,path_prims=path_prims)
             wait_subprim = (path_prims[-1],params.num_subprims-1)
-            make_wait(the_car=the_car,plate_number=plate_number,waiting=waiting,wait_subprim=wait_subprim,time_table=time_table)
+            make_wait(the_car=the_car,plate_number=plate_number,waiting=waiting,wait_subprim=wait_subprim)
             request_queue.enqueue((plate_number, transit, arrive, the_car))
-        else:
+        elif plate_number not in cars and depart[0] == 0:
+            path_prims = path_to_primitives(path)
+            wait_subprim = (path_prims[0], 0)
+            wait_interval = (current_time, float('inf'))
+            if subprim_is_safe(wait_subprim, wait_interval, time_table, plate_number, traffic_lights):
+                cars[plate_number] = the_car # add the car
+                scheduled_intervals = dict()
+                scheduled_intervals[wait_subprim] = wait_interval
+                update_time_table(time_table=time_table,scheduled_intervals=scheduled_intervals,plate_number=plate_number)
+                make_wait(the_car=the_car,plate_number=plate_number,waiting=waiting,wait_subprim=wait_subprim)
+                request_queue.enqueue(request)
+        elif plate_number in cars:
             request_queue.enqueue(request)

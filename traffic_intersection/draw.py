@@ -180,7 +180,7 @@ show_axes = False
 if not show_axes:
     plt.axis('off')
 # sampling time
-dt = 0.2
+dt = options.dt
 # create car
 def spawn_car():
     def generate_license_plate():
@@ -583,13 +583,15 @@ t0 = time.time()
 animate(0)
 t1 = time.time()
 interval = (t1 - t0)
-num_frames = 2000 # number of the first frames to save in video
+movie_duration = options.duration
+fps = options.fps
+num_frames = int(movie_duration/dt) # number of the first frames to save in video
 ani = animation.FuncAnimation(fig, animate, frames=num_frames, interval=interval, blit=True, repeat=False) # by default the animation function loops, we set repeat to False in order to limit the number of frames generated to num_frames
 
 if options.save_video:
     Writer = animation.writers['ffmpeg']
-    writer = Writer(fps = 60, metadata=dict(artist='Me'), bitrate=-1)
-    ani.save('movies/new_test.avi', writer=writer, dpi=200)
+    writer = Writer(fps = fps, metadata=dict(artist='Me'), bitrate=-1)
+    ani.save('movies/working_planner.avi', writer=writer, dpi=200)
 plt.show()
 t2 = time.time()
 print('Total elapsed time: ' + str(t2-t0))
