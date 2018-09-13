@@ -25,7 +25,7 @@ import prepare.options as options
 from  prepare.collision_check import collision_free, get_bounding_box
 import numpy as np
 from numpy import cos, sin, tan, pi
-from PIL import Image
+from PIL import Image, ImageDraw
 import scipy.io
 if platform.system() == 'Darwin': # if the operating system is MacOS
     matplotlib.use('macosx')
@@ -130,11 +130,11 @@ def draw_medic_signs(medic_signs_coordinates):
 
 walk_sign_go = dir_path + '/components/imglib/go.png'
 go_fig = Image.open(walk_sign_go).convert("RGBA")
-go_fig = go_fig.resize((18,25))
+go_fig = go_fig.resize((18,18))
 
 walk_sign_stop = dir_path + '/components/imglib/stop.png'
 stop_fig = Image.open(walk_sign_stop).convert("RGBA")
-stop_fig = stop_fig.resize((18,25))
+stop_fig = stop_fig.resize((18,18))
 
 vertical_go_fig = go_fig.rotate(-180, expand = False)
 vertical_stop_fig = stop_fig.rotate(-180, expand = False)
@@ -154,22 +154,8 @@ def draw_walk_signs(vertical_fig, horizontal_fig):
         x, y = find_corner_coordinates(0, 0, coordinate[0], coordinate[1], 0, horizontal_fig)
         background.paste(horizontal_fig, (int(x), int(y)), horizontal_fig)
 
-green_light_png = dir_path + '/components/imglib/intersection_states/green_light.png'
-green_light_fig = Image.open(green_light_png)
-yellow_light_png = dir_path + '/components/imglib/intersection_states/yellow_light.png'
-yellow_light_fig = Image.open(yellow_light_png)
-red_light_png = dir_path + '/components/imglib/intersection_states/red_light.png'
-red_light_fig = Image.open(red_light_png)
-
-colors_of_light = {'green': green_light_fig, 'yellow': yellow_light_fig, 'red': red_light_fig}
-vertical_light_coordinates = {'green':[(379, 642), (684,112)], 'yellow': [(379, 659), (684,129)], 'red': [(379, 677), (684, 146)]}
-horizontal_light_coordinates = {'green':[(294, 193), (757, 566)], 'yellow': [(311, 193), (774, 566)], 'red': [(329, 193), (791, 566)]}
-
-# takes the light color and pastes it at the desired coordinates
-def draw_lights(light_color_fig, coordinates):
-    for coordinate in coordinates:
-        x, y = find_corner_coordinates(0, 0, coordinate[0], coordinate[1], 0, light_color_fig)
-        background.paste(light_color_fig, (int(x), int(y)), light_color_fig)
+vertical_light_coordinates = {'green':[(378, 642), (682.5,110)], 'yellow': [(378, 659), (682.5,126)], 'red': [(378, 677), (682.5, 144.5)]}
+horizontal_light_coordinates = {'green':[(291, 193), (756, 566.25)], 'yellow': [(309, 193), (773, 566.25)], 'red': [(327, 193), (790, 566.25)]}
 
 # creates figure
 fig = plt.figure()
@@ -324,7 +310,7 @@ def animate(frame_idx): # update animation by dt
     # if sign is true then walk, stop if false
     vertical_walk_safe = safe_to_walk(green_duration, vertical_light, vertical_light_time)
     horizontal_walk_safe = safe_to_walk(green_duration, horizontal_light, horizontal_light_time)
-    draw_walk_signs(walk_sign_figs['vertical'][vertical_walk_safe], walk_sign_figs['horizontal'][horizontal_walk_safe])
+    #draw_walk_signs(walk_sign_figs['vertical'][vertical_walk_safe], walk_sign_figs['horizontal'][horizontal_walk_safe])
 
     """ online frame update """
     global background
@@ -377,16 +363,44 @@ def animate(frame_idx): # update animation by dt
     background = Image.open(intersection_fig)
     x_lim, y_lim = background.size
 
-    # if sign is true then walk, stop if false
-    vertical_walk_safe = safe_to_walk(green_duration, vertical_light, vertical_light_time)
-    horizontal_walk_safe = safe_to_walk(green_duration, horizontal_light, horizontal_light_time)
+    if options.highlight_crossings:
+        alpha = 120 # transparency 
+        green = (34,139,34,alpha)
+        red = (200,0,0,alpha)
+        vertical_lane_color = green if vertical_walk_safe else red
+        horizontal_lane_color = green if horizontal_walk_safe else red
+    
+        img1 = Image.open(intersection_fig) # highlighted crossings will be drawn on this image
+        draw = ImageDraw.Draw(img1)
+        draw.rectangle([(345,209),(366,550)], fill = vertical_lane_color)
+        draw.rectangle([(697,209),(718,550)], fill = vertical_lane_color)
+        draw.rectangle([(392,580),(670,602)], fill = horizontal_lane_color)
+        draw.rectangle([(392,158),(670,180)], fill = horizontal_lane_color)
+        img = Image.alpha_composite(background, img1) # image with highlighted walk lanes
+        background.paste(img)
+
     draw_walk_signs(walk_sign_figs['vertical'][vertical_walk_safe], walk_sign_figs['horizontal'][horizontal_walk_safe])
-    draw_lights(colors_of_light[vertical_light], vertical_light_coordinates[vertical_light]) # vertical lights
-    draw_lights(colors_of_light[horizontal_light], horizontal_light_coordinates[horizontal_light]) # horizontal lights
+
+    vertical_lights = ax.scatter(None,None)
+    horizontal_lights = ax.scatter(None,None)
+    x = []
+    y = []
+    for coordinate in vertical_light_coordinates[vertical_light]:
+        x.append(coordinate[0])
+        y.append(coordinate[1])
+    vertical_lights = ax.scatter(x, y, s=25, facecolors=vertical_light[0])
+    
+    x = []
+    y = []
+    for coordinate in horizontal_light_coordinates[horizontal_light]:
+        x.append(coordinate[0])
+        y.append(coordinate[1])
+    horizontal_lights = ax.scatter(x, y, s=25, facecolors=horizontal_light[0])
 
     # update pedestrians
     pedestrians_to_keep = []
     pedestrians_waiting = []
+
     lane1 = [(355, 195), (355, 565)] # left vertical path, (bottom node, top node)
     lane2 = [(705, 195), (705, 565)] # right vertical path, (bottom node, top node)
     lane3 = [(380, 590), (680, 590)] # top horizontal path (left node, right node)
@@ -548,6 +562,7 @@ def animate(frame_idx): # update animation by dt
     draw_pedestrians(pedestrians_to_keep) # draw pedestrians to background
     draw_cars(cars_to_keep)
 
+
     # plot traffic light walls
     walls = [ax.plot([], [],'r')[0] for _ in range(4)]
     if options.show_traffic_light_walls:
@@ -577,7 +592,7 @@ def animate(frame_idx): # update animation by dt
     # show artists
     global stage # set up a global stage
     stage = ax.imshow(background, origin="lower") # update the stage
-    return  [stage] + [honk_waves] + boxes + curr_tubes + ids + plot_prims + walls
+    return  [stage] + [honk_waves] + boxes + curr_tubes + ids + plot_prims + walls + [vertical_lights] + [horizontal_lights] 
 
 t0 = time.time()
 animate(0)

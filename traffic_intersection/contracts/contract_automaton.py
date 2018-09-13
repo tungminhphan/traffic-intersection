@@ -28,6 +28,25 @@ class ContractAutomaton(InterfaceAutomaton):
                     return False
         return True
 
+    def remove_state(self, state):
+        # deletes all transitions leading to that state
+        for key in self.transitions_dict:
+            transitions = transitions_dict[key]
+            for trans in transitions:
+                if trans.endState == state:
+                    transitions_dict[key].remove(trans)
+                    may[key].remove(trans)
+                    if key in must:
+                        must[key].remove(trans)
+
+        # deletes the state
+        self.transitions_dict.pop(state)
+        self.may.pop(state)
+        self.must.pop(state)
+        self.states.remove(state)
+        self.startStates.remove(state)
+
+
     def add_transition(self, transition, must = 0):
         self.may[transition.startState].add(transition)
         if must:
@@ -51,21 +70,14 @@ class ContractAutomaton(InterfaceAutomaton):
             self.fail_state = interface.fail_state
 
     def convert_to_digraph(self):
-        automata = Digraph(comment = 'insert description parameter later?')
-        maxlen = 0
-        for state in self.states:
-            if len(state.name) > maxlen:
-                maxlen = len(state.name)
+        automata = Digraph(format = 'pdf')
 
-        for state in self.states:
+        for state in self.states.union({self.fail_state}):
             # adds nodes
-            automata.attr('node', shape = 'circle', color= 'gray', style = 'filled', fixedsize = 'true')
-            if state in self.endStates:
-                automata.attr('node', shape = 'doublecircle', fixedsize = 'true')
+            automata.attr('node', color = 'gray', shape = 'circle', style='filled', fixedsize='false')
             if state in self.startStates:
-                automata.attr('node', color = 'gray', shape = 'invhouse', fixedsize = 'true')
-            newtext = ' ' * math.floor((maxlen - len(state.name))/2) + state.name + ' ' * math.ceil((maxlen - len(state.name))/2)
-            automata.node(newtext, newtext)
+                automata.attr('node', color = 'gray', style='filled',  fixedsize = 'false', shape='invhouse')
+            automata.node(state.name, state.name)
 
         # adds transitions
         for state in self.states.union({self.fail_state}):
@@ -74,22 +86,19 @@ class ContractAutomaton(InterfaceAutomaton):
                 for trans in maytransit:
                     if trans is not False:
                         state2 = trans.endState
-                        transtext = trans.show()
-                        automata.edge(state.name, state.name, label = transtext, style = 'dotted')
+                        automata.edge(state.name, state2.name, label = trans.show(), style = 'dotted')
 
             if state in self.must:
                 musttransit = self.must[state]
                 for trans in musttransit:
                     if trans is not False:
                         state2 = trans.endState
-                        transtext = trans.show()
-                        automata.edge(state.name, state2.name, label = transtext)
+                        automata.edge(state.name, state2.name, label = trans.show())
 
         return automata
 
     def prune_illegal_state(self):
         #remove any states such that must does not imply may
-
         finished = False
         while not finished:
             finished = True
@@ -122,138 +131,107 @@ class ContractAutomaton(InterfaceAutomaton):
                 selfloop = guardTransition(state, state, 'True', letter, '#')
                 self.add_transition(selfloop, 1)
 
+def compose_contract(cr_1, cr_2):
+    cr_1 = cr_1.strongAlphabetProjection(cr_2)
+    cr_2 = cr_2.strongAlphabetProjection(cr_1)
+
+    must1 = cr_1.get_must_interface()
+    must2 = cr_2.get_must_interface()
+    may1 = cr_1.get_may_interface()
+    may2 = cr_2.get_may_interface()
+
+    mustAuto = compose_interface(must1, must2)
+    mayAuto = compose_interface(may1, may2)
+
+    may1 = cr_1.may
+    may2 = cr_2.may
+    must1 = cr_1.must
+    must2 = cr_2.must
+
+    # pruning
+    for key in mayAuto.states:
+        notFound = False
+        # needs to fix the following since composite list might have length > 2
+        key1 = key.composite_list[0]
+        key2 = key.composite_list[1]
+        for may in may1[key1]:
+            for must in must2[key2]:
+                if may.action == must.action and may.actionType == must.actionType:
+                    if is_satisfiable(may.guard + ' ∧ ' + must.guard):
+                        notFound = True
+            if notFound:
+                mayAuto.remove_state(key)
+                mustAuto.remove_state(key)
+
+        for may in may2[key2]:
+            for must in must1[key1]:
+                if may.action == must.action and may.actionType == must.actionType:
+                    if is_satisfiable(may.guard + ' ∧ ' + must.guard):
+                        notFound = True
+            if notFound:
+                mayAuto.remove_state(key)
+                mustAuto.remove_state(key)
+
+    contract = ContractAutomaton(must = mustAuto.transitions_dict, may = mayAuto.transitions_dict)
+    contract.set_interface_automaton(mayAuto)
+    return contract
+
+def check_simulation(trans1, trans2):
+    # checks if trans1 <= trans2, ie they have the same action, action type, and g_1 => g_2
+    # TODO
+    if trans1.action != trans2.action or trans1.actionType != trans2.actionType:
+        return False
+
+    pass
+
+def is_satisfiable(guard):
+    # TODO
+    pass 
+
+# Makes contract automaton
+def construct_contract_automaton(state_set, musttrans, maytrans, starts):
+    new_contract = ContractAutomaton()
+    string_state_dict = dict()
+    string_state_dict['fail'] = new_contract.fail_state # add failure state manually
+    # state_set is a list of strings representing state names
+    for state in state_set:
+        newstate = State(state)
+        new_contract.add_state(newstate)
+        string_state_dict[state] = newstate
+
+    for start in starts:
+        new_contract.startStates.add(string_state_dict[start])
+
+    for key in musttrans:
+        state1 = string_state_dict[key[0]]
+        state2 = string_state_dict[key[1]]
+        guard = musttrans[key][0]
+        action = musttrans[key][1]
+        action_type = musttrans[key][2]
+        new_contract.add_transition(guardTransition(start = state1, end = state2,  guard = guard, action = action, actionType = action_type), must = 1)
+
+    for key in maytrans:
+        state1 = string_state_dict[key[0]]
+        state2 = string_state_dict[key[1]]
+        guard = maytrans[key][0]
+        action = maytrans[key][1]
+        action_type = maytrans[key][2]
+        new_contract.add_transition(guardTransition(start = state1, end = state2,  guard = guard, action = action, actionType = action_type), must = 0)
+
+    new_contract.trim()
+    return new_contract
+
+
 may = dict()
 state_set = {'0', '1', '2', '3'}
 starts = {'0', '1'}
 may = {('0', '1'): ('x > 5', 'a', '?')}
 may[('1', '2')] = ('True', 'c', '!')
 may[('2', '0')] = ('True', 'a', '!')
-D =  construct_automaton(state_set=state_set, starts=starts, translist=may)
-D.convert_to_digraph().render('D', view = True)
+D =  construct_contract_automaton(state_set=state_set, starts=starts, musttrans = {}, maytrans = may)
+if D.check_validity():
+    D.convert_to_digraph().render('D', view = True)
 
 
-def compose_contract(cr_1, cr_2):
-	cr_1 = cr_1.strongAlphabetProjection(cr_2)
-	cr_2 = cr_2.strongAlphabetProjection(cr_1)
 
-	must1 = cr_1.get_must_interface()
-	must2 = cr_2.get_must_interface()
-	may1 = cr_1.get_may_interface()
-	may2 = cr_2.get_may_interface()
-
-	mustAuto = compose_interface(must1, must2)
-	mayAuto = compose_interface(may1, may2)
-
-	# TODO: Add in pruning for composition
-
-	contract = ContractAutomaton(must = mustAuto.transitions_dict, may = mayAuto.transitions_dict)
-	contract.set_interface_automaton(mayAuto)
-	return contract
-
-def check_simulation(trans1, trans2):
-    # checks if trans1 <= trans2, ie they have the same action, action type, and g_1 => g_2
-    # TODO
-    pass
-
-
-# assumes weight on a graph is a string of the form "guard / ?input, not output, #internal separated by , "
-def convert_graph_to_automaton(digraph):
-    new_interface = InterfaceAutomaton()
-    nodes = digraph._nodes
-    edges = digraph._edges
-    stringstatedict = {}
-    inp = set()
-    out = set()
-    inter = set()
-
-    for node in nodes:
-        newstate = State(node)
-        new_interface.add_state(node)
-        stringstatedict[node] = newstate
-
-    for source in sources:
-        new_interface.set_start_state(stringstatedict[source])
-
-    for sink in sinks:
-        new_interface.endStates.add(stringstatedict[sink])
-
-
-    for trans in edges:
-        state1 = stringstatedict[trans[0]]
-        state2 = stringstatedict[trans[1]]
-        text = digraph._weights[trans]
-        words = text.split() # weight is a string
-
-        actions = text[text.find('/') + 1:].split() # part of transition text after / delimiter
-
-        if words[0] == 'True':
-            guard = True
-
-        else:
-            if len(words) > 3 and words[1] == '≤' and words[3] == '≤':
-                lwrbnd = float(words[0])
-                var = words[2]
-                uprbnd = float(words[4])
-            elif words[1] == '≥':
-                var = words[0]
-                lwrbnd = float(words[2])
-                uprbnd = np.inf
-            elif words[1] == '≤':
-                var = words[0]
-                uprbnd = float(words[2])
-                lwrbnd = -np.inf
-
-        guard = iq.dictionarize(iq.Inequality(var, lwrbnd, uprbnd))
-
-        # Each action in form ?(input), not (output), or #(internal)
-        for action in actions:
-            if action[0] == '?':
-                inp.add(action[1:])
-            elif action[0] == 'not ':
-                out.add(action[1:])
-            elif action[0] == '#':
-                inter.add(action[1:])
-            else:
-                raise SyntaxError('Input, output or internals in wrong format.')
-
-        new_interface.add_transition(guardTransition(state1, state2, guard, inp, out, inter))
-
-    return new_interface
-
-# # Add this later to make testing easier
-# need to change
-def construct_automaton(statelist, translist, start, ends):
-    new_interface = InterfaceAutomaton()
-    stringstatedict = {}
-    # statelist is a list of strings representing state names
-    for state in statelist:
-        newstate = State(state)
-        new_interface.add_state(newstate)
-        stringstatedict[state] = newstate
-
-    new_interface.set_start_state(stringstatedict[start])
-
-    for end in ends:
-        new_interface.endStates.add(stringstatedict[end])
-
-    # translist is a dictionary; the key is a tuple of strings representing the states of the transition, and the value is a tuple:
-    # (guardtext, inputs, outputs, internal actions)
-    # inputs, outputs, internal action are sets of strings
-    for key in translist:
-        state1 = stringstatedict[key[0]]
-        state2 = stringstatedict[key[1]]
-
-        words = translist[key][0].split()
-        inp = translist[key][1]
-        out = translist[key][2]
-        inter = translist[key][3]
-
-        if words[0] == 'True':
-            guard = True
-        else:
-            guard = translist[key][0]
-
-        new_interface.add_transition(guardTransition(state1, state2, guard, inp, out, inter))
-
-    return new_interface
 
