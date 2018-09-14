@@ -213,12 +213,10 @@ background = Image.open(intersection_fig)
 pedestrians = []
 pedestrian_queue = queue.Queue()
 
-cars = dict()
 honk_x = []
 honk_y = []
 honk_t = []
 all_wavefronts = set()
-waiting = dict()
 
 def flip_last_node(path): # turn last primitive to a stopping primitive
     new_path = path[0:-1]
@@ -236,8 +234,8 @@ def pause_car(the_car):
 def unpause_car(the_car, plate_number):
     #the_car.new_unpause = True
     the_car.prim_queue.remove((-1,0))
-    if plate_number in waiting.keys():
-        del waiting[plate_number]
+    if plate_number in global_vars.waiting_dict.keys():
+        del global_vars.waiting_dict[plate_number]
 
 def clean_stamps():
     for sub_prim in global_vars.time_table.copy():
@@ -316,7 +314,7 @@ def animate(frame_idx): # update animation by dt
     original_request_len = global_vars.request_queue.len()
     while global_vars.request_queue.len() > 0 and not deadlocked: # if there is at least one live request in the queue
         request = global_vars.request_queue.pop() # take the first request
-        planner.serve_request(request=request,graph=G,effective_times=effective_times, cars=cars,waiting=waiting,traffic_lights=traffic_lights)
+        planner.serve_request(request=request,graph=G,effective_times=effective_times, traffic_lights=traffic_lights)
         service_count += 1
         if service_count == original_request_len:
             service_count = 0 # reset service count
@@ -431,19 +429,19 @@ def animate(frame_idx): # update animation by dt
     cars_to_remove = set()
 
     # determine which cars to keep
-    for plate_number in cars.keys():
-        car = cars[plate_number]
+    for plate_number in global_vars.all_cars.keys():
+        car = global_vars.all_cars[plate_number]
 #        if (car.state[2] <= x_lim and car.state[2] >= 0 and car.state[3] >= 0 and car.state[3] <= y_lim): TODO: implement this
         if car.prim_queue.len() > 0:
             # update cars with primitives
-            cars[plate_number].prim_next(dt)
+            global_vars.all_cars[plate_number].prim_next(dt)
             # add cars to keep list
-            cars_to_keep.append(cars[plate_number])
+            cars_to_keep.append(global_vars.all_cars[plate_number])
         else:
             cars_to_remove.add(plate_number)
     # determine which cars to remove
     for plate_number in cars_to_remove:
-        del cars[plate_number]
+        del global_vars.all_cars[plate_number]
 
     ax.cla() # clear Axes before plotting
     clean_stamps()
