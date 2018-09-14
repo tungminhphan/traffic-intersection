@@ -12,7 +12,7 @@ from primitives.prim_car import prim_state_dot
 from components.auxiliary.tire_data import get_tire_data
 from scipy.integrate import odeint
 from numpy import cos, sin, tan, arctan2, sqrt
-main_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+main_dir = os.path.dirname(os.path.dirname(os.path.realpath("__file__")))
 primitive_data = main_dir + '/primitives/MA3.mat'
 from prepare.queue import Queue
 from PIL import Image
@@ -21,13 +21,13 @@ import assumes.params as params
 import math
 from math import pi
 
-dir_path = os.path.dirname(os.path.realpath(__file__))
+dir_path = os.path.dirname(os.path.realpath("__file__"))
 car_colors = {'blue', 'gray', 'white', 'yellow', 'brown',
         'white1','green', 'white_cross', 'cyan', 'red1', 'orange'}
 #car_colors = {'blue', 'gray', 'black', 'white', 'yellow', 'brown', 'white1','green', 'white_cross', 'cyan', 'red1', 'orange', 'white2'}
 car_figs = dict()
 for color in car_colors:
-    car_figs[color] = dir_path + '/imglib/cars/' + color + '_car.png'
+    car_figs[color] = main_dir + '/components/imglib/cars/' + color + '_car.png'
 
 mat = scipy.io.loadmat(primitive_data)
 

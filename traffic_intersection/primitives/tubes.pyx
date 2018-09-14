@@ -21,7 +21,7 @@ else:
     make_dictionary = options.create_collision_dictionary
     rel = ''
 # set dir_path to current directory
-dir_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+dir_path = os.path.dirname(os.path.dirname(os.path.realpath('__file__')))
 car_scale_factor = params.car_scale_factor
 pedestrian_scale_factor = params.pedestrian_scale_factor
 
@@ -63,15 +63,6 @@ def make_tube(prim_id):
     segments = [(x_ref[:,idx], x_ref[:,(idx+1)]) for idx in range(x_ref.shape[1]-1)]
     rects = [vertices_rect(center1 = segment[0][2:4], center2 = segment[1][2:4], theta = np.arctan2(segment[1][3]-segment[0][3], segment[1][2]-segment[0][2]), size_x = size_x, size_y = size_y) for segment in segments]
     return rects
-
-#def make_subtube(subtube_id):
-#    prim_id = subtube_id[0]
-#    segment_id = subtube[1]
-#    x_ref = mat['MA3'][prim_id,0]['x_ref'][0,0]
-#    size_x = get_prim_data(prim_id, 'size_tube_x')
-#    size_y = get_prim_data(prim_id, 'size_tube_y')
-#    segment = [(x_ref[:,segment_id], x_ref[:,(segment_id+1)])]
-#    rect = [vertices_rect(center1 = segment[0][2:4], center2 = segment[1][2:4], theta = np.arctan2(segment[1][3]-segment[0][3], segment[1][2]-segment[0][2]), size_x = size_x, size_y = size_y)]
 
 def nonoverlapping_tubes(prim1_id, prim2_id):
     rects_1 = make_tube(prim1_id)
@@ -170,27 +161,3 @@ if make_dictionary:
     warnings.warn('New Collision and Primitive ID Dictionaries Created!')
 else:
     warnings.warn('Warning: Using Last Computed Collision and Primitive ID Dictionaries!')
-
-#########################################################################################
-#                                                                                       #
-#                                   TESTING                                             #
-#                                                                                       #
-#########################################################################################
-#### TEST2 ######
-#prim_id = 0
-#rects = make_rects(0)
-#print(rects)
-#x_ref = mat['MA3'][prim_id,0]['x_ref'][0,0]
-#import matplotlib.pyplot as plt
-#x = x_ref[2,:]
-#y = x_ref[3,:]
-#plt.plot(x,y)
-#for idx in range(len(rects)):
-#    xs = np.array(rects[idx])[:,0]
-#    ys = np.array(rects[idx])[:,1]
-#    xs = np.concatenate((xs, np.array([xs[0]]))) # to plot the remaining side
-#    ys = np.concatenate((ys, np.array([ys[0]]))) # to plot the remaining side
-#    plt.plot(xs,ys)
-#plt.axis('equal')
-#plt.savefig('tube_new.png')
-#plt.show()
