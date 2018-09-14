@@ -9,7 +9,9 @@ show = True
 if __name__ == '__main__':
     from graph import WeightedDirectedGraph
 else:
-    from traffic_intersection.prepare.graph import WeightedDirectedGraph
+    import sys
+    sys.path.append('..')
+    from prepare.graph import WeightedDirectedGraph
     show = False
 
 G = WeightedDirectedGraph()
