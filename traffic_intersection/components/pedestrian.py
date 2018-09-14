@@ -40,7 +40,7 @@ class Pedestrian:
                  prim_queue = None, # primitive queue
                  pedestrian_type = '3', # three types 1 or 2 or 3
                  name = None,
-                 age = 20): 
+                 age = 20):
         """
         Pedestrian class
         """

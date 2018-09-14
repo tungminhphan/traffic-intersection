@@ -38,7 +38,7 @@ import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 
 # set dir_path to current directory
-dir_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+dir_path = os.path.dirname(os.path.dirname(os.path.realpath('__file__')))
 intersection_fig = dir_path + "/components/imglib/intersection_states/intersection_lights.png"
 
 G = car_graph.G # primitive graph
@@ -93,8 +93,8 @@ def draw_pedestrians(pedestrians):
         background.paste(person_fig, (int(x_corner), int(y_corner)), person_fig)
 
 # set random seed (for debugging)
-#random.seed(2)
-#np.random.seed(400)
+# random.seed(2)
+# np.random.seed(400)
 
 # disable antialiasing for better performance
 antialias_enabled = False
@@ -142,7 +142,7 @@ horizontal_stop_fig = stop_fig.rotate(-90, expand = True)
 vertical_walk_fig = {True: vertical_go_fig, False: vertical_stop_fig}
 horizontal_walk_fig = {True: horizontal_go_fig, False: horizontal_stop_fig}
 walk_sign_figs = {'vertical': vertical_walk_fig, 'horizontal': horizontal_walk_fig}
-walk_sign_coordinates = {'vertical': [(378, 621), (684, 90)], 'horizontal': [(272, 193), (735, 565)]}
+walk_sign_coordinates = {'vertical': [(378, 621), (683, 90)], 'horizontal': [(272, 193), (736, 565)]}
 
 def draw_walk_signs(vertical_fig, horizontal_fig):
     for coordinate in walk_sign_coordinates['vertical']:
@@ -152,7 +152,7 @@ def draw_walk_signs(vertical_fig, horizontal_fig):
         x, y = find_corner_coordinates(0, 0, coordinate[0], coordinate[1], 0, horizontal_fig)
         background.paste(horizontal_fig, (int(x), int(y)), horizontal_fig)
 
-vertical_light_coordinates = {'green':[(378, 642), (682.5,110)], 'yellow': [(378, 659), (682.5,126)], 'red': [(378, 677), (682.5, 144.5)]}
+vertical_light_coordinates = {'green':[(377, 642), (682,110)], 'yellow': [(377, 659), (682,126)], 'red': [(378, 675), (682.5, 144.5)]}
 horizontal_light_coordinates = {'green':[(291, 193), (756, 566.25)], 'yellow': [(309, 193), (773, 566.25)], 'red': [(327, 193), (790, 566.25)]}
 
 # creates figure
@@ -191,7 +191,7 @@ def spawn_pedestrian():
     if age > 50:
         pedestrian_type = '2'
     else:
-        pedestrian_type = random.choice(['1','3'])
+        pedestrian_type = random.choice(['1','2','3','4','5','6'])
     the_pedestrian = pedestrian.Pedestrian(init_state=init_state, pedestrian_type=pedestrian_type, name=name, age=age)
     return name, start_node, end_node, the_pedestrian
 
@@ -218,24 +218,6 @@ honk_y = []
 honk_t = []
 all_wavefronts = set()
 
-def flip_last_node(path): # turn last primitive to a stopping primitive
-    new_path = path[0:-1]
-    new_path.append((0, path[-1][1], path[-1][2], path[-1][3]))
-    return new_path
-
-def flip_node(node): # turn last primitive to a stopping primitive
-    new_node = (0, node[1], node[2], node[3])
-    return new_node
-
-def pause_car(the_car):
-    #the_car.new_pause = True
-    the_car.prim_queue.enqueue((-1, 0))
-
-def unpause_car(the_car, plate_number):
-    #the_car.new_unpause = True
-    the_car.prim_queue.remove((-1,0))
-    if plate_number in global_vars.waiting_dict.keys():
-        del global_vars.waiting_dict[plate_number]
 
 def clean_stamps():
     for sub_prim in global_vars.time_table.copy():
@@ -289,6 +271,7 @@ def walk_faster(person, remaining_time):
             person.prim_queue.replace_top(((start, finish, vee), prim_progress))
 
 def animate(frame_idx): # update animation by dt
+    ax.cla() # clear Axes before plotting
     deadlocked = False
     global_vars.current_time = frame_idx * dt # compute current time from frame index and dt
     print('{:.2f}'.format(global_vars.current_time)+'/'+str(options.duration)) # print out current time to 2 decimal places
@@ -356,7 +339,7 @@ def animate(frame_idx): # update animation by dt
     x_lim, y_lim = background.size
 
     if options.highlight_crossings:
-        alpha = 120 # transparency 
+        alpha = int(sin(global_vars.current_time)*50+100) # transparency 
         green = (34,139,34,alpha)
         red = (200,0,0,alpha)
         vertical_lane_color = green if vertical_walk_safe else red
@@ -364,8 +347,8 @@ def animate(frame_idx): # update animation by dt
 
         img1 = Image.open(intersection_fig) # highlighted crossings will be drawn on this image
         draw = ImageDraw.Draw(img1)
-        draw.rectangle([(345,209),(366,550)], fill = vertical_lane_color)
-        draw.rectangle([(697,209),(718,550)], fill = vertical_lane_color)
+        draw.rectangle([(344,209),(366,553)], fill = vertical_lane_color)
+        draw.rectangle([(695,209),(718,553)], fill = vertical_lane_color)
         draw.rectangle([(392,580),(670,602)], fill = horizontal_lane_color)
         draw.rectangle([(392,158),(670,180)], fill = horizontal_lane_color)
         img = Image.alpha_composite(background, img1) # image with highlighted walk lanes
@@ -373,21 +356,25 @@ def animate(frame_idx): # update animation by dt
 
     draw_walk_signs(walk_sign_figs['vertical'][vertical_walk_safe], walk_sign_figs['horizontal'][horizontal_walk_safe])
 
-    vertical_lights = ax.scatter(None,None)
-    horizontal_lights = ax.scatter(None,None)
     x = []
     y = []
     for coordinate in vertical_light_coordinates[vertical_light]:
         x.append(coordinate[0])
         y.append(coordinate[1])
-    vertical_lights = ax.scatter(x, y, s=25, facecolors=vertical_light[0])
+    circle1 = plt.Circle((x[0],y[0]), radius=6, alpha=(0.3*sin(global_vars.current_time*1000)+0.6), color=vertical_light[0])
+    circle2 = plt.Circle((x[1],y[1]), radius=6, alpha=(0.3*sin(global_vars.current_time*1000)+0.6), color=vertical_light[0])
+    vertical_lights =[ax.add_artist(circle1), ax.add_artist(circle2)]
 
     x = []
     y = []
     for coordinate in horizontal_light_coordinates[horizontal_light]:
         x.append(coordinate[0])
         y.append(coordinate[1])
-    horizontal_lights = ax.scatter(x, y, s=25, facecolors=horizontal_light[0])
+
+    circle1 = plt.Circle((x[0],y[0]), radius=6, alpha=(0.3*sin(global_vars.current_time*1000)+0.6), color=horizontal_light[0])
+    circle2 = plt.Circle((x[1],y[1]), radius=6, alpha=(0.3*sin(global_vars.current_time*1000)+0.6), color=horizontal_light[0])
+    horizontal_lights = [ax.add_artist(circle1), ax.add_artist(circle2)]
+
 
     # update pedestrians
     pedestrians_to_keep = []
@@ -443,7 +430,6 @@ def animate(frame_idx): # update animation by dt
     for plate_number in cars_to_remove:
         del global_vars.all_cars[plate_number]
 
-    ax.cla() # clear Axes before plotting
     clean_stamps()
     if not show_axes:
         plt.axis('off')
@@ -584,7 +570,7 @@ def animate(frame_idx): # update animation by dt
     # show artists
     global stage # set up a global stage
     stage = ax.imshow(background, origin="lower") # update the stage
-    return  [stage] + [honk_waves] + boxes + curr_tubes + ids + plot_prims + walls + [vertical_lights] + [horizontal_lights]
+    return  [stage] + [honk_waves] + boxes + curr_tubes + ids + plot_prims + walls + vertical_lights + horizontal_lights
 
 t0 = time.time()
 animate(0)
@@ -595,8 +581,8 @@ ani = animation.FuncAnimation(fig, animate, frames=int(options.duration/options.
 
 if options.save_video:
     Writer = animation.writers['ffmpeg']
-    writer = Writer(fps = int(1/options.dt), metadata=dict(artist='Me'), bitrate=-1)
-    ani.save('movies/working_planner.avi', writer=writer, dpi=200)
+    writer = Writer(fps = options.speed_up_factor*int(1/options.dt), metadata=dict(artist='Me'), bitrate=-1)
+    ani.save('../movies/cython.avi', writer=writer, dpi=200)
 plt.show()
 t2 = time.time()
 print('Total elapsed time: ' + str(t2-t0))
