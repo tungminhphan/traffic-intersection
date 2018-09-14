@@ -9,7 +9,7 @@ sys.path.append("..")
 import scipy.io
 import numpy as np
 from primitives.prim_car import prim_state_dot
-from components.aux.tire_data import get_tire_data
+from components.auxiliary.tire_data import get_tire_data
 from scipy.integrate import odeint
 from numpy import cos, sin, tan, arctan2, sqrt
 main_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))

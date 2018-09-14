@@ -1,7 +1,7 @@
 custom = True
 if custom:
     save_video = False
-    dt = 0.1
+    dt = 0.2
     duration = 400
     highlight_crossings = False
     create_collision_dictionary = False

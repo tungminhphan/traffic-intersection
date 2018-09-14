@@ -4,29 +4,25 @@
 # California Institute of Technology
 # July 17, 2018
 
-import os, platform, time, warnings, matplotlib, random
+import os, time, platform, warnings, matplotlib, random
 import components.planner as planner
 import components.car as car
-import components.aux.honk_wavefront as wavefront
+import components.auxiliary.honk_wavefront as wavefront
 import components.pedestrian as pedestrian
 import components.traffic_signals as traffic_signals
 import components.intersection as intersection
 import prepare.car_waypoint_graph as car_graph
 import prepare.pedestrian_waypoint_graph as pedestrian_graph
-import prepare.graph as graph
 import prepare.queue as queue
-import assumes.params as params
-import primitives.tubes as tubes
-#from primitives.tubes import true_zero_velocity, round_node
-import primitives.load_primitives as load_primitives
-from primitives.load_primitives import get_prim_data
-from components.aux.pedestrian_names import names
+from numpy import cos, sin, tan, pi
+from PIL import Image, ImageDraw
+from components.auxiliary.pedestrian_names import names
 import prepare.options as options
 from  prepare.collision_check import collision_free, get_bounding_box
 import numpy as np
-from numpy import cos, sin, tan, pi
-from PIL import Image, ImageDraw
-import scipy.io
+import variables.global_vars as global_vars
+import assumes.params as params
+
 if platform.system() == 'Darwin': # if the operating system is MacOS
     matplotlib.use('macosx')
 else: # if the operating system is Linux or Windows
@@ -216,13 +212,10 @@ pedestrians = []
 pedestrian_queue = queue.Queue()
 
 cars = dict()
-time_table = dict()
-request_queue = queue.Queue()
 honk_x = []
 honk_y = []
 honk_t = []
 all_wavefronts = set()
-request_queue = queue.Queue()
 waiting = dict()
 
 def flip_last_node(path): # turn last primitive to a stopping primitive
@@ -244,14 +237,14 @@ def unpause_car(the_car, plate_number):
     if plate_number in waiting.keys():
         del waiting[plate_number]
 
-def clean_stamps(time_table, current_time):
-    for sub_prim in time_table.copy():
-        for plate_number in time_table[sub_prim].copy():
-            interval = time_table[sub_prim][plate_number]
-            if interval[1] < current_time:
-                del time_table[sub_prim][plate_number]
-        if len(time_table[sub_prim]) == 0:
-            del time_table[sub_prim]
+def clean_stamps():
+    for sub_prim in global_vars.time_table.copy():
+        for plate_number in global_vars.time_table[sub_prim].copy():
+            interval = global_vars.time_table[sub_prim][plate_number]
+            if interval[1] < global_vars.current_time:
+                del global_vars.time_table[sub_prim][plate_number]
+        if len(global_vars.time_table[sub_prim]) == 0:
+            del global_vars.time_table[sub_prim]
 
 effective_times = dict()
 # checks if pedestrian is crossing street
@@ -297,8 +290,8 @@ def walk_faster(person, remaining_time):
 
 def animate(frame_idx): # update animation by dt
     deadlocked = False
-    current_time = frame_idx * dt # compute current time from frame index and dt
-    print('{:.2f}'.format(current_time)+'/'+str(options.duration)) # print out current time to 2 decimal places
+    global_vars.current_time = frame_idx * dt # compute current time from frame index and dt
+    print('{:.2f}'.format(global_vars.current_time)+'/'+str(options.duration)) # print out current time to 2 decimal places
 
     horizontal_light = traffic_lights.get_states('horizontal', 'color')
     vertical_light = traffic_lights.get_states('vertical', 'color')
@@ -316,19 +309,19 @@ def animate(frame_idx): # update animation by dt
     global background
     if with_probability(options.new_car_probability):
         new_plate_number, new_start_node, new_end_node, new_car = spawn_car()
-        request_queue.enqueue((new_plate_number, new_start_node, new_end_node, new_car))
+        global_vars.request_queue.enqueue((new_plate_number, new_start_node, new_end_node, new_car))
     service_count = 0
-    original_request_len = request_queue.len()
-    while request_queue.len() > 0 and not deadlocked: # if there is at least one live request in the queue
-        request = request_queue.pop() # take the first request
-        planner.serve_request(request=request,graph=G,current_time=current_time,effective_times=effective_times, time_table=time_table,cars=cars,waiting=waiting,traffic_lights=traffic_lights,request_queue=request_queue)
+    original_request_len = global_vars.request_queue.len()
+    while global_vars.request_queue.len() > 0 and not deadlocked: # if there is at least one live request in the queue
+        request = global_vars.request_queue.pop() # take the first request
+        planner.serve_request(request=request,graph=G,effective_times=effective_times, cars=cars,waiting=waiting,traffic_lights=traffic_lights)
         service_count += 1
         if service_count == original_request_len:
             service_count = 0 # reset service count
-            if request_queue.len() == original_request_len:
+            if global_vars.request_queue.len() == original_request_len:
                 deadlocked = True
             else:
-                original_request_len = request_queue.len()
+                original_request_len = global_vars.request_queue.len()
 
 ######## pedestrian implementation ########
     if with_probability(options.new_pedestrian_probability):
@@ -368,7 +361,7 @@ def animate(frame_idx): # update animation by dt
         red = (200,0,0,alpha)
         vertical_lane_color = green if vertical_walk_safe else red
         horizontal_lane_color = green if horizontal_walk_safe else red
-    
+
         img1 = Image.open(intersection_fig) # highlighted crossings will be drawn on this image
         draw = ImageDraw.Draw(img1)
         draw.rectangle([(345,209),(366,550)], fill = vertical_lane_color)
@@ -388,7 +381,7 @@ def animate(frame_idx): # update animation by dt
         x.append(coordinate[0])
         y.append(coordinate[1])
     vertical_lights = ax.scatter(x, y, s=25, facecolors=vertical_light[0])
-    
+
     x = []
     y = []
     for coordinate in horizontal_light_coordinates[horizontal_light]:
@@ -451,7 +444,7 @@ def animate(frame_idx): # update animation by dt
         del cars[plate_number]
 
     ax.cla() # clear Axes before plotting
-    clean_stamps(time_table, current_time)
+    clean_stamps()
     if not show_axes:
         plt.axis('off')
     ## STAGE UPDATE HAPPENS AFTER THIS COMMENT
@@ -591,14 +584,14 @@ def animate(frame_idx): # update animation by dt
     # show artists
     global stage # set up a global stage
     stage = ax.imshow(background, origin="lower") # update the stage
-    return  [stage] + [honk_waves] + boxes + curr_tubes + ids + plot_prims + walls + [vertical_lights] + [horizontal_lights] 
+    return  [stage] + [honk_waves] + boxes + curr_tubes + ids + plot_prims + walls + [vertical_lights] + [horizontal_lights]
 
 t0 = time.time()
 animate(0)
 t1 = time.time()
 interval = (t1 - t0)
 
-ani = animation.FuncAnimation(fig, animate, frames=int(options.duration/options.dt), interval=interval, blit=True, repeat=False) # by default the animation function loops, we set repeat to False in order to limit the number of frames generated to num_frames
+ani = animation.FuncAnimation(fig, animate, frames=int(options.duration/options.dt), interval=interval, blit=True, repeat=False) # by default the animation function loops so set repeat to False in order to limit the number of frames generated to num_frames
 
 if options.save_video:
     Writer = animation.writers['ffmpeg']
