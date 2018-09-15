@@ -1,9 +1,9 @@
 custom = True
 if custom:
-    save_video = True
-    speed_up_factor = 3
-    dt = 0.1
-    duration = 100
+    save_video = False
+    speed_up_factor = 6
+    dt = 0.2
+    duration = 150
     highlight_crossings = True
     create_collision_dictionary = False
     show_boxes = False
@@ -12,8 +12,8 @@ if custom:
     show_plates = False
     show_prims = False
     show_traffic_light_walls = False
-    new_car_probability = 0.5
-    new_pedestrian_probability = 0.5
+    new_car_probability = 0.7
+    new_pedestrian_probability = 0.1
 else:
     speed_up_factor = 3
     dt = 0.1

@@ -16,11 +16,11 @@ import components.intersection as intersection
 import prepare.car_waypoint_graph as car_graph
 import prepare.pedestrian_waypoint_graph as pedestrian_graph
 import prepare.queue as queue
-from numpy import cos, sin, tan, pi
 from PIL import Image, ImageDraw
 from components.auxiliary.pedestrian_names import names
 import prepare.options as options
 from  prepare.collision_check import collision_free, get_bounding_box
+from  prepare.helper import *
 import numpy as np
 import variables.global_vars as global_vars
 import assumes.params as params
@@ -41,37 +41,6 @@ import matplotlib.pyplot as plt
 dir_path = os.path.dirname(os.path.dirname(os.path.realpath('__file__')))
 intersection_fig = dir_path + "/components/imglib/intersection_states/intersection_lights.png"
 
-G = car_graph.G # primitive graph
-edge_to_prim_id = np.load('../prepare/edge_to_prim_id.npy').item()
-
-def find_corner_coordinates(x_state_center_before, y_state_center_before, x_desired, y_desired, theta, square_fig):
-    """
-    This function takes an image and an angle then computes
-    the coordinates of the corner (observe that vertical axis here is flipped).
-    If we'd like to put the point specfied by (x_state_center_before, y_state_center_before) at (x_desired, y_desired),
-    this function returns the coordinates of the lower left corner of the new image
-    """
-    w, h = square_fig.size
-    theta = -theta
-    if abs(w - h) > 1:
-        warnings.warn("Warning: Figure has to be square! Otherwise, clipping or unexpected behavior may occur")
-    R = np.array([[cos(theta), sin(theta)], [-sin(theta), cos(theta)]])
-    x_corner_center_before, y_corner_center_before = -w/2., -h/2. # lower left corner before rotation
-    x_corner_center_after, y_corner_center_after = -w/2., -h/2. # doesn't change since figure size remains unchanged
-
-    x_state_center_after, y_state_center_after = R.dot(np.array([[x_state_center_before], [y_state_center_before]])) # relative coordinates after rotation by theta
-
-    x_state_corner_after = x_state_center_after - x_corner_center_after
-    y_state_corner_after = y_state_center_after - y_corner_center_after
-
-    # x_corner_unknown + x_state_corner_after = x_desired
-    x_corner_unknown = int(x_desired - x_state_center_after + x_corner_center_after)
-    # y_corner_unknown + y_state_corner_after = y_desired
-    y_corner_unknown = int(y_desired - y_state_center_after + y_corner_center_after)
-    return x_corner_unknown, y_corner_unknown
-
-def with_probability(P=1):
-    return np.random.uniform() <= P
 
 def draw_pedestrians(pedestrians):
     for pedestrian in pedestrians:
@@ -176,8 +145,8 @@ def spawn_car():
         return plate_number
     plate_number = generate_license_plate()
     rand_num = np.random.choice(10)
-    start_node = random.sample(G._sources, 1)[0]
-    end_node = random.sample(G._sinks, 1)[0]
+    start_node = random.sample(car_graph.G._sources, 1)[0]
+    end_node = random.sample(car_graph.G._sinks, 1)[0]
     color = np.random.choice(tuple(car.car_colors))
     the_car = car.KinematicCar(init_state=start_node, color=color, plate_number=plate_number)
     return plate_number, start_node, end_node, the_car
@@ -203,9 +172,6 @@ def safe_to_walk(green_duration, light_color, light_time):
 
 # create traffic lights
 traffic_lights = traffic_signals.TrafficLights(yellow_max = 10, green_max = 50, random_start = True)
-#init_horizontal_light = traffic_lights._state['horizontal']
-#init_vertical_light = traffic_lights._state['vertical']
-#init_lights = {'horizontal': init_horizontal_light, 'vertical': init_vertical_light}
 horizontal_light = traffic_lights.get_states('horizontal', 'color')
 vertical_light = traffic_lights.get_states('vertical', 'color')
 background = Image.open(intersection_fig)
@@ -228,7 +194,6 @@ def clean_stamps():
         if len(global_vars.time_table[sub_prim]) == 0:
             del global_vars.time_table[sub_prim]
 
-effective_times = dict()
 # checks if pedestrian is crossing street
 def distance(a, b):
     return ((a[0] - b[0])**2 + (a[1] - b[1])**2)**0.5
@@ -297,7 +262,7 @@ def animate(frame_idx): # update animation by dt
     original_request_len = global_vars.request_queue.len()
     while global_vars.request_queue.len() > 0 and not deadlocked: # if there is at least one live request in the queue
         request = global_vars.request_queue.pop() # take the first request
-        planner.serve_request(request=request,graph=G,effective_times=effective_times, traffic_lights=traffic_lights)
+        planner.serve_request(request=request,graph=car_graph.G,traffic_lights=traffic_lights)
         service_count += 1
         if service_count == original_request_len:
             service_count = 0 # reset service count
@@ -339,7 +304,7 @@ def animate(frame_idx): # update animation by dt
     x_lim, y_lim = background.size
 
     if options.highlight_crossings:
-        alpha = int(sin(global_vars.current_time)*50+100) # transparency 
+        alpha = int(alt_sin(70,150,global_vars.current_time,1)) # transparency 
         green = (34,139,34,alpha)
         red = (200,0,0,alpha)
         vertical_lane_color = green if vertical_walk_safe else red
@@ -433,7 +398,7 @@ def animate(frame_idx): # update animation by dt
     clean_stamps()
     if not show_axes:
         plt.axis('off')
-    ## STAGE UPDATE HAPPENS AFTER THIS COMMENT
+
     honk_waves = ax.scatter(None,None)
     if options.show_honks:
         honk_xs = []
@@ -568,10 +533,9 @@ def animate(frame_idx): # update animation by dt
             walls[3].set_data(xs,ys)
 
     # show artists
-    global stage # set up a global stage
     stage = ax.imshow(background, origin="lower") # update the stage
-    return  [stage] + [honk_waves] + boxes + curr_tubes + ids + plot_prims + walls + vertical_lights + horizontal_lights
-
+    all_artists = [stage] + [honk_waves] + boxes + curr_tubes + ids + plot_prims + walls + vertical_lights + horizontal_lights
+    return all_artists
 t0 = time.time()
 animate(0)
 t1 = time.time()

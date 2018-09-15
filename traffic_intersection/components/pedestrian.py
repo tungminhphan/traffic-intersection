@@ -139,12 +139,3 @@ class Pedestrian:
             if total_distance != 0:
                 prim_progress += dt / (total_distance / vee)
             self.prim_queue.replace_top((prim_data, prim_progress)) # update primitive queue
-
-#my_pedestrian = Pedestrian()
-#dt = 0.1
-##from matplotlib import pyplot as plt
-##box = (70, 70, 30, 30)
-#my_pedestrian.visualize()
-#while True:
-#    my_pedestrian.next((0.1, 0.05), dt)
-#    print(my_pedestrian.state)

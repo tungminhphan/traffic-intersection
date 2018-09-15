@@ -191,18 +191,18 @@ def path_to_primitives(path):
             primitives.append(next_prim_id)
     return primitives
 
-def refresh_effective_times(plate_number, effective_times):
-    if plate_number in effective_times.keys():
-        effective_times[plate_number] = max(global_vars.current_time, effective_times[plate_number])
+def refresh_effective_times(plate_number):
+    if plate_number in global_vars.effective_times.keys():
+        global_vars.effective_times[plate_number] = max(global_vars.current_time, global_vars.effective_times[plate_number])
     else:
-        effective_times[plate_number] = global_vars.current_time
+        global_vars.effective_times[plate_number] = global_vars.current_time
 
-def send_prims_and_update_effective_times(plate_number, the_car, effective_times, path_prims):
+def send_prims_and_update_effective_times(plate_number, the_car, path_prims):
     if plate_number not in global_vars.all_cars:
         global_vars.all_cars[plate_number] = the_car # add the car
     for prim_id in path_prims:
         global_vars.all_cars[plate_number].prim_queue.enqueue((prim_id, 0))
-        effective_times[plate_number] += get_prim_data(prim_id, 't_end')[0]
+        global_vars.effective_times[plate_number] += get_prim_data(prim_id, 't_end')[0]
 
 def update_table(scheduled_intervals, plate_number):
     for sub_prim in scheduled_intervals:
@@ -223,18 +223,18 @@ def unwait(the_car, plate_number):
         del global_vars.time_table[wait_subprim][plate_number]
         del global_vars.waiting_dict[plate_number]
 
-def serve_request(request, graph, effective_times, traffic_lights):
+def serve_request(request, graph, traffic_lights):
     depart, arrive = extract_destinations(request)
     plate_number, the_car = extract_car_info(request)
-    refresh_effective_times(plate_number, effective_times)
-    effective_time = effective_times[plate_number]
+    refresh_effective_times(plate_number)
+    effective_time = global_vars.effective_times[plate_number]
     _, path = dijkstra(depart, arrive, graph)
     if complete_path_is_safe(path=path, effective_time=effective_time, graph=graph, plate_number=plate_number, traffic_lights=traffic_lights):
         unwait(the_car, plate_number)
         scheduled_intervals = get_scheduled_intervals(path, effective_time, graph)
         update_table(scheduled_intervals=scheduled_intervals,plate_number=plate_number)
         path_prims = path_to_primitives(path)
-        send_prims_and_update_effective_times(plate_number, the_car, effective_times, path_prims)
+        send_prims_and_update_effective_times(plate_number, the_car, path_prims)
     else:
         head = find_transit(path=path, graph=graph,  effective_time=effective_time,  plate_number=plate_number,  traffic_lights=traffic_lights)
         if head != None:
@@ -243,7 +243,7 @@ def serve_request(request, graph, effective_times, traffic_lights):
             scheduled_intervals = get_scheduled_intervals(path=head, effective_time=effective_time, graph=graph, complete_path=False)
             update_table(scheduled_intervals=scheduled_intervals,plate_number=plate_number)
             path_prims = path_to_primitives(head)
-            send_prims_and_update_effective_times(plate_number=plate_number,the_car=the_car,effective_times=effective_times,path_prims=path_prims)
+            send_prims_and_update_effective_times(plate_number=plate_number,the_car=the_car,path_prims=path_prims)
             wait_subprim = (path_prims[-1],params.num_subprims-1)
             make_wait(the_car=the_car,plate_number=plate_number,wait_subprim=wait_subprim)
             global_vars.request_queue.enqueue((plate_number, transit, arrive, the_car))
