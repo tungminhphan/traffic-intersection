@@ -1,7 +1,8 @@
 custom = True
 if custom:
     save_video = False
-    speed_up_factor = 6
+    antialias_enabled = False
+    speed_up_factor = 3
     dt = 0.2
     duration = 150
     highlight_crossings = True
@@ -16,6 +17,7 @@ if custom:
     new_pedestrian_probability = 0.1
 else:
     speed_up_factor = 3
+    antialias_enabled = False
     dt = 0.1
     duration = 200
     save_video = False

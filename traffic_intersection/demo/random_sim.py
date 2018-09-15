@@ -41,51 +41,11 @@ import matplotlib.pyplot as plt
 dir_path = os.path.dirname(os.path.dirname(os.path.realpath('__file__')))
 intersection_fig = dir_path + "/components/imglib/intersection_states/intersection_lights.png"
 
-
-def draw_pedestrians(pedestrians):
-    for pedestrian in pedestrians:
-        x, y, theta, current_gait = pedestrian.state
-        i = current_gait % pedestrian.film_dim[1]
-        j = current_gait // pedestrian.film_dim[1]
-        film_fig = Image.open(pedestrian.fig)
-        scaled_film_fig_size  =  tuple([int(params.pedestrian_scale_factor * i) for i in film_fig.size])
-        film_fig = film_fig.resize( scaled_film_fig_size)
-        width, height = film_fig.size
-        sub_width = width/pedestrian.film_dim[1]
-        sub_height = height/pedestrian.film_dim[0]
-        lower = (i*sub_width,j*sub_height)
-        upper = ((i+1)*sub_width, (j+1)*sub_height)
-        area = (int(lower[0]), int(lower[1]), int(upper[0]), int(upper[1]))
-        person_fig = film_fig.crop(area)
-        person_fig = person_fig.rotate(180-theta/np.pi * 180 + 90, expand = False)
-        x_corner, y_corner = find_corner_coordinates(0., 0, x, y, theta,  person_fig)
-        background.paste(person_fig, (int(x_corner), int(y_corner)), person_fig)
-
 # set random seed (for debugging)
 # random.seed(2)
 # np.random.seed(400)
 
 # disable antialiasing for better performance
-antialias_enabled = False
-def draw_cars(vehicles):
-    for vehicle in vehicles:
-        vee, theta, x, y = vehicle.state
-        # convert angle to degrees and positive counter-clockwise
-        theta_d = -theta/np.pi * 180
-        vehicle_fig = vehicle.fig
-        w_orig, h_orig = vehicle_fig.size
-        # set expand=True so as to disable cropping of output image
-        vehicle_fig = vehicle_fig.rotate(theta_d, expand = False)
-        scaled_vehicle_fig_size  =  tuple([int(params.car_scale_factor * i) for i in vehicle_fig.size])
-        # rescale car 
-        if antialias_enabled:
-            vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size, Image.ANTIALIAS)
-        else:
-            vehicle_fig = vehicle_fig.resize(scaled_vehicle_fig_size)
-        # at (full scale) the relative coordinates of the center of the rear axle w.r.t. the center of the figure is center_to_axle_dist
-        x_corner, y_corner = find_corner_coordinates(-params.car_scale_factor * params.center_to_axle_dist, 0, x, y, theta, vehicle_fig)
-        background.paste(vehicle_fig, (x_corner, y_corner), vehicle_fig)
-
 medic_signs = []
 medic_sign = dir_path + '/components/imglib/medic.png'
 medic_fig = Image.open(medic_sign).convert("RGBA")
@@ -136,20 +96,13 @@ if not show_axes:
 dt = options.dt
 # create car
 def spawn_car():
-    def generate_license_plate():
-        import string
-        choices = string.digits + string.ascii_uppercase
-        plate_number = ''
-        for i in range(0,7):
-            plate_number = plate_number + random.choice(choices)
-        return plate_number
     plate_number = generate_license_plate()
     rand_num = np.random.choice(10)
     start_node = random.sample(car_graph.G._sources, 1)[0]
     end_node = random.sample(car_graph.G._sinks, 1)[0]
     color = np.random.choice(tuple(car.car_colors))
     the_car = car.KinematicCar(init_state=start_node, color=color, plate_number=plate_number)
-    return plate_number, start_node, end_node, the_car
+    return start_node, end_node, the_car
 
 def spawn_pedestrian():
     name = random.choice(names)
@@ -177,26 +130,13 @@ vertical_light = traffic_lights.get_states('vertical', 'color')
 background = Image.open(intersection_fig)
 
 pedestrians = []
-pedestrian_queue = queue.Queue()
 
 honk_x = []
 honk_y = []
 honk_t = []
 all_wavefronts = set()
 
-
-def clean_stamps():
-    for sub_prim in global_vars.time_table.copy():
-        for plate_number in global_vars.time_table[sub_prim].copy():
-            interval = global_vars.time_table[sub_prim][plate_number]
-            if interval[1] < global_vars.current_time:
-                del global_vars.time_table[sub_prim][plate_number]
-        if len(global_vars.time_table[sub_prim]) == 0:
-            del global_vars.time_table[sub_prim]
-
 # checks if pedestrian is crossing street
-def distance(a, b):
-    return ((a[0] - b[0])**2 + (a[1] - b[1])**2)**0.5
 def is_between(lane, person_xy):
     return distance(lane[0], person_xy) + distance(lane[1], person_xy) == distance(lane[0], lane[1])
 
@@ -255,9 +195,11 @@ def animate(frame_idx): # update animation by dt
 
     """ online frame update """
     global background
+
+    # car request
     if with_probability(options.new_car_probability):
-        new_plate_number, new_start_node, new_end_node, new_car = spawn_car()
-        global_vars.request_queue.enqueue((new_plate_number, new_start_node, new_end_node, new_car))
+        new_start_node, new_end_node, new_car = spawn_car()
+        global_vars.request_queue.enqueue((new_start_node, new_end_node, new_car))
     service_count = 0
     original_request_len = global_vars.request_queue.len()
     while global_vars.request_queue.len() > 0 and not deadlocked: # if there is at least one live request in the queue
@@ -271,16 +213,12 @@ def animate(frame_idx): # update animation by dt
             else:
                 original_request_len = global_vars.request_queue.len()
 
-######## pedestrian implementation ########
+    # pedestrian
     if with_probability(options.new_pedestrian_probability):
-        new_name, new_begin_node, new_final_node, new_pedestrian = spawn_pedestrian()
-        if new_begin_node == new_final_node:
-            # print("Request Denied")
-            pass
-        else:
-            pedestrian_queue.enqueue((new_name, new_begin_node, new_final_node, new_pedestrian))
-    while pedestrian_queue.len() > 0:
-        name, begin_node, final_node, the_pedestrian = pedestrian_queue.pop()
+        while True:
+            name, begin_node, final_node, the_pedestrian = spawn_pedestrian()
+            if not begin_node == final_node:
+                break
         _, shortest_path = planner.dijkstra((begin_node[0], begin_node[1]), final_node, pedestrian_graph.G)
         vee = np.random.uniform(20, 40)
         while len(shortest_path) > 0:
@@ -291,7 +229,6 @@ def animate(frame_idx): # update animation by dt
                 the_pedestrian.prim_queue.enqueue(((shortest_path[0], shortest_path[1], vee), 0))
                 del shortest_path[0]
         pedestrians.append(the_pedestrian)
-######## pedestrian implementation ########
 
     # update traffic lights
     traffic_lights.update(dt)
@@ -326,8 +263,8 @@ def animate(frame_idx): # update animation by dt
     for coordinate in vertical_light_coordinates[vertical_light]:
         x.append(coordinate[0])
         y.append(coordinate[1])
-    circle1 = plt.Circle((x[0],y[0]), radius=6, alpha=(0.3*sin(global_vars.current_time*1000)+0.6), color=vertical_light[0])
-    circle2 = plt.Circle((x[1],y[1]), radius=6, alpha=(0.3*sin(global_vars.current_time*1000)+0.6), color=vertical_light[0])
+    circle1 = plt.Circle((x[0],y[0]), radius=6, alpha=alt_sin(0.3,1,100,global_vars.current_time), color=vertical_light[0])
+    circle2 = plt.Circle((x[1],y[1]), radius=6, alpha=alt_sin(0.3,1,100,global_vars.current_time), color=vertical_light[0])
     vertical_lights =[ax.add_artist(circle1), ax.add_artist(circle2)]
 
     x = []
@@ -336,10 +273,9 @@ def animate(frame_idx): # update animation by dt
         x.append(coordinate[0])
         y.append(coordinate[1])
 
-    circle1 = plt.Circle((x[0],y[0]), radius=6, alpha=(0.3*sin(global_vars.current_time*1000)+0.6), color=horizontal_light[0])
-    circle2 = plt.Circle((x[1],y[1]), radius=6, alpha=(0.3*sin(global_vars.current_time*1000)+0.6), color=horizontal_light[0])
+    circle1 = plt.Circle((x[0],y[0]), radius=6, alpha=alt_sin(0.3,1,100,global_vars.current_time), color=horizontal_light[0])
+    circle2 = plt.Circle((x[1],y[1]), radius=6, alpha=alt_sin(0.3,1,100,global_vars.current_time), color=horizontal_light[0])
     horizontal_lights = [ax.add_artist(circle1), ax.add_artist(circle2)]
-
 
     # update pedestrians
     pedestrians_to_keep = []
@@ -383,7 +319,6 @@ def animate(frame_idx): # update animation by dt
     # determine which cars to keep
     for plate_number in global_vars.all_cars.keys():
         car = global_vars.all_cars[plate_number]
-#        if (car.state[2] <= x_lim and car.state[2] >= 0 and car.state[3] >= 0 and car.state[3] <= y_lim): TODO: implement this
         if car.prim_queue.len() > 0:
             # update cars with primitives
             global_vars.all_cars[plate_number].prim_next(dt)
@@ -395,7 +330,7 @@ def animate(frame_idx): # update animation by dt
     for plate_number in cars_to_remove:
         del global_vars.all_cars[plate_number]
 
-    clean_stamps()
+    clear_stamps()
     if not show_axes:
         plt.axis('off')
 
@@ -500,10 +435,10 @@ def animate(frame_idx): # update animation by dt
     # plot honking 
     np.random.shuffle(pedestrians_waiting)
     np.random.shuffle(pedestrians_to_keep)
-    draw_pedestrians(pedestrians_waiting)
+    draw_pedestrians(pedestrians_waiting, background)
     draw_medic_signs(medic_signs)
-    draw_pedestrians(pedestrians_to_keep) # draw pedestrians to background
-    draw_cars(cars_to_keep)
+    draw_pedestrians(pedestrians_to_keep, background) # draw pedestrians to background
+    draw_cars(cars_to_keep, background)
 
 
     # plot traffic light walls
@@ -532,7 +467,6 @@ def animate(frame_idx): # update animation by dt
             ys.append(ys[0])
             walls[3].set_data(xs,ys)
 
-    # show artists
     stage = ax.imshow(background, origin="lower") # update the stage
     all_artists = [stage] + [honk_waves] + boxes + curr_tubes + ids + plot_prims + walls + vertical_lights + horizontal_lights
     return all_artists
@@ -540,6 +474,7 @@ t0 = time.time()
 animate(0)
 t1 = time.time()
 interval = (t1 - t0)
+interval = 1
 
 ani = animation.FuncAnimation(fig, animate, frames=int(options.duration/options.dt), interval=interval, blit=True, repeat=False) # by default the animation function loops so set repeat to False in order to limit the number of frames generated to num_frames
 

@@ -39,23 +39,6 @@ def saturation_filter(u, u_max, u_min):
     '''
     return max(min(u, u_max), u_min)
 
-
-#def force_saturation_function(sigma, tire_data):
-#    ''' Force saturation function used in the calculation of tire traction forces
-#    Inputs:
-#    sigma - the composite slip
-#    tire_data - tire parameters
-#
-#    Output:
-#    f - composite force coefficient such tat f = F_c / (mu * F_z)
-#    '''
-#    C_1 = tire_data['C1']
-#    C_2 = tire_data['C2']
-#    C_3 = tire_data['C3']
-#    C_4 = tire_data['C4']
-#    f =  (C_1 * sigma**3 + C_2 * sigma**2 + (4/np.pi) * sigma)/(C_1 * sigma**3 + C_3 * sigma ** 2 + C_4 * sigma + 1)
-#    return f
-
 class KinematicCar:
     '''Kinematic car class
 
@@ -74,7 +57,7 @@ class KinematicCar:
                  plate_number=None,  # license plate number
                  # queue of primitives, each item in the queue has the form (prim_id, prim_progress) where prim_id is the primitive ID and prim_progress is the progress of the primitive)
                  prim_queue=None,
-                 fuel_level=float('inf')):  # TODO: fuel level of the car - FUTURE FEATURE)
+                 fuel_level=float('inf')):  # TODO: fuel level of the car
         if color not in car_colors:
             raise Exception("This car color doesn't exist!")
         self.params = (L, a_max, a_min, nu_max, nu_min, vee_max)
@@ -151,7 +134,6 @@ class KinematicCar:
             self.state[0] = np.sign(self.state[0]) * abs(self.state[0]) * dt * 0.01
 
     def extract_primitive(self):
-        # TODO: rewrite the comment below
         """
         This function updates the primitive queue and picks the next primitive to be applied. When there is no more primitive in the queue, it will
         return False
@@ -175,17 +157,12 @@ class KinematicCar:
         Outputs:
         None - the states of the car will get updated
         """
-        # TODO: implement compatibility check with primitive to make sure that the params & dynamics match (essentially comparing prim_car and the
-        # kinematic model)
         if self.extract_primitive() == False:  # if there is no primitive to use
             self.next((0, 0), dt)
         else:
             prim_id, prim_progress = self.extract_primitive()
             # load primitive data TODO: make this portion of the code more automated
             if prim_id > -1:
-#                if self.new_unpause:
-#                    self.new_unpause = False
-#                    self.state = self.init_state
                 # the primitive corresponding to the primitive number
                 prim = mat['MA3'][prim_id, 0]
                 # extract duration of primitive
@@ -226,9 +203,6 @@ class KinematicCar:
                 prim_progress = prim_progress + dt / t_end
                 self.prim_queue.replace_top((prim_id, prim_progress))
             else:  # if is stopping primitive
-#                if self.new_pause:
-#                    self.new_pause = False
-#                    self.init_state = self.state # init is previous state
                 self.next((0, 0), dt)
 
 class DynamicCar(KinematicCar): # bicycle 5 DOF model
@@ -435,43 +409,3 @@ class DynamicCar(KinematicCar): # bicycle 5 DOF model
         F_x = (f_of_sigma * K_c_prime * S / sqrt(K_s**2 * (tan(alpha))**2 + K_c_prime**2 * S**2)) * mu * F_z
 
         return F_x, F_y
-
-# TESTING
-#v_x = 0.0001
-#v_y = 0
-#r = 0
-#psi = 0
-#w_f = 0
-#w_r = 0
-#X = 0
-#Y = 0
-#init_dyn_state = np.array([v_x, v_y, r, psi, w_f, w_r, X, Y])
-#dyn_car = DynamicCar(init_dyn_state = init_dyn_state)
-#delta_f = -0.04
-#delta_r = 0
-#T_af = 300
-#T_ar = 0.001
-#T_bf = 0
-#T_br = 0
-#inputs = (delta_f, delta_r, T_af, T_ar, T_bf, T_br)
-#dt = 0.1
-#t_end = 10
-#t_start = 0
-#t_current = t_start
-#X = []
-#Y = []
-#psi = []
-#while t_current < t_end:
-#    dyn_car.next(inputs, 0.1)
-#    t_current += dt
-#    state = dyn_car.dyn_state
-#    X.append(state[-2])
-#    Y.append(state[-1])
-#    print(state)
-#
-## state = [v_x, v_y, r, psi, w_f, w_r, X, Y]
-#import matplotlib.pyplot as plt
-#plt.plot(X,Y)
-#plt.xlim(-100, 100)
-#plt.ylim(-100, 100)
-#plt.show()
