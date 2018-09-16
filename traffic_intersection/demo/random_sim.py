@@ -18,12 +18,13 @@ import prepare.queue as queue
 from PIL import Image, ImageDraw
 from components.auxiliary.pedestrian_names import names
 import prepare.options as options
-from  prepare.collision_check import collision_free
-from  prepare.helper import *
+from prepare.collision_check import collision_free
+from prepare.helper import *
 import numpy as np
 import variables.global_vars as global_vars
 import assumes.params as params
 import datetime
+import components.intersection as intersection
 
 if platform.system() == 'Darwin': # if the operating system is MacOS
     matplotlib.use('macosx')
@@ -45,15 +46,6 @@ intersection_fig = dir_path + "/components/imglib/intersection_states/intersecti
 if not options.random_simulation:
     random.seed(options.random_seed)
     np.random.seed(options.np_random_seed )
-
-medic_signs = []
-medic_sign = dir_path + '/components/imglib/pedestrians/medic.png'
-medic_fig = Image.open(medic_sign).convert("RGBA")
-medic_fig = medic_fig.resize((25,25))
-def draw_medic_signs(medic_signs_coordinates):
-    for coordinate in medic_signs_coordinates:
-        x, y = find_corner_coordinates(0, 0, coordinate[0], coordinate[1], 0, medic_fig)
-        background.paste(medic_fig, (int(x), int(y)), medic_fig)
 
 walk_sign_go = dir_path + '/components/imglib/go.png'
 go_fig = Image.open(walk_sign_go).convert("RGBA")
@@ -87,6 +79,9 @@ horizontal_light_coordinates = {'green':[(291, 193), (756, 566.25)], 'yellow': [
 # creates figure
 fig = plt.figure()
 ax = fig.add_axes([0,0,1,1]) # get rid of white border
+
+if not options.show_axes:
+    plt.axis('off')
 
 # sampling time
 dt = options.dt
@@ -159,7 +154,6 @@ def walk_faster(person, remaining_time):
         if (vee <= vee_max):
             person.prim_queue.replace_top(((start, finish, vee), prim_progress))
 
-
 def animate(frame_idx): # update animation by dt
     t0 = time.time()
     ax.cla() # clear Axes before plotting
@@ -195,6 +189,7 @@ def animate(frame_idx): # update animation by dt
                 deadlocked = True
             else:
                 original_request_len = planner._request_queue.len()
+    planner.clear_stamps()
 
     # pedestrian
     if with_probability(options.new_pedestrian_probability):
@@ -204,11 +199,7 @@ def animate(frame_idx): # update animation by dt
                 break
         _, shortest_path = dijkstra((begin_node[0], begin_node[1]), final_node, pedestrian_graph.G)
         vee = np.random.uniform(20, 40)
-        while len(shortest_path) > 0:
-            if len(shortest_path) == 1:
-                the_pedestrian.prim_queue.enqueue(((shortest_path[0], shortest_path[0], vee), 0))
-                del shortest_path[0]
-            else:
+        while len(shortest_path) > 1:
                 the_pedestrian.prim_queue.enqueue(((shortest_path[0], shortest_path[1], vee), 0))
                 del shortest_path[0]
         pedestrians.append(the_pedestrian)
@@ -264,11 +255,6 @@ def animate(frame_idx): # update animation by dt
     pedestrians_to_keep = []
     pedestrians_waiting = []
 
-    lane1 = [(355, 195), (355, 565)] # left vertical path, (bottom node, top node)
-    lane2 = [(705, 195), (705, 565)] # right vertical path, (bottom node, top node)
-    lane3 = [(380, 590), (680, 590)] # top horizontal path (left node, right node)
-    lane4 = [(380, 170), (680, 170)] # bottom horizontal path (left node, right node)
-
     if len(pedestrians) > 0:
         for person in pedestrians:
             if (person.state[0] <= x_lim and person.state[0] >= 0 and person.state[1] >= 0 and person.state[1] <= y_lim):
@@ -277,13 +263,13 @@ def animate(frame_idx): # update animation by dt
                 remaining_vertical_time = abs(walk_sign_duration - vertical_light_time)
                 remaining_horizontal_time = abs(walk_sign_duration  - horizontal_light_time)
 
-                if person_xy not in (lane1 + lane2 + lane3 + lane4): # if pedestrian is not at any of the nodes then continue  
+                if person_xy not in (intersection.lane1 + intersection.lane2 + intersection.lane3 + intersection.lane4): # if pedestrian is not at any of the nodes then continue  
                     person.prim_next(dt)
                     pedestrians_to_keep.append(person)
-                elif continue_walking(person, vertical_walk_safe, lane1, lane2, (-pi/2, pi/2), remaining_vertical_time): # if light is green cross the street, or if at a node and facing away from the street i.e. just crossed the street then continue
+                elif continue_walking(person, vertical_walk_safe, intersection.lane1, intersection.lane2, (-pi/2, pi/2), remaining_vertical_time): # if light is green cross the street, or if at a node and facing away from the street i.e. just crossed the street then continue
                     person.prim_next(dt)
                     pedestrians_to_keep.append(person)
-                elif continue_walking(person, horizontal_walk_safe, lane3, lane4, (pi, 0), remaining_horizontal_time):
+                elif continue_walking(person, horizontal_walk_safe, intersection.lane3, intersection.lane4, (pi, 0), remaining_horizontal_time):
                     person.prim_next(dt)
                     pedestrians_to_keep.append(person)
                 else:
@@ -291,34 +277,18 @@ def animate(frame_idx): # update animation by dt
                     pedestrians_waiting.append(person)
 
                 # pedestrians walk faster if not going fast enough to finish crossing the street before walk sign is off or 'false'
-                if is_between(lane1, person_xy) or is_between(lane2, person_xy):
+                if is_between(intersection.lane1, person_xy) or is_between(intersection.lane2, person_xy):
                     walk_faster(person, remaining_vertical_time)
-                elif is_between(lane3, person_xy) or is_between(lane4, person_xy):
+                elif is_between(intersection.lane3, person_xy) or is_between(intersection.lane4, person_xy):
                     walk_faster(person, remaining_horizontal_time)
 
     cars_to_keep = []
 
-    # determine which cars to keep
-    for plate_number in global_vars.all_cars.keys():
-        car = global_vars.all_cars[plate_number]
-        if car.prim_queue.len() > 0:
-            # update cars with primitives
-            global_vars.all_cars[plate_number].prim_next(dt)
-            # add cars to keep list
-            cars_to_keep.append(global_vars.all_cars[plate_number])
-        else:
-            global_vars.cars_to_remove.add(plate_number)
-    # determine which cars to remove
-    for plate_number in global_vars.cars_to_remove.copy():
-        del global_vars.all_cars[plate_number]
-        global_vars.cars_to_remove.remove(plate_number)
-
-    planner.clear_stamps()
 
     ################################ Update and Generate Visuals ################################ 
-    # turn on/off axes
-    if not options.show_axes:
-        plt.axis('off')
+    # update cars
+    update_cars(cars_to_keep, dt)
+    draw_cars(cars_to_keep, background)
     # show honk wavefronts
     if options.show_honks:
         show_wavefronts(ax, dt)
@@ -338,21 +308,11 @@ def animate(frame_idx): # update animation by dt
     # show traffic light walls
     if options.show_traffic_light_walls:
         plot_traffic_light_walls(ax, traffic_lights)
+    # check for collisions and update pedestrian state
+    check_for_collisions(pedestrians_to_keep, cars_to_keep)
 
-    # if cars are hitting pedestrians replace pedestrian with medic sign
-    for person in pedestrians_to_keep:
-        for car in cars_to_keep:
-            collision_free1,_ = collision_free(person, car)
-            if not collision_free1 and car.state[0] > 1:
-                medic_signs.append((person.state[0], person.state[1]))
-                del pedestrians[pedestrians.index(person)]
-
-    np.random.shuffle(pedestrians_waiting)
-    np.random.shuffle(pedestrians_to_keep)
     draw_pedestrians(pedestrians_waiting, background)
-    draw_medic_signs(medic_signs)
     draw_pedestrians(pedestrians_to_keep, background) # draw pedestrians to background
-    draw_cars(cars_to_keep, background)
 
     stage = ax.imshow(background, origin="lower") # update the stage
     all_artists = [stage] + global_vars.honk_waves + global_vars.boxes + global_vars.curr_tubes + global_vars.ids + global_vars.prim_ids_to_show + global_vars.walls + vertical_lights + horizontal_lights

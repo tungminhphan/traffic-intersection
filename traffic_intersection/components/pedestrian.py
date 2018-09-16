@@ -13,6 +13,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 from prepare.queue import Queue
 
 medic = dir_path + '/imglib/pedestrians/medic' + '.png'
+all_pedestrian_types = {'1','2','3','4','5','6'}
 
 class Pedestrian:
     def __init__(self,
@@ -22,7 +23,7 @@ class Pedestrian:
                  gait_progress = 0,
                  film_dim = (1, 6),
                  prim_queue = None, # primitive queue
-                 pedestrian_type = '3', # three types 1 or 2 or 3
+                 pedestrian_type = '3',
                  name = None,
                  age = 20):
         """
@@ -30,6 +31,7 @@ class Pedestrian:
         """
         # init_state: initial state by default (x = 0, y = 0, theta = 0, gait = 0)
         self.alive_time = 0
+        self.is_dead = False
         self.state = np.array(init_state, dtype="float")
         self.number_of_gaits = film_dim[0] * film_dim[1]
         self.gait_length = gait_length
@@ -47,15 +49,19 @@ class Pedestrian:
         """
         The pedestrian advances forward
         """
-        dee_theta, vee = inputs
-        self.state[2] += dee_theta # update heading of pedestrian
-        self.state[0] += vee * np.cos(self.state[2]) * dt # update x coordinate of pedestrian
-        self.state[1] += vee * np.sin(self.state[2]) * dt # update y coordinate of pedestrian
-        distance_travelled = vee * dt # compute distance travelled during dt
-        gait_change = (self.gait_progress + distance_travelled / self.gait_length) // 1 # compute number of gait change
-        self.gait_progress = (self.gait_progress + distance_travelled / self.gait_length) % 1
-        self.state[3] = int((self.state[3] + gait_change) % self.number_of_gaits)
-        self.alive_time += dt
+        if self.is_dead:
+            if self.fig != medic:
+                self.fig = medic
+        else:
+            dee_theta, vee = inputs
+            self.state[2] += dee_theta # update heading of pedestrian
+            self.state[0] += vee * np.cos(self.state[2]) * dt # update x coordinate of pedestrian
+            self.state[1] += vee * np.sin(self.state[2]) * dt # update y coordinate of pedestrian
+            distance_travelled = vee * dt # compute distance travelled during dt
+            gait_change = (self.gait_progress + distance_travelled / self.gait_length) // 1 # compute number of gait change
+            self.gait_progress = (self.gait_progress + distance_travelled / self.gait_length) % 1
+            self.state[3] = int((self.state[3] + gait_change) % self.number_of_gaits)
+            self.alive_time += dt
 
     def visualize(self):
         # convert gait number to i, j coordinates of subfigure

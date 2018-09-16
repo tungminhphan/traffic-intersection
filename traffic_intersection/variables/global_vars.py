@@ -12,3 +12,5 @@ ids = []
 boxes = []
 honk_waves = []
 all_wavefronts = set()
+pedestrians_waiting = set()
+pedestrians_to_keep= set()
