@@ -145,16 +145,19 @@ class Automaton:
     def remove_state(self, state):
         # deletes all transitions leading to that state
         for key in self.transitions_dict:
-            transitions = transitions_dict[key]
+            transitions = self.transitions_dict[key]
             for trans in transitions:
                 if trans.endState == state:
-                    transitions_dict[key].remove(trans)
+                    self.transitions_dict[key].remove(trans)
 
         # deletes the state
         self.transitions_dict.pop(state)
         self.states.remove(state)
-        self.startStates.remove(state)
-        self.endStates.remove(state)
+        try:
+            self.startStates.remove(state)
+            self.endStates.remove(state)
+        except KeyError:
+            pass
 
     def convert_to_digraph(self):
         automata = Digraph(format='pdf')
@@ -202,10 +205,10 @@ class InterfaceAutomaton(Automaton):
         self.internal_alphabet = internalAlphabet
         self.alphabet = self.input_alphabet.union(self.output_alphabet).union(self.internal_alphabet)
 
-    # in the final composition, delete all transitions that are still waiting for input, since we can't take them
     # also removes all states without transitions
     def trim(self):
         reachable_set = find_reachable_set(self)
+        unreachable_set = self.states - reachable_set
         for key in self.transitions_dict:
             # removes transitions
             to_remove = set()
@@ -215,14 +218,8 @@ class InterfaceAutomaton(Automaton):
             self.transitions_dict[key] = self.transitions_dict[key] - to_remove
 
         # removes states that are not reachable
-        for node in self.transitions_dict:
-            nodes_to_remove = set()
-            if not (node in reachable_set):
-                to_remove.add(node)
-                self.states.remove(node)
-
-        for node in nodes_to_remove:
-            self.transitions_dict.pop(node, None)
+        for node in unreachable_set - {self.fail_state}:
+            self.remove_state(node)
 
     # takes two guard transitions and returns their composition
 def compose_guard_trans(tr1, tr2, node_dict):

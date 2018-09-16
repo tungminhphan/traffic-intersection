@@ -7,10 +7,10 @@
 from automaton import *
 class ContractAutomaton(InterfaceAutomaton):
     def __init__(self, must = {}, may = {}):
-        InterfaceAutomaton.__init__(self)
         self.must = must
         self.may = may
         self.transitions_dict = may
+        InterfaceAutomaton.__init__(self)
         # may and must are transition dictionaries
 
     def check_validity(self):
@@ -28,29 +28,60 @@ class ContractAutomaton(InterfaceAutomaton):
                     return False
         return True
 
+    def add_state(self, state, end_state = False, start_state = False):
+        if end_state:
+            self.endStates.add(state)
+        if start_state:
+            self.startStates.add(state)
+
+        self.states.add(state)
+        self.transitions_dict[state] = set()
+        self.must[state] = set()
+        self.may[state] = set()
+
     def remove_state(self, state):
         # deletes all transitions leading to that state
         for key in self.transitions_dict:
-            transitions = transitions_dict[key]
-            for trans in transitions:
+            maytransitions = self.transitions_dict[key]
+            to_remove_may = set()
+            to_remove_must = set()
+            for trans in maytransitions:
                 if trans.endState == state:
-                    transitions_dict[key].remove(trans)
-                    may[key].remove(trans)
-                    if key in must:
-                        must[key].remove(trans)
+                    to_remove_may.add(trans)
+
+            for trans in to_remove_may:
+                    self.transitions_dict[key].remove(trans)
+                    self.may[key].remove(trans)
+
+            musttransitions = self.must[key]
+
+            for trans in musttransitions:
+                if trans.endState == state:
+                    to_remove_must.add(trans)
+
+            for trans in to_remove_must:
+                self.must[key].remove(trans)
 
         # deletes the state
         self.transitions_dict.pop(state)
         self.may.pop(state)
         self.must.pop(state)
         self.states.remove(state)
-        self.startStates.remove(state)
+        try:
+            self.startStates.remove(state)
+        except KeyError:
+            pass
 
 
     def add_transition(self, transition, must = 0):
         self.may[transition.startState].add(transition)
         if must:
             self.must[transition.startState].add(transition)
+
+    def add_implicit_self_transitions(self):
+        for state in self.transitions_dict:
+            transition = guardTransition(state, state, 'True', '', '')
+            self.add_transition(transition, 0)
 
     def get_must_interface(self):
         return InterfaceAutomaton(self.alphabet, self.must, self.startStates, self.endStates, self.failStates,
@@ -84,7 +115,7 @@ class ContractAutomaton(InterfaceAutomaton):
             if state in self.may:
                 maytransit = self.may[state] # this is a set of may transitions from the state
                 for trans in maytransit:
-                    if trans is not False:
+                    if trans is not False and trans not in self.must[state]:
                         state2 = trans.endState
                         automata.edge(state.name, state2.name, label = trans.show(), style = 'dotted')
 
@@ -103,8 +134,8 @@ class ContractAutomaton(InterfaceAutomaton):
         while not finished:
             finished = True
             for key in self.must:
-                musttrans = must[key]
-                maytrans = may[key]
+                musttrans = self.must[key]
+                maytrans = self.may[key]
                 for must in musttrans:
                     check = False
                     for may in maytrans:
@@ -232,6 +263,55 @@ D =  construct_contract_automaton(state_set=state_set, starts=starts, musttrans 
 if D.check_validity():
     D.convert_to_digraph().render('D', view = True)
 
+h_traffic_states = {'red_h', 'green_h', 'yellow_h'}
+h_trans_may = {}
+h_trans_must = {}
+starts_h = {'red_h', 'green_h', 'yellow_h'}
+h_trans_may[('red_h', 'green_h')] = ('h_timer == 45', 'green_h', '!')
+h_trans_must[('green_h', 'yellow_h')] = ('h_timer == 40', '', '')
+h_trans_must[('yellow_h', 'red_h')] = ('h_timer == 5', 'red_h', '!')
+h_trans_may[('green_h', 'yellow_h')] = ('h_timer == 40', '', '')
+h_trans_may[('yellow_h', 'red_h')] = ('h_timer == 5', 'red_h', '!')
+h_trans_may[('green_h', 'green_h')] = ('h_timer < 40', 'green_h', '!')
+h_trans_may[('red_h', 'red_h')] = ('h_timer < 45', 'red_h', '!')
+h_trans_may[('yellow_h', 'yellow_h')] = ('h_timer < 5', '', '')
+h = construct_contract_automaton(state_set = h_traffic_states, starts = starts_h, musttrans = h_trans_must, maytrans = h_trans_may)
+h.convert_to_digraph().render('h', view = True)
 
+v_traffic_states = {'red_v', 'green_v', 'yellow_v'}
+v_trans_may = {}
+v_trans_must = {}
+starts_v = {'red_v', 'green_v', 'yellow_v'}
+v_trans_may[('red_v', 'green_v')] = ('True', 'red_h', '?')
+v_trans_must[('green_v', 'yellow_v')] = ('v_timer == 40', '', '')
+v_trans_must[('yellow_v', 'red_v')] = ('v_timer == 5', '', '')
+v_trans_may[('green_v', 'green_v')] = ('True', '', '')
+v_trans_may[('red_v', 'red_v')] = ('True', '', '!')
+v_trans_may[('yellow_v', 'yellow_v')] = ('v_timer < 5', '', '')
+v_trans_may[('green_v', 'yellow_v')] = ('v_timer == 40', '', '')
+v_trans_may[('yellow_v', 'red_v')] = ('v_timer == 5', '', '')
+v = construct_contract_automaton(state_set = v_traffic_states, starts = starts_v, musttrans = v_trans_must, maytrans = v_trans_may)
+v.convert_to_digraph().render('v', view = True)
 
+road_states = ['full', 'not full', 'aux', 'start_road', 'aux2']
+road_trans_may = {}
+road_trans_must = {}
+starts_road = {'start_road'}
+road_trans_may[('full', 'not full')] = ('g_exit', 'can_exit', '!')
+road_trans_must[('full', 'aux2')] = ('num_cars < max_cap', '', '')
+road_trans_must[('aux2', 'not full')] = ('True', '', '')
+road_trans_may[('full', 'aux2')] = ('num_cars < max_cap', '', '')
+road_trans_may[('aux2', 'not full')] = ('True', '', '')
+
+road_trans_may[('start_road', 'full')] = ('num_cars == max_cap', '', '')
+road_trans_may[('start_road', 'not full')] = ('num_cars < max_cap', '', '')
+road_trans_must[('not full', 'aux')] = ('g_enter', 'can_enter', '!')
+road_trans_must[('aux', 'full')] = ('num_cars == max_cap', '', '')
+road_trans_may[('not full', 'aux')] = ('g_enter', 'can_enter', '!')
+road_trans_may[('aux', 'full')] = ('num_cars == max_cap', '', '')
+road_trans_must[('aux', 'not full')] = ('num_cars < max_cap', '', '')
+road_trans_may[('not full', 'not full')] = ('g_exit', 'can_exit', '!')
+
+road_auto = construct_contract_automaton(state_set = road_states, starts = starts_road, musttrans = road_trans_must, maytrans = road_trans_may)
+road_auto.convert_to_digraph().render('road', view = True)
 
