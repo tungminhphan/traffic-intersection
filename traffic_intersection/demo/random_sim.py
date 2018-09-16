@@ -111,18 +111,14 @@ def safe_to_walk(green_duration, light_color, light_time):
     walk_sign_delay = green_duration / 10
     return(light_color == 'green' and (light_time + walk_sign_delay) <= (green_duration / 3 + walk_sign_delay))
 
-#### ADD COMPONENTS #####
+###################### ADD COMPONENTS ######################
 # create planner
 planner = scheduler.Scheduler()
 # create traffic lights
 traffic_lights = traffic_signals.TrafficLights(yellow_max = 10, green_max = 50, random_start = True)
 
 background = Image.open(intersection_fig)
-
 pedestrians = []
-honk_x = []
-honk_y = []
-honk_t = []
 
 # checks if pedestrian is crossing street
 def is_between(lane, person_xy):
@@ -319,7 +315,7 @@ def animate(frame_idx): # update animation by dt
 
     planner.clear_stamps()
 
-    ################################ Generating Visuals ################################ 
+    ################################ Update and Generate Visuals ################################ 
     # turn on/off axes
     if not options.show_axes:
         plt.axis('off')
