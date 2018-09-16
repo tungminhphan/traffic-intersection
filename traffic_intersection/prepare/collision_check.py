@@ -32,11 +32,11 @@ def rotate_vertex(x, y, theta, v):
 
 # used for projection of axes and vertices
 def dot(v1, v2):
-	return v1[0] * v2[0] + v1[1] * v2[1]
+    return v1[0] * v2[0] + v1[1] * v2[1]
 
 # gets the vector between two vertices (the edge)  
 def edge_vector(vertex1, vertex2):
-	return (vertex2[0] - vertex1[0], vertex2[1] - vertex1[1])
+    return (vertex2[0] - vertex1[0], vertex2[1] - vertex1[1])
 
 # takes the vectors of the edges returns them in list, note that the input list of vertices must be given in an order such that following them will trace out the polygon
 def vectors_of_edges(vertices):

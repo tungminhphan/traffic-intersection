@@ -3,7 +3,7 @@ if custom:
     save_video = False
     antialias_enabled = False
     speed_up_factor = 3
-    dt = 0.2
+    dt = 0.1
     duration = 150
     highlight_crossings = True
     create_collision_dictionary = False

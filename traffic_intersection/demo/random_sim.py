@@ -7,7 +7,7 @@
 import sys
 sys.path.append('..')
 import os, time, platform, warnings, matplotlib, random
-import components.planner as planner
+import components.scheduler as scheduler
 import components.car as car
 import components.auxiliary.honk_wavefront as wavefront
 import components.pedestrian as pedestrian
@@ -24,6 +24,7 @@ from  prepare.helper import *
 import numpy as np
 import variables.global_vars as global_vars
 import assumes.params as params
+import datetime
 
 if platform.system() == 'Darwin': # if the operating system is MacOS
     matplotlib.use('macosx')
@@ -47,7 +48,7 @@ intersection_fig = dir_path + "/components/imglib/intersection_states/intersecti
 
 # disable antialiasing for better performance
 medic_signs = []
-medic_sign = dir_path + '/components/imglib/medic.png'
+medic_sign = dir_path + '/components/imglib/pedestrians/medic.png'
 medic_fig = Image.open(medic_sign).convert("RGBA")
 medic_fig = medic_fig.resize((25,25))
 def draw_medic_signs(medic_signs_coordinates):
@@ -123,14 +124,17 @@ def safe_to_walk(green_duration, light_color, light_time):
     walk_sign_delay = green_duration / 10
     return(light_color == 'green' and (light_time + walk_sign_delay) <= (green_duration / 3 + walk_sign_delay))
 
+#### ADD COMPONENTS #####
+# create planner
+planner = scheduler.Scheduler()
 # create traffic lights
 traffic_lights = traffic_signals.TrafficLights(yellow_max = 10, green_max = 50, random_start = True)
+
 horizontal_light = traffic_lights.get_states('horizontal', 'color')
 vertical_light = traffic_lights.get_states('vertical', 'color')
 background = Image.open(intersection_fig)
 
 pedestrians = []
-
 honk_x = []
 honk_y = []
 honk_t = []
@@ -175,11 +179,12 @@ def walk_faster(person, remaining_time):
         if (vee <= vee_max):
             person.prim_queue.replace_top(((start, finish, vee), prim_progress))
 
+
 def animate(frame_idx): # update animation by dt
+    t0 = time.time()
     ax.cla() # clear Axes before plotting
     deadlocked = False
-    global_vars.current_time = frame_idx * dt # compute current time from frame index and dt
-    print('{:.2f}'.format(global_vars.current_time)+'/'+str(options.duration)) # print out current time to 2 decimal places
+    global_vars.current_time = frame_idx * dt # update current time from frame index and dt
 
     horizontal_light = traffic_lights.get_states('horizontal', 'color')
     vertical_light = traffic_lights.get_states('vertical', 'color')
@@ -199,19 +204,18 @@ def animate(frame_idx): # update animation by dt
     # car request
     if with_probability(options.new_car_probability):
         new_start_node, new_end_node, new_car = spawn_car()
-        global_vars.request_queue.enqueue((new_start_node, new_end_node, new_car))
+        planner._request_queue.enqueue((new_start_node, new_end_node, new_car)) # planner takes request
     service_count = 0
-    original_request_len = global_vars.request_queue.len()
-    while global_vars.request_queue.len() > 0 and not deadlocked: # if there is at least one live request in the queue
-        request = global_vars.request_queue.pop() # take the first request
-        planner.serve_request(request=request,graph=car_graph.G,traffic_lights=traffic_lights)
+    original_request_len = planner._request_queue.len()
+    while planner._request_queue.len() > 0 and not deadlocked: # if there is at least one live request in the queue
+        planner.serve(graph=car_graph.G,traffic_lights=traffic_lights)
         service_count += 1
         if service_count == original_request_len:
             service_count = 0 # reset service count
-            if global_vars.request_queue.len() == original_request_len:
+            if planner._request_queue.len() == original_request_len:
                 deadlocked = True
             else:
-                original_request_len = global_vars.request_queue.len()
+                original_request_len = planner._request_queue.len()
 
     # pedestrian
     if with_probability(options.new_pedestrian_probability):
@@ -219,7 +223,7 @@ def animate(frame_idx): # update animation by dt
             name, begin_node, final_node, the_pedestrian = spawn_pedestrian()
             if not begin_node == final_node:
                 break
-        _, shortest_path = planner.dijkstra((begin_node[0], begin_node[1]), final_node, pedestrian_graph.G)
+        _, shortest_path = dijkstra((begin_node[0], begin_node[1]), final_node, pedestrian_graph.G)
         vee = np.random.uniform(20, 40)
         while len(shortest_path) > 0:
             if len(shortest_path) == 1:
@@ -314,7 +318,6 @@ def animate(frame_idx): # update animation by dt
                     walk_faster(person, remaining_horizontal_time)
 
     cars_to_keep = []
-    cars_to_remove = set()
 
     # determine which cars to keep
     for plate_number in global_vars.all_cars.keys():
@@ -325,12 +328,13 @@ def animate(frame_idx): # update animation by dt
             # add cars to keep list
             cars_to_keep.append(global_vars.all_cars[plate_number])
         else:
-            cars_to_remove.add(plate_number)
+            global_vars.cars_to_remove.add(plate_number)
     # determine which cars to remove
-    for plate_number in cars_to_remove:
+    for plate_number in global_vars.cars_to_remove.copy():
         del global_vars.all_cars[plate_number]
+        global_vars.cars_to_remove.remove(plate_number)
 
-    clear_stamps()
+    planner.clear_stamps()
     if not show_axes:
         plt.axis('off')
 
@@ -469,6 +473,9 @@ def animate(frame_idx): # update animation by dt
 
     stage = ax.imshow(background, origin="lower") # update the stage
     all_artists = [stage] + [honk_waves] + boxes + curr_tubes + ids + plot_prims + walls + vertical_lights + horizontal_lights
+    t1 = time.time()
+    elapsed_time = (t1 - t0)
+    print('{:.2f}'.format(global_vars.current_time)+'/'+str(options.duration) + ' at ' + str(int(1/elapsed_time)) + ' fps') # print out current time to 2 decimal places
     return all_artists
 t0 = time.time()
 animate(0)
@@ -481,7 +488,8 @@ ani = animation.FuncAnimation(fig, animate, frames=int(options.duration/options.
 if options.save_video:
     Writer = animation.writers['ffmpeg']
     writer = Writer(fps = options.speed_up_factor*int(1/options.dt), metadata=dict(artist='Me'), bitrate=-1)
-    ani.save('../movies/cython.avi', writer=writer, dpi=200)
+    now = str(datetime.datetime.now())
+    ani.save('../movies/' + now + '.avi', writer=writer, dpi=200)
 plt.show()
 t2 = time.time()
 print('Total elapsed time: ' + str(t2-t0))

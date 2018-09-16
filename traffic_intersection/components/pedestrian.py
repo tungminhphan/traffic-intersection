@@ -12,23 +12,7 @@ import scipy.integrate as integrate
 dir_path = os.path.dirname(os.path.realpath(__file__))
 from prepare.queue import Queue
 
-def generate_walking_gif():
-    pedestrian_fig = dir_path + "/imglib/pedestrians/walking3.png"
-    film_dim = (1, 6) # dimension of the film used for animation
-    img = Image.open(pedestrian_fig)
-    width, height = img.size
-    sub_width = width/film_dim[1]
-    sub_height = height/film_dim[0]
-    images = []
-    for j in range(0, film_dim[0]):
-        for i in range(0, film_dim[1]):
-            lower = (i*sub_width,  j*sub_height)
-            upper = ((i+1)*sub_width, (j+1)*sub_height)
-            area = (lower[0], lower[1], upper[0], upper[1])
-            cropped_img = img.crop(area)
-            cropped_img = np.asarray(cropped_img)
-            images.append(cropped_img)
-    imageio.mimsave('movie.gif', images, duration=0.1)
+medic = dir_path + '/imglib/pedestrians/medic' + '.png'
 
 class Pedestrian:
     def __init__(self,
@@ -71,6 +55,7 @@ class Pedestrian:
         gait_change = (self.gait_progress + distance_travelled / self.gait_length) // 1 # compute number of gait change
         self.gait_progress = (self.gait_progress + distance_travelled / self.gait_length) % 1
         self.state[3] = int((self.state[3] + gait_change) % self.number_of_gaits)
+        self.alive_time += dt
 
     def visualize(self):
         # convert gait number to i, j coordinates of subfigure
