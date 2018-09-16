@@ -7,23 +7,23 @@
 import sys
 sys.path.append('..')
 import os, time, platform, warnings, matplotlib, random
-import components.planner as planner
+import components.scheduler as scheduler
 import components.car as car
 import components.auxiliary.honk_wavefront as wavefront
 import components.pedestrian as pedestrian
 import components.traffic_signals as traffic_signals
-import components.intersection as intersection
 import prepare.car_waypoint_graph as car_graph
 import prepare.pedestrian_waypoint_graph as pedestrian_graph
 import prepare.queue as queue
 from PIL import Image, ImageDraw
 from components.auxiliary.pedestrian_names import names
 import prepare.options as options
-from  prepare.collision_check import collision_free, get_bounding_box
+from  prepare.collision_check import collision_free
 from  prepare.helper import *
 import numpy as np
 import variables.global_vars as global_vars
 import assumes.params as params
+import datetime
 
 if platform.system() == 'Darwin': # if the operating system is MacOS
     matplotlib.use('macosx')
@@ -41,13 +41,13 @@ import matplotlib.pyplot as plt
 dir_path = os.path.dirname(os.path.dirname(os.path.realpath('__file__')))
 intersection_fig = dir_path + "/components/imglib/intersection_states/intersection_lights.png"
 
-# set random seed (for debugging)
-# random.seed(2)
-# np.random.seed(400)
+# set randomness (optional)
+if not options.random_simulation:
+    random.seed(options.random_seed)
+    np.random.seed(options.np_random_seed )
 
-# disable antialiasing for better performance
 medic_signs = []
-medic_sign = dir_path + '/components/imglib/medic.png'
+medic_sign = dir_path + '/components/imglib/pedestrians/medic.png'
 medic_fig = Image.open(medic_sign).convert("RGBA")
 medic_fig = medic_fig.resize((25,25))
 def draw_medic_signs(medic_signs_coordinates):
@@ -88,21 +88,9 @@ horizontal_light_coordinates = {'green':[(291, 193), (756, 566.25)], 'yellow': [
 fig = plt.figure()
 ax = fig.add_axes([0,0,1,1]) # get rid of white border
 
-# turn on/off axes
-show_axes = False
-if not show_axes:
-    plt.axis('off')
 # sampling time
 dt = options.dt
 # create car
-def spawn_car():
-    plate_number = generate_license_plate()
-    rand_num = np.random.choice(10)
-    start_node = random.sample(car_graph.G._sources, 1)[0]
-    end_node = random.sample(car_graph.G._sinks, 1)[0]
-    color = np.random.choice(tuple(car.car_colors))
-    the_car = car.KinematicCar(init_state=start_node, color=color, plate_number=plate_number)
-    return start_node, end_node, the_car
 
 def spawn_pedestrian():
     name = random.choice(names)
@@ -123,18 +111,14 @@ def safe_to_walk(green_duration, light_color, light_time):
     walk_sign_delay = green_duration / 10
     return(light_color == 'green' and (light_time + walk_sign_delay) <= (green_duration / 3 + walk_sign_delay))
 
+###################### ADD COMPONENTS ######################
+# create planner
+planner = scheduler.Scheduler()
 # create traffic lights
 traffic_lights = traffic_signals.TrafficLights(yellow_max = 10, green_max = 50, random_start = True)
-horizontal_light = traffic_lights.get_states('horizontal', 'color')
-vertical_light = traffic_lights.get_states('vertical', 'color')
+
 background = Image.open(intersection_fig)
-
 pedestrians = []
-
-honk_x = []
-honk_y = []
-honk_t = []
-all_wavefronts = set()
 
 # checks if pedestrian is crossing street
 def is_between(lane, person_xy):
@@ -175,15 +159,15 @@ def walk_faster(person, remaining_time):
         if (vee <= vee_max):
             person.prim_queue.replace_top(((start, finish, vee), prim_progress))
 
+
 def animate(frame_idx): # update animation by dt
+    t0 = time.time()
     ax.cla() # clear Axes before plotting
     deadlocked = False
-    global_vars.current_time = frame_idx * dt # compute current time from frame index and dt
-    print('{:.2f}'.format(global_vars.current_time)+'/'+str(options.duration)) # print out current time to 2 decimal places
+    global_vars.current_time = frame_idx * dt # update current time from frame index and dt
 
     horizontal_light = traffic_lights.get_states('horizontal', 'color')
     vertical_light = traffic_lights.get_states('vertical', 'color')
-
     horizontal_light_time = traffic_lights.get_states('horizontal', 'time')
     vertical_light_time = traffic_lights.get_states('vertical', 'time')
     green_duration = traffic_lights._max_time['green']
@@ -199,19 +183,18 @@ def animate(frame_idx): # update animation by dt
     # car request
     if with_probability(options.new_car_probability):
         new_start_node, new_end_node, new_car = spawn_car()
-        global_vars.request_queue.enqueue((new_start_node, new_end_node, new_car))
+        planner._request_queue.enqueue((new_start_node, new_end_node, new_car)) # planner takes request
     service_count = 0
-    original_request_len = global_vars.request_queue.len()
-    while global_vars.request_queue.len() > 0 and not deadlocked: # if there is at least one live request in the queue
-        request = global_vars.request_queue.pop() # take the first request
-        planner.serve_request(request=request,graph=car_graph.G,traffic_lights=traffic_lights)
+    original_request_len = planner._request_queue.len()
+    while planner._request_queue.len() > 0 and not deadlocked: # if there is at least one live request in the queue
+        planner.serve(graph=car_graph.G,traffic_lights=traffic_lights)
         service_count += 1
         if service_count == original_request_len:
             service_count = 0 # reset service count
-            if global_vars.request_queue.len() == original_request_len:
+            if planner._request_queue.len() == original_request_len:
                 deadlocked = True
             else:
-                original_request_len = global_vars.request_queue.len()
+                original_request_len = planner._request_queue.len()
 
     # pedestrian
     if with_probability(options.new_pedestrian_probability):
@@ -219,7 +202,7 @@ def animate(frame_idx): # update animation by dt
             name, begin_node, final_node, the_pedestrian = spawn_pedestrian()
             if not begin_node == final_node:
                 break
-        _, shortest_path = planner.dijkstra((begin_node[0], begin_node[1]), final_node, pedestrian_graph.G)
+        _, shortest_path = dijkstra((begin_node[0], begin_node[1]), final_node, pedestrian_graph.G)
         vee = np.random.uniform(20, 40)
         while len(shortest_path) > 0:
             if len(shortest_path) == 1:
@@ -241,7 +224,7 @@ def animate(frame_idx): # update animation by dt
     x_lim, y_lim = background.size
 
     if options.highlight_crossings:
-        alpha = int(alt_sin(70,150,global_vars.current_time,1)) # transparency 
+        alpha = int(alt_sin(50,200,global_vars.current_time,1)) # transparency 
         green = (34,139,34,alpha)
         red = (200,0,0,alpha)
         vertical_lane_color = green if vertical_walk_safe else red
@@ -314,7 +297,6 @@ def animate(frame_idx): # update animation by dt
                     walk_faster(person, remaining_horizontal_time)
 
     cars_to_keep = []
-    cars_to_remove = set()
 
     # determine which cars to keep
     for plate_number in global_vars.all_cars.keys():
@@ -325,104 +307,37 @@ def animate(frame_idx): # update animation by dt
             # add cars to keep list
             cars_to_keep.append(global_vars.all_cars[plate_number])
         else:
-            cars_to_remove.add(plate_number)
+            global_vars.cars_to_remove.add(plate_number)
     # determine which cars to remove
-    for plate_number in cars_to_remove:
+    for plate_number in global_vars.cars_to_remove.copy():
         del global_vars.all_cars[plate_number]
+        global_vars.cars_to_remove.remove(plate_number)
 
-    clear_stamps()
-    if not show_axes:
+    planner.clear_stamps()
+
+    ################################ Update and Generate Visuals ################################ 
+    # turn on/off axes
+    if not options.show_axes:
         plt.axis('off')
-
-    honk_waves = ax.scatter(None,None)
+    # show honk wavefronts
     if options.show_honks:
-        honk_xs = []
-        honk_ys = []
-        radii = []
-        intensities = []
-        for wave in all_wavefronts:
-            wave.next(dt)
-            honk_x, honk_y, radius, intensity = wave.get_data()
-            if intensity > 0:
-                honk_xs.append(honk_x)
-                honk_ys.append(honk_y)
-                radii.append(radius)
-                intensities.append(intensity)
-            else:
-                all_wavefronts.remove(wave)
-
-        rgba_colors = np.zeros((len(intensities),4))
-        # red color
-        rgba_colors[:,0] = 1.0
-        # intensities
-        rgba_colors[:, 3] = intensities
-        honk_waves = ax.scatter(honk_xs, honk_ys, s = radii, lw=1, facecolors='none', color=rgba_colors)
-
-    for car in cars_to_keep:
-        if with_probability(0.005) and not car.is_honking:
-            car.toggle_honk()
-            # offset is 600 before scaling
-            wave = wavefront.HonkWavefront([car.state[2] + 600*params.car_scale_factor*np.cos(car.state[1]), car.state[3] + 600*params.car_scale_factor*np.sin(car.state[1]), 0, 0], init_energy=100000)
-            all_wavefronts.add(wave)
-        elif with_probability(0.4) and car.is_honking:
-            car.toggle_honk()
-
-    # initialize boxes
-    boxes = [ax.plot([], [], 'c')[0] for _ in range(len(cars_to_keep))]
-
+        show_wavefronts(ax, dt)
+        honk_randomly(cars_to_keep)
+    # show bounding boxes
     if options.show_boxes:
-        for i in range(len(cars_to_keep)):
-            curr_car = cars_to_keep[i]
-            vertex_set,_,_,_ = get_bounding_box(curr_car)
-            xs = [vertex[0] for vertex in vertex_set]
-            ys = [vertex[1] for vertex in vertex_set]
-            xs.append(vertex_set[0][0])
-            ys.append(vertex_set[0][1])
-            if with_probability(1):
-               boxes[i].set_data(xs,ys)
-            for j in range(i + 1, len(cars_to_keep)):
-               if not collision_free(curr_car, cars_to_keep[j]):
-                    boxes[j].set_color('r')
-                    boxes[i].set_color('r')
-    # initialize ids
-    ids = [ax.text([], [], '') for _ in range(len(cars_to_keep))]
+        plot_boxes(ax, cars_to_keep)
+    # show license plates
     if options.show_plates:
-        for i in range(len(cars_to_keep)):
-            _,_,x,y = cars_to_keep[i].state
-            plate_number = cars_to_keep[i].plate_number
-            ids[i] = ax.text(x,y,str(plate_number), color='w', horizontalalignment='center', verticalalignment='center', bbox=dict(facecolor='red', alpha=0.5), fontsize=10)
-
-    # initialize prims
-    plot_prims = [ax.text([], [], '') for _ in range(len(cars_to_keep))]
+        show_license_plates(ax, cars_to_keep)
+    # show primitive ids
     if options.show_prims:
-        for i in range(len(cars_to_keep)):
-            _,_,x,y = cars_to_keep[i].state
-            prim_str = 'None'
-            if cars_to_keep[i].prim_queue.len() > 0:
-                prim_str = str((cars_to_keep[i].prim_queue.top()[0], int(params.num_subprims*cars_to_keep[i].prim_queue.top()[1])))
-            plot_prims[i] = ax.text(x,y, prim_str, color='w', horizontalalignment='center', verticalalignment='center', bbox=dict(facecolor='red', alpha=0.5), fontsize=10)
-
-    # plot primitive tubes
-    curr_tubes = []
-    # initialize tubes
+        show_prim_ids(ax, cars_to_keep)
+    # show primitive tubes
     if options.show_tubes:
-        curr_tubes = [ax.plot([], [],'b')[0] for _ in range(len(cars_to_keep))]
-
-        for i in range(len(cars_to_keep)):
-            curr_car = cars_to_keep[i]
-            if curr_car.prim_queue.len() > 0:
-                if curr_car.prim_queue.top()[1] < 1:
-                    curr_prim_id = curr_car.prim_queue.top()[0]
-                    if curr_prim_id == -1:
-                        pass
-                    else:
-                        curr_prim_progress = curr_car.prim_queue.top()[1]
-                        vertex_set = tubes.make_tube(curr_prim_id)
-                        xs = [vertex[0][0] for vertex in vertex_set[int(curr_prim_progress * params.num_subprims )]]
-                        ys = [vertex[1][0] for vertex in vertex_set[int(curr_prim_progress * params.num_subprims )]]
-                        xs.append(xs[0])
-                        ys.append(ys[0])
-                        curr_tubes[i].set_data(xs,ys)
+        plot_tubes(ax, cars_to_keep)
+    # show traffic light walls
+    if options.show_traffic_light_walls:
+        plot_traffic_light_walls(ax, traffic_lights)
 
     # if cars are hitting pedestrians replace pedestrian with medic sign
     for person in pedestrians_to_keep:
@@ -432,7 +347,6 @@ def animate(frame_idx): # update animation by dt
                 medic_signs.append((person.state[0], person.state[1]))
                 del pedestrians[pedestrians.index(person)]
 
-    # plot honking 
     np.random.shuffle(pedestrians_waiting)
     np.random.shuffle(pedestrians_to_keep)
     draw_pedestrians(pedestrians_waiting, background)
@@ -440,35 +354,11 @@ def animate(frame_idx): # update animation by dt
     draw_pedestrians(pedestrians_to_keep, background) # draw pedestrians to background
     draw_cars(cars_to_keep, background)
 
-
-    # plot traffic light walls
-    walls = [ax.plot([], [],'r')[0] for _ in range(4)]
-    if options.show_traffic_light_walls:
-        if traffic_lights.get_states('horizontal', 'color') == 'red':
-            xs = intersection.traffic_light_walls['west']['x']
-            ys = intersection.traffic_light_walls['west']['y']
-            xs.append(xs[0])
-            ys.append(ys[0])
-            walls[0].set_data(xs,ys)
-            xs = intersection.traffic_light_walls['east']['x']
-            ys = intersection.traffic_light_walls['east']['y']
-            xs.append(xs[0])
-            ys.append(ys[0])
-            walls[1].set_data(xs,ys)
-        elif traffic_lights.get_states('vertical', 'color') == 'red':
-            xs = intersection.traffic_light_walls['north']['x']
-            ys = intersection.traffic_light_walls['north']['y']
-            xs.append(xs[0])
-            ys.append(ys[0])
-            walls[2].set_data(xs,ys)
-            xs = intersection.traffic_light_walls['south']['x']
-            ys = intersection.traffic_light_walls['south']['y']
-            xs.append(xs[0])
-            ys.append(ys[0])
-            walls[3].set_data(xs,ys)
-
     stage = ax.imshow(background, origin="lower") # update the stage
-    all_artists = [stage] + [honk_waves] + boxes + curr_tubes + ids + plot_prims + walls + vertical_lights + horizontal_lights
+    all_artists = [stage] + global_vars.honk_waves + global_vars.boxes + global_vars.curr_tubes + global_vars.ids + global_vars.prim_ids_to_show + global_vars.walls + vertical_lights + horizontal_lights
+    t1 = time.time()
+    elapsed_time = (t1 - t0)
+    print('{:.2f}'.format(global_vars.current_time)+'/'+str(options.duration) + ' at ' + str(int(1/elapsed_time)) + ' fps') # print out current time to 2 decimal places
     return all_artists
 t0 = time.time()
 animate(0)
@@ -481,7 +371,8 @@ ani = animation.FuncAnimation(fig, animate, frames=int(options.duration/options.
 if options.save_video:
     Writer = animation.writers['ffmpeg']
     writer = Writer(fps = options.speed_up_factor*int(1/options.dt), metadata=dict(artist='Me'), bitrate=-1)
-    ani.save('../movies/cython.avi', writer=writer, dpi=200)
+    now = str(datetime.datetime.now())
+    ani.save('../movies/' + now + '.avi', writer=writer, dpi=200)
 plt.show()
 t2 = time.time()
 print('Total elapsed time: ' + str(t2-t0))

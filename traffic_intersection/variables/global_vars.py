@@ -2,8 +2,13 @@ import sys
 sys.path.append('..')
 import prepare.queue as queue
 current_time = 0
-time_table = dict()
-request_queue = queue.Queue()
-waiting_dict = dict()
 all_cars = dict()
-effective_times = dict()
+cars_to_remove = set()
+
+curr_tubes = []
+prim_ids_to_show = []
+walls = []
+ids = []
+boxes = []
+honk_waves = []
+all_wavefronts = set()

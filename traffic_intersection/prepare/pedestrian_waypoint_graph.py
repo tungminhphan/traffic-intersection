@@ -55,23 +55,6 @@ wait_bottom_right = (705, 170)
 wait_bottom_right_vertical = (705, 170+offset_wait)
 wait_bottom_right_horizontal = (705-offset_wait, 170)
 
-# for visualization only (not real sinks) TODO: delete
-#G._sinks.add(wait_top_left)
-#G._sinks.add(wait_top_left_vertical)
-#G._sinks.add(wait_top_left_horizontal)
-#
-#G._sinks.add(wait_bottom_left)
-#G._sinks.add(wait_bottom_left_vertical)
-#G._sinks.add(wait_bottom_left_horizontal)
-#
-#G._sinks.add(wait_top_right)
-#G._sinks.add(wait_top_right_vertical)
-#G._sinks.add(wait_top_right_horizontal)
-#
-#G._sinks.add(wait_bottom_right)
-#G._sinks.add(wait_bottom_right_vertical)
-#G._sinks.add(wait_bottom_right_horizontal)
-
 # add edges
 all_edges = [
              (left_bottom, wait_bottom_left),
