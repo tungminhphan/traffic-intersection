@@ -88,10 +88,6 @@ horizontal_light_coordinates = {'green':[(291, 193), (756, 566.25)], 'yellow': [
 fig = plt.figure()
 ax = fig.add_axes([0,0,1,1]) # get rid of white border
 
-# turn on/off axes
-show_axes = False
-if not show_axes:
-    plt.axis('off')
 # sampling time
 dt = options.dt
 # create car
@@ -127,7 +123,6 @@ pedestrians = []
 honk_x = []
 honk_y = []
 honk_t = []
-all_wavefronts = set()
 
 # checks if pedestrian is crossing street
 def is_between(lane, person_xy):
@@ -323,42 +318,15 @@ def animate(frame_idx): # update animation by dt
         global_vars.cars_to_remove.remove(plate_number)
 
     planner.clear_stamps()
-    if not show_axes:
+
+    ################################ Generating Visuals ################################ 
+    # turn on/off axes
+    if not options.show_axes:
         plt.axis('off')
-
-    honk_waves = [ax.scatter(None,None)]
+    # show honk wavefronts
     if options.show_honks:
-        honk_xs = []
-        honk_ys = []
-        radii = []
-        intensities = []
-        for wave in all_wavefronts:
-            wave.next(dt)
-            honk_x, honk_y, radius, intensity = wave.get_data()
-            if intensity > 0:
-                honk_xs.append(honk_x)
-                honk_ys.append(honk_y)
-                radii.append(radius)
-                intensities.append(intensity)
-            else:
-                all_wavefronts.remove(wave)
-
-        rgba_colors = np.zeros((len(intensities),4))
-        # red color
-        rgba_colors[:,0] = 1.0
-        # intensities
-        rgba_colors[:, 3] = intensities
-        honk_waves = [ax.scatter(honk_xs, honk_ys, s = radii, lw=1, facecolors='none', color=rgba_colors)]
-
-    for car in cars_to_keep:
-        if with_probability(0.001) and not car.is_honking:
-            car.toggle_honk()
-            # offset is 600 before scaling
-            wave = wavefront.HonkWavefront([car.state[2] + 600*params.car_scale_factor*np.cos(car.state[1]), car.state[3] + 600*params.car_scale_factor*np.sin(car.state[1]), 0, 0], init_energy=100000)
-            all_wavefronts.add(wave)
-        elif with_probability(1) and car.is_honking:
-            car.toggle_honk()
-
+        show_wavefronts(ax, dt)
+        honk_randomly(cars_to_keep)
     # show bounding boxes
     if options.show_boxes:
         plot_boxes(ax, cars_to_keep)
@@ -391,7 +359,7 @@ def animate(frame_idx): # update animation by dt
     draw_cars(cars_to_keep, background)
 
     stage = ax.imshow(background, origin="lower") # update the stage
-    all_artists = [stage] + honk_waves + global_vars.boxes + global_vars.curr_tubes + global_vars.ids + global_vars.prim_ids_to_show + global_vars.walls + vertical_lights + horizontal_lights
+    all_artists = [stage] + global_vars.honk_waves + global_vars.boxes + global_vars.curr_tubes + global_vars.ids + global_vars.prim_ids_to_show + global_vars.walls + vertical_lights + horizontal_lights
     t1 = time.time()
     elapsed_time = (t1 - t0)
     print('{:.2f}'.format(global_vars.current_time)+'/'+str(options.duration) + ' at ' + str(int(1/elapsed_time)) + ' fps') # print out current time to 2 decimal places

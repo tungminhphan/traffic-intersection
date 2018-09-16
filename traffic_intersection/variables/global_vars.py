@@ -11,3 +11,4 @@ walls = []
 ids = []
 boxes = []
 honk_waves = []
+all_wavefronts = set()
