@@ -117,7 +117,7 @@ class ContractAutomaton(InterfaceAutomaton):
                 for trans in maytransit:
                     if trans is not False and trans not in self.must[state]:
                         state2 = trans.endState
-                        automata.edge(state.name, state2.name, label = trans.show(), style = 'dotted')
+                        automata.edge(state.name, state2.name, label = trans.show(), style = 'dashed')
 
             if state in self.must:
                 musttransit = self.must[state]
@@ -249,7 +249,7 @@ def construct_contract_automaton(state_set, musttrans, maytrans, starts):
         action_type = maytrans[key][2]
         new_contract.add_transition(guardTransition(start = state1, end = state2,  guard = guard, action = action, actionType = action_type), must = 0)
 
-    new_contract.trim()
+    #new_contract.trim()
     return new_contract
 
 

@@ -55,6 +55,12 @@ wait_bottom_right = (705, 170)
 wait_bottom_right_vertical = (705, 170+offset_wait)
 wait_bottom_right_horizontal = (705-offset_wait, 170)
 
+# defined for convenience
+lane1 = [wait_bottom_left_vertical, wait_top_left_vertical] # left vertical path, (bottom node, top node)
+lane2 = [wait_bottom_right_vertical, wait_top_right_vertical] # right vertical path, (bottom node, top node)
+lane3 = [wait_top_left_horizontal, wait_top_right_horizontal] # top horizontal path (left node, right node)
+lane4 = [wait_bottom_left_horizontal, wait_bottom_right_horizontal] # bottom horizontal path (left node, right node)
+
 # add edges
 all_edges = [
              (left_bottom, wait_bottom_left),

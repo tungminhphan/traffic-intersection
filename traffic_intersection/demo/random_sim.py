@@ -146,7 +146,6 @@ def animate(frame_idx): # update animation by dt
     draw_cars_fast(ax, cars_to_keep)
 
     # update pedestrians
-    pedestrians_waiting = []
     if len(pedestrians) > 0:
         for person in pedestrians:
             if (person.state[0] <= x_lim and person.state[0] >= 0 and person.state[1] >= 0 and person.state[1] <= y_lim):
@@ -155,24 +154,25 @@ def animate(frame_idx): # update animation by dt
                 remaining_vertical_time = abs(walk_sign_duration - vertical_light_time)
                 remaining_horizontal_time = abs(walk_sign_duration  - horizontal_light_time)
 
-                if person_xy not in (intersection.lane1 + intersection.lane2 + intersection.lane3 + intersection.lane4): # if pedestrian is not at any of the nodes then continue  
+                if person_xy not in (pedestrian_graph.lane1 + pedestrian_graph.lane2 + pedestrian_graph.lane3 + pedestrian_graph.lane4): # if pedestrian is not at any of the nodes then continue  
                     person.prim_next(dt)
                     global_vars.pedestrians_to_keep.add(person)
-                elif continue_walking(person, vertical_walk_safe, intersection.lane1, intersection.lane2, (-pi/2, pi/2), remaining_vertical_time): # if light is green cross the street, or if at a node and facing away from the street i.e. just crossed the street then continue
+                elif continue_walking(person, vertical_walk_safe, pedestrian_graph.lane1, pedestrian_graph.lane2, (-pi/2, pi/2), remaining_vertical_time): # if light is green cross the street, or if at a node and facing away from the street i.e. just crossed the street then continue
                     person.prim_next(dt)
                     global_vars.pedestrians_to_keep.add(person)
-                elif continue_walking(person, horizontal_walk_safe, intersection.lane3, intersection.lane4, (pi, 0), remaining_horizontal_time):
+                elif continue_walking(person, horizontal_walk_safe, pedestrian_graph.lane3, pedestrian_graph.lane4, (pi, 0), remaining_horizontal_time):
                     person.prim_next(dt)
                     global_vars.pedestrians_to_keep.add(person)
                 else:
                     person.state[3] = 0
-                    global_vars.pedestrians_waiting.add(person)
 
                 # pedestrians walk faster if not going fast enough to finish crossing the street before walk sign is off or 'false'
-                if is_between(intersection.lane1, person_xy) or is_between(intersection.lane2, person_xy):
+                if is_between(pedestrian_graph.lane1, person_xy) or is_between(pedestrian_graph.lane2, person_xy):
                     walk_faster(person, remaining_vertical_time)
-                elif is_between(intersection.lane3, person_xy) or is_between(intersection.lane4, person_xy):
+                elif is_between(pedestrian_graph.lane3, person_xy) or is_between(pedestrian_graph.lane4, person_xy):
                     walk_faster(person, remaining_horizontal_time)
+            else:
+                del person
 
     ################################ Update and Generate Visuals ################################ 
     # highlight crossings

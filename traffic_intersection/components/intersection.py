@@ -28,10 +28,6 @@ crossing_walls ['east'] ={'x': reflect([344, 366, 366, 344], max_x), 'y': reflec
 crossing_walls ['north'] ={'x': [395, 670, 670, 395], 'y': [600, 600, 580, 580]}
 crossing_walls['south'] ={'x': reflect([395, 670, 670, 395], max_x), 'y': reflect([600, 600, 580, 580], max_y)}
 
-lane1 = [(355, 195), (355, 565)] # left vertical path, (bottom node, top node)
-lane2 = [(705, 195), (705, 565)] # right vertical path, (bottom node, top node)
-lane3 = [(380, 590), (680, 590)] # top horizontal path (left node, right node)
-lane4 = [(380, 170), (680, 170)] # bottom horizontal path (left node, right node)
 ##################################
 #                                #
 #          VISUALIZATION         # 
