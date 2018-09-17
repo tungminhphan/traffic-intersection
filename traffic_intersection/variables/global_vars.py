@@ -14,3 +14,7 @@ honk_waves = []
 all_wavefronts = set()
 pedestrians_waiting = set()
 pedestrians_to_keep= set()
+cars_to_show = []
+pedestrians_to_show = []
+crossing_highlights = []
+show_traffic_lights = []

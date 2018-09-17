@@ -5,7 +5,8 @@
 
 import random
 
-## TODO: write comments
+vertical_light_coordinates = {'green':[(377, 642), (682,110)], 'yellow': [(377, 659), (682,126)], 'red': [(378, 675), (682.5, 144.5)]}
+horizontal_light_coordinates = {'green':[(291, 193), (756, 566.25)], 'yellow': [(309, 193), (773, 566.25)], 'red': [(327, 193), (790, 566.25)]}
 
 class TrafficLights():
     def __init__(self, yellow_max = 5, green_max = 25, random_start = True, horizontal_state = ['red', 28]):
@@ -93,15 +94,3 @@ class TrafficLights():
             color_or_time = 1
         return self._state[which_light][color_or_time]
 
-
-################################### SIMULATION ##########################################################
-
-#import time
-#traffic_lights = TrafficLights(yellow_max = 5, green_max = 30)
-#dt = 0.01
-#
-#start_time = time.time()
-#while True:
-#   traffic_lights.update(dt)
-#   print(traffic_lights._state)
-#   time.sleep(dt)

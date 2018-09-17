@@ -73,8 +73,6 @@ def draw_walk_signs(vertical_fig, horizontal_fig):
         x, y = find_corner_coordinates(0, 0, coordinate[0], coordinate[1], 0, horizontal_fig)
         background.paste(horizontal_fig, (int(x), int(y)), horizontal_fig)
 
-vertical_light_coordinates = {'green':[(377, 642), (682,110)], 'yellow': [(377, 659), (682,126)], 'red': [(378, 675), (682.5, 144.5)]}
-horizontal_light_coordinates = {'green':[(291, 193), (756, 566.25)], 'yellow': [(309, 193), (773, 566.25)], 'red': [(327, 193), (790, 566.25)]}
 
 # creates figure
 fig = plt.figure()
@@ -154,6 +152,9 @@ def walk_faster(person, remaining_time):
         if (vee <= vee_max):
             person.prim_queue.replace_top(((start, finish, vee), prim_progress))
 
+# length and width of background
+x_lim, y_lim = background.size
+
 def animate(frame_idx): # update animation by dt
     t0 = time.time()
     ax.cla() # clear Axes before plotting
@@ -172,8 +173,6 @@ def animate(frame_idx): # update animation by dt
     #draw_walk_signs(walk_sign_figs['vertical'][vertical_walk_safe], walk_sign_figs['horizontal'][horizontal_walk_safe])
 
     """ online frame update """
-    global background
-
     # car request
     if with_probability(options.new_car_probability):
         new_start_node, new_end_node, new_car = spawn_car()
@@ -209,50 +208,13 @@ def animate(frame_idx): # update animation by dt
     horizontal_light = traffic_lights.get_states('horizontal', 'color')
     vertical_light = traffic_lights.get_states('vertical', 'color')
 
-    # update background
-    background.close()
-    background = Image.open(intersection_fig)
-    x_lim, y_lim = background.size
-
-    if options.highlight_crossings:
-        alpha = int(alt_sin(50,200,global_vars.current_time,1)) # transparency 
-        green = (34,139,34,alpha)
-        red = (200,0,0,alpha)
-        vertical_lane_color = green if vertical_walk_safe else red
-        horizontal_lane_color = green if horizontal_walk_safe else red
-
-        img1 = Image.open(intersection_fig) # highlighted crossings will be drawn on this image
-        draw = ImageDraw.Draw(img1)
-        draw.rectangle([(344,209),(366,553)], fill = vertical_lane_color)
-        draw.rectangle([(695,209),(718,553)], fill = vertical_lane_color)
-        draw.rectangle([(392,580),(670,602)], fill = horizontal_lane_color)
-        draw.rectangle([(392,158),(670,180)], fill = horizontal_lane_color)
-        img = Image.alpha_composite(background, img1) # image with highlighted walk lanes
-        background.paste(img)
-
     draw_walk_signs(walk_sign_figs['vertical'][vertical_walk_safe], walk_sign_figs['horizontal'][horizontal_walk_safe])
 
-    x = []
-    y = []
-    for coordinate in vertical_light_coordinates[vertical_light]:
-        x.append(coordinate[0])
-        y.append(coordinate[1])
-    circle1 = plt.Circle((x[0],y[0]), radius=6, alpha=alt_sin(0.3,1,100,global_vars.current_time), color=vertical_light[0])
-    circle2 = plt.Circle((x[1],y[1]), radius=6, alpha=alt_sin(0.3,1,100,global_vars.current_time), color=vertical_light[0])
-    vertical_lights =[ax.add_artist(circle1), ax.add_artist(circle2)]
 
-    x = []
-    y = []
-    for coordinate in horizontal_light_coordinates[horizontal_light]:
-        x.append(coordinate[0])
-        y.append(coordinate[1])
-
-    circle1 = plt.Circle((x[0],y[0]), radius=6, alpha=alt_sin(0.3,1,100,global_vars.current_time), color=horizontal_light[0])
-    circle2 = plt.Circle((x[1],y[1]), radius=6, alpha=alt_sin(0.3,1,100,global_vars.current_time), color=horizontal_light[0])
-    horizontal_lights = [ax.add_artist(circle1), ax.add_artist(circle2)]
+    # update traffic lights
+    update_traffic_lights(ax, plt, traffic_lights)
 
     # update pedestrians
-    pedestrians_to_keep = []
     pedestrians_waiting = []
 
     if len(pedestrians) > 0:
@@ -265,16 +227,16 @@ def animate(frame_idx): # update animation by dt
 
                 if person_xy not in (intersection.lane1 + intersection.lane2 + intersection.lane3 + intersection.lane4): # if pedestrian is not at any of the nodes then continue  
                     person.prim_next(dt)
-                    pedestrians_to_keep.append(person)
+                    global_vars.pedestrians_to_keep.add(person)
                 elif continue_walking(person, vertical_walk_safe, intersection.lane1, intersection.lane2, (-pi/2, pi/2), remaining_vertical_time): # if light is green cross the street, or if at a node and facing away from the street i.e. just crossed the street then continue
                     person.prim_next(dt)
-                    pedestrians_to_keep.append(person)
+                    global_vars.pedestrians_to_keep.add(person)
                 elif continue_walking(person, horizontal_walk_safe, intersection.lane3, intersection.lane4, (pi, 0), remaining_horizontal_time):
                     person.prim_next(dt)
-                    pedestrians_to_keep.append(person)
+                    global_vars.pedestrians_to_keep.add(person)
                 else:
                     person.state[3] = 0
-                    pedestrians_waiting.append(person)
+                    global_vars.pedestrians_waiting.add(person)
 
                 # pedestrians walk faster if not going fast enough to finish crossing the street before walk sign is off or 'false'
                 if is_between(intersection.lane1, person_xy) or is_between(intersection.lane2, person_xy):
@@ -283,12 +245,15 @@ def animate(frame_idx): # update animation by dt
                     walk_faster(person, remaining_horizontal_time)
 
     cars_to_keep = []
-
-
     ################################ Update and Generate Visuals ################################ 
     # update cars
     update_cars(cars_to_keep, dt)
-    draw_cars(cars_to_keep, background)
+    draw_cars_fast(ax, cars_to_keep)
+    # highlight crossings
+    vertical_lane_color = 'g' if vertical_walk_safe else 'r'
+    horizontal_lane_color = 'g' if horizontal_walk_safe else 'r'
+    if options.highlight_crossings:
+        draw_crossings(ax, plt, vertical_lane_color, horizontal_lane_color)
     # show honk wavefronts
     if options.show_honks:
         show_wavefronts(ax, dt)
@@ -309,13 +274,11 @@ def animate(frame_idx): # update animation by dt
     if options.show_traffic_light_walls:
         plot_traffic_light_walls(ax, traffic_lights)
     # check for collisions and update pedestrian state
-    check_for_collisions(pedestrians_to_keep, cars_to_keep)
+    check_for_collisions(cars_to_keep)
+    draw_pedestrians(ax) # draw pedestrians to background
 
-    draw_pedestrians(pedestrians_waiting, background)
-    draw_pedestrians(pedestrians_to_keep, background) # draw pedestrians to background
-
-    stage = ax.imshow(background, origin="lower") # update the stage
-    all_artists = [stage] + global_vars.honk_waves + global_vars.boxes + global_vars.curr_tubes + global_vars.ids + global_vars.prim_ids_to_show + global_vars.walls + vertical_lights + horizontal_lights
+    the_intersection = [ax.imshow(background, origin="lower")] # update the stage
+    all_artists = the_intersection + global_vars.crossing_highlights + global_vars.honk_waves + global_vars.boxes + global_vars.curr_tubes + global_vars.ids + global_vars.prim_ids_to_show + global_vars.walls + global_vars.show_traffic_lights + global_vars.cars_to_show + global_vars.pedestrians_to_show
     t1 = time.time()
     elapsed_time = (t1 - t0)
     print('{:.2f}'.format(global_vars.current_time)+'/'+str(options.duration) + ' at ' + str(int(1/elapsed_time)) + ' fps') # print out current time to 2 decimal places
@@ -324,7 +287,6 @@ t0 = time.time()
 animate(0)
 t1 = time.time()
 interval = (t1 - t0)
-interval = 1
 
 ani = animation.FuncAnimation(fig, animate, frames=int(options.duration/options.dt), interval=interval, blit=True, repeat=False) # by default the animation function loops so set repeat to False in order to limit the number of frames generated to num_frames
 
