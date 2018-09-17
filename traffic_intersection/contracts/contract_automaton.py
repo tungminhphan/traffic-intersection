@@ -67,6 +67,7 @@ class ContractAutomaton(InterfaceAutomaton):
         self.may.pop(state)
         self.must.pop(state)
         self.states.remove(state)
+        print(state.name)
         try:
             self.startStates.remove(state)
         except KeyError:
@@ -249,7 +250,7 @@ def construct_contract_automaton(state_set, musttrans, maytrans, starts):
         action_type = maytrans[key][2]
         new_contract.add_transition(guardTransition(start = state1, end = state2,  guard = guard, action = action, actionType = action_type), must = 0)
 
-    new_contract.trim()
+    # new_contract.trim()
     return new_contract
 
 
