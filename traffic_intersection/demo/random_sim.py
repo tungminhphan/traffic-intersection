@@ -78,9 +78,6 @@ def walk_faster(person, remaining_time):
             person.prim_queue.replace_top(((start, finish, vee), prim_progress))
 
 # create traffic intersection
-the_traffic_intersection = Image.open(intersection.intersection_fig)
-x_lim, y_lim = the_traffic_intersection.size
-# create traffic lights
 traffic_lights = traffic_signals.TrafficLights(yellow_max = 10, green_max = 50, random_start = True)
 # create planner
 planner = scheduler.Scheduler()
@@ -88,21 +85,18 @@ planner = scheduler.Scheduler()
 pedestrians = []
 
 def animate(frame_idx): # update animation by dt
+    ax.clear()
     t0 = time.time()
-    ax.cla() # clear Axes before plotting
     deadlocked = False
     global_vars.current_time = frame_idx * dt # update current time from frame index and dt
 
     horizontal_light = traffic_lights.get_states('horizontal', 'color')
     vertical_light = traffic_lights.get_states('vertical', 'color')
-    horizontal_light_time = traffic_lights.get_states('horizontal', 'time')
-    vertical_light_time = traffic_lights.get_states('vertical', 'time')
     green_duration = traffic_lights._max_time['green']
 
     # if sign is true then walk, stop if false
-    vertical_walk_safe = safe_to_walk(green_duration, vertical_light, vertical_light_time)
-    horizontal_walk_safe = safe_to_walk(green_duration, horizontal_light, horizontal_light_time)
-    #draw_walk_signs(walk_sign_figs['vertical'][vertical_walk_safe], walk_sign_figs['horizontal'][horizontal_walk_safe])
+    vertical_walk_safe = safe_to_walk(green_duration, vertical_light, traffic_lights.get_elapsed_time('vertical'))
+    horizontal_walk_safe = safe_to_walk(green_duration, horizontal_light, traffic_lights.get_elapsed_time('horizontal'))
 
     """ online frame update """
     # car request
@@ -138,21 +132,15 @@ def animate(frame_idx): # update animation by dt
     # update traffic lights
     traffic_lights.update(dt)
     update_traffic_lights(ax, plt, traffic_lights) # for plotting
-    draw_walk_signs(traffic_signals.walk_sign_figs['vertical'][vertical_walk_safe], traffic_signals.walk_sign_figs['horizontal'][horizontal_walk_safe], the_traffic_intersection)
-
-    # update cars
-    cars_to_keep = []
-    update_cars(cars_to_keep, dt)
-    draw_cars_fast(ax, cars_to_keep)
+    draw_walk_signs(ax,traffic_signals.walk_sign_figs['vertical'][vertical_walk_safe], traffic_signals.walk_sign_figs['horizontal'][horizontal_walk_safe])
 
     # update pedestrians
     if len(pedestrians) > 0:
         for person in pedestrians:
-            if (person.state[0] <= x_lim and person.state[0] >= 0 and person.state[1] >= 0 and person.state[1] <= y_lim):
+            if within_confines(person.state[0], person.state[1]):
                 person_xy = (person.state[0], person.state[1])
-                walk_sign_duration = green_duration / 3.
-                remaining_vertical_time = abs(walk_sign_duration - vertical_light_time)
-                remaining_horizontal_time = abs(walk_sign_duration  - horizontal_light_time)
+                remaining_vertical_time = abs(traffic_lights._walk_sign_duration - traffic_lights.get_elapsed_time('vertical'))
+                remaining_horizontal_time = abs(traffic_lights._walk_sign_duration  -traffic_lights.get_elapsed_time('horizontal'))
 
                 if person_xy not in (pedestrian_graph.lane1 + pedestrian_graph.lane2 + pedestrian_graph.lane3 + pedestrian_graph.lane4): # if pedestrian is not at any of the nodes then continue  
                     person.prim_next(dt)
@@ -172,9 +160,15 @@ def animate(frame_idx): # update animation by dt
                 elif is_between(pedestrian_graph.lane3, person_xy) or is_between(pedestrian_graph.lane4, person_xy):
                     walk_faster(person, remaining_horizontal_time)
             else:
-                del person
+                if person in global_vars.pedestrians_to_keep:
+                    global_vars.pedestrians_to_keep.remove(person)
+                    del person
 
     ################################ Update and Generate Visuals ################################ 
+    # update cars
+    cars_to_keep = []
+    update_cars(cars_to_keep, dt)
+    draw_cars_fast(ax, cars_to_keep)
     # highlight crossings
     vertical_lane_color = 'g' if vertical_walk_safe else 'r'
     horizontal_lane_color = 'g' if horizontal_walk_safe else 'r'
@@ -202,9 +196,9 @@ def animate(frame_idx): # update animation by dt
     # check for collisions and update pedestrian state
     check_for_collisions(cars_to_keep)
     draw_pedestrians(ax) # draw pedestrians to background
+    the_intersection = [ax.imshow(intersection.intersection, origin="lower")] # update the stage
 
-    the_intersection = [ax.imshow(the_traffic_intersection, origin="lower")] # update the stage
-    all_artists = the_intersection + global_vars.crossing_highlights + global_vars.honk_waves + global_vars.boxes + global_vars.curr_tubes + global_vars.ids + global_vars.prim_ids_to_show + global_vars.walls + global_vars.show_traffic_lights + global_vars.cars_to_show + global_vars.pedestrians_to_show
+    all_artists = the_intersection + global_vars.crossing_highlights + global_vars.honk_waves + global_vars.boxes + global_vars.curr_tubes + global_vars.ids + global_vars.prim_ids_to_show + global_vars.walls + global_vars.show_traffic_lights + global_vars.cars_to_show + global_vars.pedestrians_to_show + global_vars.walk_signs
     t1 = time.time()
     elapsed_time = (t1 - t0)
     print('{:.2f}'.format(global_vars.current_time)+'/'+str(options.duration) + ' at ' + str(int(1/elapsed_time)) + ' fps') # print out current time to 2 decimal places
@@ -216,9 +210,9 @@ interval = (t1 - t0)
 ani = animation.FuncAnimation(fig, animate, frames=int(options.duration/options.dt), interval=interval, blit=True, repeat=False) # by default the animation function loops so set repeat to False in order to limit the number of frames generated to num_frames
 if options.save_video:
     Writer = animation.writers['ffmpeg']
-    writer = Writer(fps = options.speed_up_factor*int(1/options.dt), metadata=dict(artist='Me'), bitrate=-1)
+    writer = Writer(fps = options.speed_up_factor*int(1/options.dt), metadata=dict(artist='Traffic Intersection Simulator'), bitrate=-1)
     now = str(datetime.datetime.now())
-    ani.save('../movies/' + now + '.avi', writer=writer, dpi=200)
+    ani.save('../movies/' + now + '.avi', dpi=200)
 plt.show()
 t2 = time.time()
 print('Total elapsed time: ' + str(t2-t0))
