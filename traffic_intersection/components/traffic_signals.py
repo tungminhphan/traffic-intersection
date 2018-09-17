@@ -4,8 +4,32 @@
 # California Institute of Technology
 
 import random
+import os
+import sys
+from PIL import Image
+sys.path.append("..")
+dir_path = os.path.dirname(os.path.dirname(os.path.realpath("__file__")))
 
-## TODO: write comments
+vertical_light_coordinates = {'green':[(377, 642), (682,110)], 'yellow': [(377, 659), (682,126)], 'red': [(378, 675), (682.5, 144.5)]}
+horizontal_light_coordinates = {'green':[(291, 193), (756, 566.25)], 'yellow': [(309, 193), (773, 566.25)], 'red': [(327, 193), (790, 566.25)]}
+
+walk_sign_go = dir_path + '/components/imglib/go.png'
+go_fig = Image.open(walk_sign_go).convert("RGBA")
+go_fig = go_fig.resize((18,18))
+
+walk_sign_stop = dir_path + '/components/imglib/stop.png'
+stop_fig = Image.open(walk_sign_stop).convert("RGBA")
+stop_fig = stop_fig.resize((18,18))
+
+vertical_go_fig = go_fig.rotate(-180, expand = False)
+vertical_stop_fig = stop_fig.rotate(-180, expand = False)
+horizontal_go_fig = go_fig.rotate(-90, expand = True)
+horizontal_stop_fig = stop_fig.rotate(-90, expand = True)
+
+vertical_walk_fig = {True: vertical_go_fig, False: vertical_stop_fig}
+horizontal_walk_fig = {True: horizontal_go_fig, False: horizontal_stop_fig}
+walk_sign_figs = {'vertical': vertical_walk_fig, 'horizontal': horizontal_walk_fig}
+walk_sign_coordinates = {'vertical': [(378, 621), (683, 90)], 'horizontal': [(272, 193), (736, 565)]}
 
 class TrafficLights():
     def __init__(self, yellow_max = 5, green_max = 25, random_start = True, horizontal_state = ['red', 28]):
@@ -93,15 +117,3 @@ class TrafficLights():
             color_or_time = 1
         return self._state[which_light][color_or_time]
 
-
-################################### SIMULATION ##########################################################
-
-#import time
-#traffic_lights = TrafficLights(yellow_max = 5, green_max = 30)
-#dt = 0.01
-#
-#start_time = time.time()
-#while True:
-#   traffic_lights.update(dt)
-#   print(traffic_lights._state)
-#   time.sleep(dt)
