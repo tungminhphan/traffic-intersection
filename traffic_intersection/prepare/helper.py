@@ -403,11 +403,17 @@ def update_traffic_lights(ax, plt, traffic_lights):
         circ = plt.Circle((x,y), radius=6, alpha=alt_sin(0.3,1,100,global_vars.current_time), color=horizontal_light[0])
         global_vars.show_traffic_lights.append(ax.add_artist(circ))
 
-def draw_walk_signs(vertical_fig, horizontal_fig, background):
+def draw_walk_signs(ax, vertical_fig, horizontal_fig):
+    global_vars.walk_signs = []
     for coordinate in traffic_signals.walk_sign_coordinates['vertical']:
-        x, y = find_corner_coordinates(0, 0, coordinate[0], coordinate[1], 0, vertical_fig)
-        background.paste(vertical_fig, (int(x), int(y)), vertical_fig)
+        x_corner, y_corner = find_corner_coordinates(0, 0, coordinate[0], coordinate[1], 0, vertical_fig)
+        w, h = vertical_fig.size
+        global_vars.walk_signs.append(ax.imshow(vertical_fig, extent=(x_corner,x_corner+w, y_corner, y_corner+h)))
     for coordinate in traffic_signals.walk_sign_coordinates['horizontal']:
-        x, y = find_corner_coordinates(0, 0, coordinate[0], coordinate[1], 0, horizontal_fig)
-        background.paste(horizontal_fig, (int(x), int(y)), horizontal_fig)
+        x_corner, y_corner = find_corner_coordinates(0, 0, coordinate[0], coordinate[1], 0, horizontal_fig)
+        w, h = horizontal_fig.size
+        global_vars.walk_signs.append(ax.imshow(horizontal_fig, extent=(x_corner,x_corner+w, y_corner, y_corner+h)))
 
+def within_confines(x,y):
+    x_lim, y_lim = intersection.intersection.size
+    return x <= x_lim and x >= 0 and y >= 0 and y <= y_lim
