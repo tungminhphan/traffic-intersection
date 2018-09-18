@@ -196,9 +196,9 @@ def find_reachable_set(automaton):
     return reachable_set
 
 class InterfaceAutomaton(Automaton):
-    def __init__(self, inputAlphabet = set(), outputAlphabet = set(), internalAlphabet = set()):
+    def __init__(self, inputAlphabet = set(), outputAlphabet = set(), internalAlphabet = set(), fail_state = State('fail')):
         Automaton.__init__(self)
-        self.fail_state = State('fail')
+        self.fail_state = fail_state
         self.add_state(self.fail_state)
         self.input_alphabet = inputAlphabet
         self.output_alphabet = outputAlphabet
@@ -223,11 +223,11 @@ class InterfaceAutomaton(Automaton):
 
     # takes two guard transitions and returns their composition
 def compose_guard_trans(tr1, tr2, node_dict):
-    if tr1.action != tr2.action and '' not in [tr1.actionType, tr2.actionType] or tr1.guard == False or tr2.guard == False:
+    if (tr1.action != tr2.action and '' not in [tr1.actionType, tr2.actionType]) or tr1.guard == False or tr2.guard == False:
         return False
-    if tr1.guard == True:
+    if tr1.guard == True or tr1.guard == 'True':
         guard = tr2.guard
-    elif tr2.guard == True:
+    elif tr2.guard == True or tr2.guard == 'True':
         guard = tr1.guard
     elif isinstance(tr1.guard, str) and isinstance(tr2.guard, str):
         guard = tr1.guard + ' ∧ ' + tr2.guard
@@ -266,7 +266,7 @@ def compose_interfaces(interface_1, interface_2):
             for trans1 in dict1[key1]:
                 for trans2 in dict2[key2]:
                     new_interface.transitions_dict[newstate].add(compose_guard_trans(trans1, trans2, node_dict))
-    new_interface.trim()
+    # new_interface.trim()
     return new_interface
 
 def construct_automaton(state_set, translist, starts):
