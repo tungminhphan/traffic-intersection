@@ -72,7 +72,7 @@ def find_corner_coordinates(x_state_center_before, y_state_center_before, x_desi
     y_corner_unknown = int(y_desired - y_state_center_after + y_corner_center_after)
     return x_corner_unknown, y_corner_unknown
 
-def draw_pedestrians(ax):
+def draw_pedestrians(plt):
     global_vars.pedestrians_to_show = []
     for pedestrian in global_vars.pedestrians_to_keep:
         if not pedestrian.is_dead:
@@ -97,7 +97,7 @@ def draw_pedestrians(ax):
             person_fig = person_fig.resize((20,20))
             x_corner, y_corner = find_corner_coordinates(0., 0., x, y, theta,  person_fig)
         w, h = person_fig.size
-        global_vars.pedestrians_to_show.append(ax.imshow(person_fig, extent=(x_corner,x_corner+w, y_corner, y_corner+h)))
+        global_vars.pedestrians_to_show.append(plt.imshow(person_fig, extent=(x_corner,x_corner+w, y_corner, y_corner+h)))
     random.shuffle(global_vars.pedestrians_to_show)
 
 
@@ -129,7 +129,7 @@ def draw_cars(vehicles, background):
         x_corner, y_corner = find_corner_coordinates(-params.car_scale_factor * params.center_to_axle_dist, 0, x, y, theta, vehicle_fig)
         background.paste(vehicle_fig, (x_corner, y_corner), vehicle_fig)
 
-def draw_cars_fast(ax, vehicles):
+def draw_cars_fast(plt, vehicles):
     global_vars.cars_to_show = []
     for vehicle in vehicles:
         vee, theta, x, y = vehicle.state
@@ -148,7 +148,7 @@ def draw_cars_fast(ax, vehicles):
         # at (full scale) the relative coordinates of the center of the rear axle w.r.t. the center of the figure is center_to_axle_dist
         x_corner, y_corner = find_corner_coordinates(-params.car_scale_factor*params.center_to_axle_dist, 0, x, y, theta, vehicle_fig)
         w, h = vehicle_fig.size
-        global_vars.cars_to_show.append(ax.imshow(vehicle_fig, extent=(x_corner,x_corner+w, y_corner, y_corner+h)))
+        global_vars.cars_to_show.append(plt.imshow(vehicle_fig, extent=(x_corner,x_corner+w, y_corner, y_corner+h)))
 
 def with_probability(P=1):
     return np.random.uniform() <= P
