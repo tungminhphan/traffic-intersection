@@ -243,8 +243,16 @@ def compose_contract(cr_1, cr_2):
 
             for trans1 in cr_1.transitions_dict[key1]:
                 for trans2 in cr_2.transitions_dict[key2]:
-                    if compose_guard_trans(trans1, trans2, node_dict) != False:
-                        new_contract.transitions_dict[newstate].add(compose_guard_trans(trans1, trans2, node_dict))
+                    new_trans = compose_guard_trans(trans1, trans2, node_dict)
+                    if new_trans != False:
+                        new_contract.transitions_dict[newstate].add(new_trans)
+                        new_contract.alphabet.add(new_trans.action)
+                        if new_trans.actionType == '?':
+                            new_contract.input_alphabet.add(new_trans.action)
+                        elif new_trans.actionType == '!':
+                            new_contract.output_alphabet.add(new_trans.action)
+                        elif new_trans.actionType =='#':
+                            new_contract.internal_alphabet.add(new_trans.action)
 
             for trans1 in cr_1.must[key1]:
                 for trans2 in cr_2.must[key2]:
