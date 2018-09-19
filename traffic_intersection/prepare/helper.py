@@ -173,49 +173,53 @@ def dijkstra(start, end, graph):
             graph - weighted directed graph
     output: shortest path from start to end node
     '''
-    if start == end: # if start coincides with end
-        return 0, [start]
-    else: # otherwise
-        score = {}
-        predecessor = {}
-        unmarked_nodes = graph._nodes.copy() # create a copy of set of nodes in graph
-        if start not in graph._nodes:
-            print(start)
-            raise SyntaxError("The start node is not in the graph!")
-        elif end not in graph._nodes:
-            raise SyntaxError("The end node is not in the graph!")
-        for node in graph._nodes:
-            if node != start:
-                score[node] = float('inf') # initialize all scores to inf
+    if (start, end, graph) in global_vars.path_table:
+        return global_vars.path_table[(start,end,graph)]
+    else:
+        if start == end: # if start coincides with end
+            return 0, [start]
+        else: # otherwise
+            score = {}
+            predecessor = {}
+            unmarked_nodes = graph._nodes.copy() # create a copy of set of nodes in graph
+            if start not in graph._nodes:
+                print(start)
+                raise SyntaxError("The start node is not in the graph!")
+            elif end not in graph._nodes:
+                raise SyntaxError("The end node is not in the graph!")
+            for node in graph._nodes:
+                if node != start:
+                    score[node] = float('inf') # initialize all scores to inf
+                else:
+                    score[node] = 0 # start node is initalized to 0
+            current = start # set currently processed node to start node
+            while current != end:
+                if current in graph._edges:
+                    for neighbor in graph._edges[current]:
+                        new_score = score[current] + graph._weights[(current, neighbor)]
+                        if score[neighbor] > new_score:
+                            score[neighbor] = new_score
+                            predecessor[neighbor] = current
+                unmarked_nodes.remove(current) # mark current node
+                min_node = None # find unmarked node with lowest score
+                score[min_node] = float('inf')
+                for unmarked in unmarked_nodes:
+                    if score[unmarked] <= score[min_node]: # need equal sign to account to ensure dummy "None" value is replaced
+                        min_node = unmarked
+                current = min_node # set current to unmarked node with min score
+            shortest_path = [end]
+            if score[end] != float('inf'):
+                start_of_suffix = end
+                while predecessor[start_of_suffix] != start:
+                    shortest_path.append(predecessor[start_of_suffix])
+                    start_of_suffix = predecessor[start_of_suffix]
+                # add start node then reverse list
+                shortest_path.append(start)
+                shortest_path.reverse()
             else:
-                score[node] = 0 # start node is initalized to 0
-        current = start # set currently processed node to start node
-        while current != end:
-            if current in graph._edges:
-                for neighbor in graph._edges[current]:
-                    new_score = score[current] + graph._weights[(current, neighbor)]
-                    if score[neighbor] > new_score:
-                        score[neighbor] = new_score
-                        predecessor[neighbor] = current
-            unmarked_nodes.remove(current) # mark current node
-            min_node = None # find unmarked node with lowest score
-            score[min_node] = float('inf')
-            for unmarked in unmarked_nodes:
-                if score[unmarked] <= score[min_node]: # need equal sign to account to ensure dummy "None" value is replaced
-                    min_node = unmarked
-            current = min_node # set current to unmarked node with min score
-        shortest_path = [end]
-        if score[end] != float('inf'):
-            start_of_suffix = end
-            while predecessor[start_of_suffix] != start:
-                shortest_path.append(predecessor[start_of_suffix])
-                start_of_suffix = predecessor[start_of_suffix]
-            # add start node then reverse list
-            shortest_path.append(start)
-            shortest_path.reverse()
-        else:
-            shortest_path = []
-    return score[end], shortest_path
+                shortest_path = []
+        global_vars.path_table[(start, end, graph)] = score[end], shortest_path
+        return score[end], shortest_path
 
 def is_disjoint(interval_A, interval_B):
     '''

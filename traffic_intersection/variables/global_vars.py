@@ -5,6 +5,8 @@ current_time = 0
 all_cars = dict()
 cars_to_remove = set()
 
+path_table = dict()
+
 curr_tubes = []
 prim_ids_to_show = []
 walls = []
@@ -18,5 +20,5 @@ cars_to_show = []
 pedestrians_to_show = []
 crossing_highlights = []
 show_traffic_lights = []
-the_intersection = [] 
+the_intersection = []
 walk_signs = []

@@ -6,7 +6,7 @@ if custom:
     np_random_seed = 1
     antialias_enabled = False
     speed_up_factor = 4
-    dt = 0.2
+    dt = 0.15
     duration = 150
     highlight_crossings = True
     create_collision_dictionary = False
