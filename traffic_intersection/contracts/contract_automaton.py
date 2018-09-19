@@ -161,26 +161,70 @@ class ContractAutomaton(InterfaceAutomaton):
                         finished = False
 
     def weakAlphabetProjection(self, contract):
-        # adds may self-loops
-        alphabetDifference = contract.alphabet - self.alphabet
-        for state in self.states:
-            for letter in alphabetDifference:
+        # adds must self-loops
+        input_alphabet_difference = set()
+        output_alphabet_difference = set()
+        internal_alphabet_difference = set()
+        alphabet_difference = contract.alphabet - self.alphabet
+        for letter in alphabet_difference:
+            if letter in contract.input_alphabet:
+                input_alphabet_difference.add(letter)
+            if letter in contract.output_alphabet:
+                output_alphabet_difference.add(letter)
+            if letter in contract.internal_alphabet:
+                internal_alphabet_difference.add(letter)
+
+        for state in self.states - {self.fail_state}:
+            for letter in input_alphabet_difference:
+                selfloop = guardTransition(state, state, 'True', letter, '?')
+                self.add_transition(selfloop, 0)
+                self.input_alphabet.add(letter)
+
+            for letter in output_alphabet_difference:
+                selfloop = guardTransition(state, state, 'True', letter, '!')
+                self.add_transition(selfloop, 0)
+                self.output_alphabet.add(letter)
+
+            for letter in internal_alphabet_difference:
                 selfloop = guardTransition(state, state, 'True', letter, '#')
                 self.add_transition(selfloop, 0)
+                self.internal_alphabet.add(letter)
 
     def strongAlphabetProjection(self, contract):
         # adds must self-loops
-        alphabetDifference = contract.alphabet - self.alphabet
-        for state in self.states:
-            for letter in alphabetDifference:
+        input_alphabet_difference = set()
+        output_alphabet_difference = set()
+        internal_alphabet_difference = set()
+        alphabet_difference = contract.alphabet - self.alphabet
+        for letter in alphabet_difference:
+            if letter in contract.input_alphabet:
+                input_alphabet_difference.add(letter)
+            if letter in contract.output_alphabet:
+                output_alphabet_difference.add(letter)
+            if letter in contract.internal_alphabet:
+                internal_alphabet_difference.add(letter)
+                
+        for state in self.states - {self.fail_state}:
+            for letter in input_alphabet_difference:
+                selfloop = guardTransition(state, state, 'True', letter, '?')
+                self.add_transition(selfloop, 1)
+                self.input_alphabet.add(letter)
+
+            for letter in output_alphabet_difference:
+                selfloop = guardTransition(state, state, 'True', letter, '!')
+                self.add_transition(selfloop, 1)
+                self.output_alphabet.add(letter)
+
+            for letter in internal_alphabet_difference:
                 selfloop = guardTransition(state, state, 'True', letter, '#')
                 self.add_transition(selfloop, 1)
+                self.internal_alphabet.add(letter)
+
 
 
 def compose_contract(cr_1, cr_2):
     cr_1.strongAlphabetProjection(cr_2)
     cr_2.strongAlphabetProjection(cr_1)
-
     new_contract = ContractAutomaton()
 
     node_dict = dict() # maintain references to states being composed
@@ -231,8 +275,9 @@ def compose_contract(cr_1, cr_2):
     #         if not notFound:
     #             mayAuto.remove_state(key)
     #             mustAuto.remove_state(key)
-    new_contract.trim()
+    new_contract.trim()    
     return new_contract
+
 
 def check_simulation(trans1, trans2):
     # checks if trans1 <= trans2, ie they have the same action, action type, and g_1 => g_2
@@ -247,9 +292,15 @@ def is_satisfiable(guard):
     pass 
 
 # Makes contract automaton
-# change later so that there can be multiple transitions between two states
-def construct_contract_automaton(state_set, musttrans, maytrans, starts):
+# change later so alphabet is better
+def construct_contract_automaton(state_set, musttrans, maytrans, starts, input_alphabet = set(), output_alphabet = set(), internal_alphabet = set()):
     new_contract = ContractAutomaton()
+
+    new_contract.input_alphabet = input_alphabet
+    new_contract.output_alphabet = output_alphabet
+    new_contract.internal_alphabet = internal_alphabet
+    new_contract.alphabet = input_alphabet.union(output_alphabet).union(internal_alphabet)
+
     string_state_dict = dict()
     string_state_dict['fail'] = new_contract.fail_state # add failure state manually
     # state_set is a list of strings representing state names
@@ -264,74 +315,23 @@ def construct_contract_automaton(state_set, musttrans, maytrans, starts):
     for key in musttrans:
         state1 = string_state_dict[key[0]]
         state2 = string_state_dict[key[1]]
-        guard = musttrans[key][0]
-        action = musttrans[key][1]
-        action_type = musttrans[key][2]
-        new_contract.add_transition(guardTransition(start = state1, end = state2,  guard = guard, action = action, actionType = action_type), must = 1)
+        for trans in musttrans[key]:
+            guard = trans[0]
+            action = trans[1]
+            action_type = trans[2]
+            new_contract.add_transition(guardTransition(start = state1, end = state2,  guard = guard, action = action, actionType = action_type), must = 1)
 
     for key in maytrans:
         state1 = string_state_dict[key[0]]
         state2 = string_state_dict[key[1]]
-        guard = maytrans[key][0]
-        action = maytrans[key][1]
-        action_type = maytrans[key][2]
-        new_contract.add_transition(guardTransition(start = state1, end = state2,  guard = guard, action = action, actionType = action_type), must = 0)
+        for trans in maytrans[key]:
+            guard = trans[0]
+            action = trans[1]
+            action_type = trans[2]
+            new_contract.add_transition(guardTransition(start = state1, end = state2,  guard = guard, action = action, actionType = action_type), must = 0)
 
 
     new_contract.trim()
     return new_contract
 
-
-h_traffic_states = {'red_h', 'green_h', 'yellow_h'}
-h_trans_must = {}
-h_trans_may = {}
-starts_h = {'red_h'}
-
-h_trans_may[('red_h', 'green_h')] = ('True', 'green_h', '!')
-h_trans_may[('green_h', 'yellow_h')] = ('True', 'yellow_h', '!')
-h_trans_must[('yellow_h', 'red_h')] = ('h_timer == 5', 'red_h', '!')
-h_trans_may[('green_h', 'green_h')] = ('True', 'green_h', '!')
-h_trans_may[('red_h', 'red_h')] = ('True', 'red_h', '!')
-h_trans_must[('yellow_h', 'yellow_h')] = ('h_timer < 5', 'yellow_h', '!')
-h = construct_contract_automaton(state_set = h_traffic_states, starts = starts_h, musttrans = h_trans_must, maytrans = h_trans_may)
-h.convert_to_digraph().render('h', view = True)
-
-v_traffic_states = {'red_v', 'green_v', 'yellow_v'}
-v_trans_must = {}
-v_trans_may = {}
-starts_v = {'green_v'}
-v_trans_may[('red_v', 'green_v')] = ('True', 'red_h', '?')
-v_trans_may[('green_v', 'yellow_v')] = ('True', 'red_h', '?')
-v_trans_must[('yellow_v', 'red_v')] = ('v_timer == 5', '', '')
-v_trans_may[('green_v', 'green_v')] = ('True', 'red_h', '?')
-v_trans_may[('red_v', 'red_v')] = ('True', 'green_h', '?')
-v_trans_must[('red_v', 'red_v')] = ('x > 5', 'green_h', '?')
-v_trans_must[('yellow_v', 'yellow_v')] = ('v_timer < 5', 'red_h', '?')
-v = construct_contract_automaton(state_set = v_traffic_states, starts = starts_v, musttrans = v_trans_must, maytrans = v_trans_may)
-v.convert_to_digraph().render('v', view = True)
-
-# road_states = ['full', 'not full', 'aux', 'start_road', 'aux2']
-# road_trans_may = {}
-# road_trans_must = {}
-# starts_road = {'start_road'}
-# road_trans_may[('full', 'not full')] = ('g_exit', 'can_exit', '!')
-# road_trans_must[('full', 'aux2')] = ('num_cars < max_cap', '', '')
-# road_trans_must[('aux2', 'not full')] = ('True', '', '')
-# road_trans_may[('full', 'aux2')] = ('num_cars < max_cap', '', '')
-# road_trans_may[('aux2', 'not full')] = ('True', '', '')
-
-# road_trans_may[('start_road', 'full')] = ('num_cars == max_cap', '', '')
-# road_trans_may[('start_road', 'not full')] = ('num_cars < max_cap', '', '')
-# road_trans_must[('not full', 'aux')] = ('g_enter', 'can_enter', '!')
-# road_trans_must[('aux', 'full')] = ('num_cars == max_cap', '', '')
-# road_trans_may[('not full', 'aux')] = ('g_enter', 'can_enter', '!')
-# road_trans_may[('aux', 'full')] = ('num_cars == max_cap', '', '')
-# road_trans_must[('aux', 'not full')] = ('num_cars < max_cap', '', '')
-# road_trans_may[('not full', 'not full')] = ('g_exit', 'can_exit', '!')
-
-# road_auto = construct_contract_automaton(state_set = road_states, starts = starts_road, musttrans = road_trans_must, maytrans = road_trans_may)
-# road_auto.convert_to_digraph().render('road', view = True)
-
-composed = compose_contract(h, v)
-composed.convert_to_digraph().render('traffic light', view = True)
 
