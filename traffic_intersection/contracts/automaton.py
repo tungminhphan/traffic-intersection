@@ -36,6 +36,12 @@ def product(state1, state2):
     new_name += ')'
     return State(new_name, composite_list)
 
+def compact_product(state1, state2):
+    composite_list = state1.composite_list + state2.composite_list
+    new_name = ''
+    for state in composite_list:
+        new_name += state.name
+    return State(new_name, composite_list)
 # test case for state class
 
 #s1 = State(1)
@@ -230,7 +236,7 @@ def compose_guard_trans(tr1, tr2, node_dict):
     elif tr2.guard == True or tr2.guard == 'True':
         guard = tr1.guard
     elif isinstance(tr1.guard, str) and isinstance(tr2.guard, str):
-        guard = tr1.guard + ' ∧ ' + tr2.guard
+        guard = tr1.guard + '∧' + tr2.guard
 
     newStart = node_dict[(tr1.startState, tr2.startState)]
     newEnd = node_dict[(tr1.endState, tr2.endState)]

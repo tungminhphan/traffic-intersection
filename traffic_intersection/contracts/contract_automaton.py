@@ -109,12 +109,12 @@ class ContractAutomaton(InterfaceAutomaton):
             self.fail_state = interface.fail_state
 
     def convert_to_digraph(self):
-        automata = Digraph(format = 'png')
+        automata = Digraph(format = 'svg')
         for state in self.states.union({self.prestart_state}):
             # adds nodes
-            automata.attr('node', color = 'gray', shape = 'circle', style='filled', fixedsize='false')
+            automata.attr('node', color = 'gray', shape = 'circle', style='filled', fixedsize='true')
             if state is self.prestart_state:
-                automata.attr('node', color = 'white',  fixedsize = 'false', shape='point')
+                automata.attr('node', color = 'white',  fixedsize = 'true', shape='point')
             automata.node(state.name, state.name)
         # adds transitions
         for state in self.startStates:
@@ -135,7 +135,7 @@ class ContractAutomaton(InterfaceAutomaton):
                                     automata.edge(state.name, state2.name, label = trans2.show())
                                 else:
                                     automata.edge(state.name, state2.name,
-                                            label = '[' + trans.guard + ' ∧ ¬'
+                                            label = '[' + trans.guard + '∧¬'
                                             + trans2.guard + ' | ' +
                                             trans.actionType + trans.action +
                                             ']')
@@ -236,7 +236,7 @@ def compose_contract(cr_1, cr_2):
             if key1 == cr_1.fail_state or key2 == cr_2.fail_state:
                 node_dict[(key1, key2)] = new_contract.fail_state
             else:
-                node_dict[(key1, key2)] = product(key1,key2)
+                node_dict[(key1, key2)] = compact_product(key1,key2)
 
     for key1 in cr_1.states:
         for key2 in cr_2.states:
