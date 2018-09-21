@@ -160,12 +160,12 @@ class Automaton:
             pass
 
     def convert_to_digraph(self):
-        automata = Digraph(format='pdf')
+        automata = Digraph(format='png')
         for state in self.states.union({self.fail_state}):
             # adds nodes
             automata.attr('node', color = 'gray', shape = 'circle', style='filled', fixedsize='false')
             if state in self.startStates:
-                automata.attr('node', color = 'gray', style='filled',  fixedsize = 'false', shape='invhouse')
+                automata.attr('node', color = 'gray', style='filled',  fixedsize = 'false', shape='circle')
             automata.node(state.name, state.name)
         # adds transitions
         for state in self.states:
@@ -185,7 +185,6 @@ def find_reachable_set(automaton):
     for start in automaton.startStates:
         search_queue.enqueue(start)
         reachable_set.add(start)
-
     while search_queue.len() > 0:
         top = search_queue.pop()
         for trans in automaton.transitions_dict[top]:
@@ -196,9 +195,10 @@ def find_reachable_set(automaton):
     return reachable_set
 
 class InterfaceAutomaton(Automaton):
-    def __init__(self, inputAlphabet = set(), outputAlphabet = set(), internalAlphabet = set(), fail_state = State('fail')):
+    def __init__(self, inputAlphabet = set(), outputAlphabet = set(), internalAlphabet = set(), fail_state = State('⊥'), prestart_state = State('')):
         Automaton.__init__(self)
         self.fail_state = fail_state
+        self.prestart_state = prestart_state
         self.add_state(self.fail_state)
         self.input_alphabet = inputAlphabet
         self.output_alphabet = outputAlphabet
@@ -218,7 +218,7 @@ class InterfaceAutomaton(Automaton):
             self.transitions_dict[key] = self.transitions_dict[key] - to_remove
 
         # removes states that are not reachable
-        for node in unreachable_set - {self.fail_state}:
+        for node in unreachable_set:
             self.remove_state(node)
 
     # takes two guard transitions and returns their composition
@@ -272,7 +272,7 @@ def compose_interfaces(interface_1, interface_2):
 def construct_automaton(state_set, translist, starts):
     new_interface = InterfaceAutomaton()
     string_state_dict = dict()
-    string_state_dict['fail'] = new_interface.fail_state # add failure state manually
+    string_state_dict['⊥'] = new_interface.fail_state # add failure state manually
     # state_set is a list of strings representing state names
     for state in state_set:
         newstate = State(state)
@@ -291,32 +291,3 @@ def construct_automaton(state_set, translist, starts):
         new_interface.add_transition(guardTransition(start = state1, end = state2,  guard = guard, action = action, actionType = action_type))
     new_interface.trim()
     return new_interface
-
-#construct_automaton(state_set, translist, starts).convert_to_digraph().render('test', view = True)
-# testing
-
-#state_set = {'0', '1', '2', '3'}
-#starts = {'0', '1'}
-#translist = {('0', '1'): ('x > 5', 'a', '?')}
-#translist[('1', '2')] = ('True', 'c', '!')
-#translist[('2', '0')] = ('True', 'a', '!')
-#translist[('3', '0')] = ('y >= 3', 'b', '!')
-#translist[('1', '0')] = ('z >= 3', 'b', '#')
-#translist[('0', '3')] = ('z >= 3', 'b', '#')
-#translist[('0', 'fail')] = ('z >= 3', 'b', '#')
-#A = construct_automaton(state_set, translist, starts)
-#A.convert_to_digraph().render('A', view = True)
-#state_set = {'4','5','6', '7'}
-#starts = {'4', '7'}
-#translist = dict()
-#translist[('4', '6')] = ('z <= 9', 'a', '!')
-#translist[('7', '6')] = ('z <= 9', 'b', '?')
-#translist[('5', '7')] = ('z <= 9', 'c', '!')
-#translist[('7', '4')] = ('z <= 9', 'b', '!')
-#translist[('5', '6')] = ('z <= 10', 'b', '#')
-#translist[('6', '4')] = ('z <= 9', 'b', '?')
-#translist[('4', 'fail')] = ('z <= 5', 'c', '?')
-#B = construct_automaton(state_set, translist, starts)
-#B.convert_to_digraph().render('B', view = True)
-#C = compose_interfaces(A,B)
-#C.convert_to_digraph().render('C', view = True)
