@@ -134,7 +134,11 @@ class ContractAutomaton(InterfaceAutomaton):
                                 if trans2.show() == trans.show() or trans2.guard == 'True':
                                     automata.edge(state.name, state2.name, label = trans2.show())
                                 else:
-                                    automata.edge(state.name, state2.name, label = '[' + trans.guard + ' ∧ ¬' + trans2.guard + ' | ' + trans.actionType + trans.action + ']')
+                                    automata.edge(state.name, state2.name,
+                                            label = '[' + trans.guard + ' ∧ ¬'
+                                            + trans2.guard + ' | ' +
+                                            trans.actionType + trans.action +
+                                            ']')
                                     automata.edge(state.name, state2.name, label = '['  + trans2.guard + ' | ' + trans.actionType + trans.action + ']')
                                 if not checked:
                                     break
@@ -284,7 +288,7 @@ def construct_contract_automaton(state_set, musttrans, maytrans, starts, input_a
     new_contract.alphabet = input_alphabet.union(output_alphabet).union(internal_alphabet)
 
     string_state_dict = dict()
-    string_state_dict['fail'] = new_contract.fail_state # add failure state manually
+    string_state_dict['⊥'] = new_contract.fail_state # add failure state manually
     # state_set is a list of strings representing state names
     for state in state_set:
         newstate = State(state)
