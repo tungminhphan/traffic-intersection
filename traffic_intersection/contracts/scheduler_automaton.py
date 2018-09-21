@@ -30,7 +30,7 @@ trans_must[('2', '3')] = {('True', 'accept', '!')}
 trans_must[('0', '1')] = {('True', 'request', '?')}
 trans_must[('1', '2')] = {('len(request_queue)>0', 'processing', '#')}
 scheduler = construct_contract_automaton(state_set = scheduler_states, starts = starts_h, musttrans = trans_must, maytrans = trans_may, input_alphabet = input_alph, output_alphabet = output_alph, internal_alphabet = internal_alph)
-scheduler.convert_to_digraph().render('scheduler', view = True, dpi = 300)
+scheduler.convert_to_digraph().render('scheduler', view = True)
 
 sched_car = compose_contract(scheduler, car_auto)
 sched_car.convert_to_digraph().render('sched_car', view = True)
