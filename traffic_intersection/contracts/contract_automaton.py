@@ -4,6 +4,7 @@
 # Steve Guo, Tung M. Phan
 # California Institute of Technology
 # July 12, 2018
+
 from automaton import *
 class ContractAutomaton(InterfaceAutomaton):
     def __init__(self, must = {}, may = {}):
@@ -60,7 +61,6 @@ class ContractAutomaton(InterfaceAutomaton):
             for trans in to_remove_must:
                 self.must[key].remove(trans)
 
-
         # deletes the state
         self.transitions_dict.pop(state)
         self.must.pop(state)
@@ -70,7 +70,6 @@ class ContractAutomaton(InterfaceAutomaton):
             self.startStates.remove(state)
         except KeyError:
             pass
-
     def add_transition(self, transition, must = 0, may = 1):
         if may:
             self.transitions_dict[transition.startState].add(transition)
@@ -79,7 +78,7 @@ class ContractAutomaton(InterfaceAutomaton):
 
     def add_implicit_self_transitions(self):
         for state in self.transitions_dict:
-            transition = guardTransition(state, state, 'True', '', '')
+            transition = guardTransition(state, state, 'True', 'eps', '')
             self.add_transition(transition, 0)
 
     def get_must_interface(self):
@@ -110,16 +109,17 @@ class ContractAutomaton(InterfaceAutomaton):
             self.fail_state = interface.fail_state
 
     def convert_to_digraph(self):
-        automata = Digraph(format = 'pdf')
-
-        for state in self.states.union({self.fail_state}):
+        automata = Digraph(format = 'svg')
+        for state in self.states.union({self.prestart_state}):
             # adds nodes
-            automata.attr('node', color = 'gray', shape = 'circle', style='filled', fixedsize='false')
-            if state in self.startStates:
-                automata.attr('node', color = 'gray', style='filled',  fixedsize = 'false', shape='invhouse')
+            automata.attr('node', color = 'gray', shape = 'circle', style='filled', fixedsize='true')
+            if state is self.prestart_state:
+                automata.attr('node', color = 'white',  fixedsize = 'true', shape='point')
             automata.node(state.name, state.name)
-
         # adds transitions
+        for state in self.startStates:
+            automata.edge(self.prestart_state.name, state.name, label = 'start')
+
         for state in self.states.union({self.fail_state}):
             if state in self.transitions_dict:
                 maytransit = self.transitions_dict[state] # this is a set of may transitions from the state
@@ -134,12 +134,16 @@ class ContractAutomaton(InterfaceAutomaton):
                                 if trans2.show() == trans.show() or trans2.guard == 'True':
                                     automata.edge(state.name, state2.name, label = trans2.show())
                                 else:
-                                    automata.edge(state.name, state2.name, label = '[' + trans.guard + ' ∧ ¬' + trans2.guard + ' | ' + trans.actionType + trans.action + ']'
-                                        , style = 'dashed')
-
+                                    automata.edge(state.name, state2.name,
+                                            label = '[' + trans.guard + '∧¬'
+                                            + trans2.guard + ' | ' +
+                                            trans.actionType + trans.action +
+                                            ']')
+                                    automata.edge(state.name, state2.name, label = '['  + trans2.guard + ' | ' + trans.actionType + trans.action + ']')
+                                if not checked:
+                                    break
                         if checked:
                                 automata.edge(state.name, state2.name, label = trans.show(), style = 'dashed')
-
         return automata
 
     def prune_illegal_state(self):
@@ -155,7 +159,6 @@ class ContractAutomaton(InterfaceAutomaton):
                     for may in maytrans:
                         if check_simulation(must, may):
                             check = True
-
                     if not check:
                         self.remove_state(key)
                         finished = False
@@ -203,7 +206,6 @@ class ContractAutomaton(InterfaceAutomaton):
                 output_alphabet_difference.add(letter)
             if letter in contract.internal_alphabet:
                 internal_alphabet_difference.add(letter)
-                
         for state in self.states - {self.fail_state}:
             for letter in input_alphabet_difference:
                 selfloop = guardTransition(state, state, 'True', letter, '?')
@@ -234,7 +236,7 @@ def compose_contract(cr_1, cr_2):
             if key1 == cr_1.fail_state or key2 == cr_2.fail_state:
                 node_dict[(key1, key2)] = new_contract.fail_state
             else:
-                node_dict[(key1, key2)] = product(key1,key2)
+                node_dict[(key1, key2)] = compact_product(key1,key2)
 
     for key1 in cr_1.states:
         for key2 in cr_2.states:
@@ -259,31 +261,7 @@ def compose_contract(cr_1, cr_2):
                     if compose_guard_trans(trans1, trans2, node_dict) != False:
                         new_contract.must[newstate].add(compose_guard_trans(trans1, trans2, node_dict))
 
-
-    # pruning
-    # for key in mayAuto.states:
-    #     notFound = False
-    #     # needs to fix the following since composite list might have length > 2
-    #     key1 = key.composite_list[0]
-    #     key2 = key.composite_list[1]
-    #     for may in may1[key1]:
-    #         for must in must2[key2]:
-    #             if may.action == must.action and may.actionType == must.actionType:
-    #                 if is_satisfiable(may.guard + ' ∧ ' + must.guard):
-    #                     notFound = True
-    #         if not notFound:
-    #             mayAuto.remove_state(key)
-    #             mustAuto.remove_state(key)
-
-    #     for may in may2[key2]:
-    #         for must in must1[key1]:
-    #             if may.action == must.action and may.actionType == must.actionType:
-    #                 if is_satisfiable(may.guard + ' ∧ ' + must.guard):
-    #                     notFound = True
-    #         if not notFound:
-    #             mayAuto.remove_state(key)
-    #             mustAuto.remove_state(key)
-    new_contract.trim()    
+    new_contract.trim()
     return new_contract
 
 
@@ -297,7 +275,7 @@ def check_simulation(trans1, trans2):
 
 def is_satisfiable(guard):
     # TODO
-    pass 
+    pass
 
 # Makes contract automaton
 # change later so alphabet is better
@@ -310,7 +288,7 @@ def construct_contract_automaton(state_set, musttrans, maytrans, starts, input_a
     new_contract.alphabet = input_alphabet.union(output_alphabet).union(internal_alphabet)
 
     string_state_dict = dict()
-    string_state_dict['fail'] = new_contract.fail_state # add failure state manually
+    string_state_dict['⊥'] = new_contract.fail_state # add failure state manually
     # state_set is a list of strings representing state names
     for state in state_set:
         newstate = State(state)
@@ -337,8 +315,6 @@ def construct_contract_automaton(state_set, musttrans, maytrans, starts, input_a
             action = trans[1]
             action_type = trans[2]
             new_contract.add_transition(guardTransition(start = state1, end = state2,  guard = guard, action = action, actionType = action_type), must = 0)
-
-
     new_contract.trim()
     return new_contract
 
