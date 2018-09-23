@@ -211,6 +211,18 @@ class InterfaceAutomaton(Automaton):
         self.internal_alphabet = internalAlphabet
         self.alphabet = self.input_alphabet.union(self.output_alphabet).union(self.internal_alphabet)
 
+    def add_transition(self, transition):
+        if transition != False:
+            self.transitions_dict[transition.startState].add(transition)
+            self.alphabet.add(transition.action)
+            if transition.actionType == '?':
+                self.input_alphabet.add(transition.action)
+            elif transition.actionType == '!':
+                self.output_alphabet.add(transition.action)
+            elif transition.actionType =='#':
+                self.internal_alphabet.add(transition.action)
+
+
     # also removes all states without transitions
     def trim(self):
         reachable_set = find_reachable_set(self)
@@ -236,7 +248,7 @@ def compose_guard_trans(tr1, tr2, node_dict):
     elif tr2.guard == True or tr2.guard == 'True':
         guard = tr1.guard
     elif isinstance(tr1.guard, str) and isinstance(tr2.guard, str):
-        guard = tr1.guard + '∧' + tr2.guard
+        guard = tr1.guard + ' ∧ ' + tr2.guard
 
     newStart = node_dict[(tr1.startState, tr2.startState)]
     newEnd = node_dict[(tr1.endState, tr2.endState)]
@@ -251,6 +263,37 @@ def compose_guard_trans(tr1, tr2, node_dict):
         if {tr1.actionType, tr2.actionType} == {'!', '?'} or tr2.actionType == '#':
             newType = '#'
     return guardTransition(newStart, newEnd, guard, action, newType)
+
+def conjunct_may_trans(tr1, tr2, node_dict):
+    if tr1.action != tr2.action or tr1.actionType != tr2.actionType:
+        return False
+    if tr1.guard == True or tr1.guard == 'True':
+        guard = tr2.guard
+    elif tr2.guard == True or tr2.guard == 'True':
+        guard = tr1.guard
+    else:
+        guard = tr1.guard + ' ∧ ' + tr2.guard
+
+    newStart = node_dict[(tr1.startState, tr2.startState)]
+    newEnd = node_dict[(tr1.endState, tr2.endState)]
+
+    return guardTransition(newStart, newEnd, guard, tr1.action, tr1.actionType)
+
+def conjunct_must_trans(tr1, tr2, node_dict):
+    if tr1.action != tr2.action or tr1.actionType != tr2.actionType:
+        return False
+    if tr1.guard == True or tr1.guard == 'True':
+        guard = 'True'
+    elif tr2.guard == True or tr2.guard == 'True':
+        guard = 'True'
+    else:
+        guard = tr1.guard + ' ∨ ' + tr2.guard
+
+    newStart = node_dict[(tr1.startState, tr2.startState)]
+    newEnd = node_dict[(tr1.endState, tr2.endState)]
+
+    return guardTransition(newStart, newEnd, guard, tr1.action, tr1.actionType)
+
 
 def compose_interfaces(interface_1, interface_2):
     new_interface = InterfaceAutomaton()
