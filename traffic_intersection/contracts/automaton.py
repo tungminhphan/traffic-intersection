@@ -128,7 +128,7 @@ class guardTransition(Transition):
 # t.print_transition()
 
 # General finite automaton. 
-class Automaton:
+class Automaton():
     def __init__(self):
         self.alphabet = set()
         self.transitions_dict = {} # transitions_dict[state] is the set of transitions from that state
