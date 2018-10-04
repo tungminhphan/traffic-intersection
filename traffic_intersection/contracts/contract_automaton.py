@@ -6,7 +6,7 @@
 # July 12, 2018
 
 from automaton import *
-from copy import * 
+from copy import *
 
 class ContractAutomaton(InterfaceAutomaton):
     def __init__(self, must = {}):
@@ -205,7 +205,6 @@ class ContractAutomaton(InterfaceAutomaton):
                 selfloop = guardTransition(state, state, 'True', letter, '#')
                 self.add_transition(selfloop, strong)
 
-
 def compose_contract(cr_1, cr_2):
     cr_1.alphabetProjection(cr_2, 1)
     cr_2.alphabetProjection(cr_1, 1)
@@ -301,12 +300,7 @@ def conjunct_contract(cr_1, cr_2):
                     endState = node_dict[(key1, trans2.endState)]
                     new_trans = guardTransition(startState, endState, trans2.guard, trans2.action, trans2.actionType)
                     new_contract.add_transition(new_trans, 1, 0)
-
-    # new_contract.trim()
-    # new_contract.prune_illegal_state()
     return new_contract
-
-
 
 def check_simulation(trans1, trans2):
     # checks if trans1 <= trans2, ie they have the same action, action type, and g_1 => g_2
@@ -336,7 +330,6 @@ def construct_contract_automaton(state_set, starts, musttrans, maytrans, inp = s
     new_contract.input_alphabet = inp
     new_contract.output_alphabet = out
     new_contract.internal_alphabet = internal
-    # print(new_contract.internal_alphabet)
     new_contract.alphabet = new_contract.input_alphabet.union(new_contract.output_alphabet).union(new_contract.internal_alphabet)
 
     string_state_dict = dict()
@@ -369,5 +362,4 @@ def construct_contract_automaton(state_set, starts, musttrans, maytrans, inp = s
             new_contract.add_transition(guardTransition(start = state1, end = state2,  guard = guard, action = action, actionType = action_type), must = 0)
     new_contract.trim()
     return new_contract
-
 
