@@ -9,15 +9,7 @@ Packages: see **requirements.txt** <br />
 ## Instructions
 1. Install all required packages
 2. Modify parameters if desired
-3. Run **main.py**
-## Installation (optional)
-1. Install with `pip3 install traffic-intersection`
-2. Create a new **.py** file and enter
-```python
-import traffic_intersection.main
-```
-3. Run the **.py** file
-## License
+3. Run **demo/random_sim.py**
 
 This is free software released under the terms of `the BSD 3-Clause License
 (http://opensource.org/licenses/BSD-3-Clause).  There is no warranty; not even

@@ -6,12 +6,12 @@
 # July 12, 2018
 
 from automaton import *
+from copy import * 
+
 class ContractAutomaton(InterfaceAutomaton):
-    def __init__(self, must = {}, may = {}):
+    def __init__(self, must = {}):
         self.must = must
-        self.transitions_dict = may
         InterfaceAutomaton.__init__(self)
-        # may and must are transition dictionaries
 
     def check_validity(self):
         # checks every must transition is a may transition
@@ -65,16 +65,26 @@ class ContractAutomaton(InterfaceAutomaton):
         self.transitions_dict.pop(state)
         self.must.pop(state)
         self.states.remove(state)
-        print(state.name)
         try:
             self.startStates.remove(state)
         except KeyError:
             pass
+
     def add_transition(self, transition, must = 0, may = 1):
-        if may:
-            self.transitions_dict[transition.startState].add(transition)
-        if must:
-            self.must[transition.startState].add(transition)
+        if transition != False:
+            self.alphabet.add(transition.action)
+            if transition.actionType == '?':
+                self.input_alphabet.add(transition.action)
+            elif transition.actionType == '!':
+                self.output_alphabet.add(transition.action)
+            elif transition.actionType =='#':
+                self.internal_alphabet.add(transition.action)
+
+            if may:
+                self.transitions_dict[transition.startState].add(transition)
+
+            if must:
+                self.must[transition.startState].add(transition)
 
     def add_implicit_self_transitions(self):
         for state in self.transitions_dict:
@@ -112,9 +122,9 @@ class ContractAutomaton(InterfaceAutomaton):
         automata = Digraph(format = 'svg')
         for state in self.states.union({self.prestart_state}):
             # adds nodes
-            automata.attr('node', color = 'gray', shape = 'circle', style='filled', fixedsize='true')
+            automata.attr('node', color = 'gray', shape = 'circle', style='filled', fixedsize='false')
             if state is self.prestart_state:
-                automata.attr('node', color = 'white',  fixedsize = 'true', shape='point')
+                automata.attr('node', color = 'white',  fixedsize = 'false', shape='point')
             automata.node(state.name, state.name)
         # adds transitions
         for state in self.startStates:
@@ -151,7 +161,8 @@ class ContractAutomaton(InterfaceAutomaton):
         finished = False
         while not finished:
             finished = True
-            for key in self.must:
+            to_remove = set()
+            for key in self.states:
                 musttrans = self.must[key]
                 maytrans = self.transitions_dict[key]
                 for must in musttrans:
@@ -159,12 +170,16 @@ class ContractAutomaton(InterfaceAutomaton):
                     for may in maytrans:
                         if check_simulation(must, may):
                             check = True
+
                     if not check:
-                        self.remove_state(key)
+                        to_remove.add(key)
                         finished = False
 
-    def weakAlphabetProjection(self, contract):
-        # adds must self-loops
+            for state in to_remove:
+                self.remove_state(state)
+
+    def alphabetProjection(self, contract, strong = 0):
+        # if strong, adds must self-loop
         input_alphabet_difference = set()
         output_alphabet_difference = set()
         internal_alphabet_difference = set()
@@ -180,54 +195,24 @@ class ContractAutomaton(InterfaceAutomaton):
         for state in self.states - {self.fail_state}:
             for letter in input_alphabet_difference:
                 selfloop = guardTransition(state, state, 'True', letter, '?')
-                self.add_transition(selfloop, 0)
-                self.input_alphabet.add(letter)
+                self.add_transition(selfloop, strong)
 
             for letter in output_alphabet_difference:
                 selfloop = guardTransition(state, state, 'True', letter, '!')
-                self.add_transition(selfloop, 0)
-                self.output_alphabet.add(letter)
+                self.add_transition(selfloop, strong)
 
             for letter in internal_alphabet_difference:
                 selfloop = guardTransition(state, state, 'True', letter, '#')
-                self.add_transition(selfloop, 0)
-                self.internal_alphabet.add(letter)
-
-    def strongAlphabetProjection(self, contract):
-        # adds must self-loops
-        input_alphabet_difference = set()
-        output_alphabet_difference = set()
-        internal_alphabet_difference = set()
-        alphabet_difference = contract.alphabet - self.alphabet
-        for letter in alphabet_difference:
-            if letter in contract.input_alphabet:
-                input_alphabet_difference.add(letter)
-            if letter in contract.output_alphabet:
-                output_alphabet_difference.add(letter)
-            if letter in contract.internal_alphabet:
-                internal_alphabet_difference.add(letter)
-        for state in self.states - {self.fail_state}:
-            for letter in input_alphabet_difference:
-                selfloop = guardTransition(state, state, 'True', letter, '?')
-                self.add_transition(selfloop, 1)
-                self.input_alphabet.add(letter)
-
-            for letter in output_alphabet_difference:
-                selfloop = guardTransition(state, state, 'True', letter, '!')
-                self.add_transition(selfloop, 1)
-                self.output_alphabet.add(letter)
-
-            for letter in internal_alphabet_difference:
-                selfloop = guardTransition(state, state, 'True', letter, '#')
-                self.add_transition(selfloop, 1)
-                self.internal_alphabet.add(letter)
-
+                self.add_transition(selfloop, strong)
 
 
 def compose_contract(cr_1, cr_2):
-    cr_1.strongAlphabetProjection(cr_2)
-    cr_2.strongAlphabetProjection(cr_1)
+    cr_1.alphabetProjection(cr_2, 1)
+    cr_2.alphabetProjection(cr_1, 1)
+
     new_contract = ContractAutomaton()
+    for letter in new_contract.alphabet:
+        print(letter)
 
     node_dict = dict() # maintain references to states being composed
     for key1 in cr_1.states:
@@ -236,7 +221,7 @@ def compose_contract(cr_1, cr_2):
             if key1 == cr_1.fail_state or key2 == cr_2.fail_state:
                 node_dict[(key1, key2)] = new_contract.fail_state
             else:
-                node_dict[(key1, key2)] = compact_product(key1,key2)
+                node_dict[(key1, key2)] = product(key1, key2)
 
     for key1 in cr_1.states:
         for key2 in cr_2.states:
@@ -247,22 +232,80 @@ def compose_contract(cr_1, cr_2):
                 for trans2 in cr_2.transitions_dict[key2]:
                     new_trans = compose_guard_trans(trans1, trans2, node_dict)
                     if new_trans != False:
-                        new_contract.transitions_dict[newstate].add(new_trans)
-                        new_contract.alphabet.add(new_trans.action)
-                        if new_trans.actionType == '?':
-                            new_contract.input_alphabet.add(new_trans.action)
-                        elif new_trans.actionType == '!':
-                            new_contract.output_alphabet.add(new_trans.action)
-                        elif new_trans.actionType =='#':
-                            new_contract.internal_alphabet.add(new_trans.action)
+                        new_contract.add_transition(new_trans)
 
             for trans1 in cr_1.must[key1]:
                 for trans2 in cr_2.must[key2]:
-                    if compose_guard_trans(trans1, trans2, node_dict) != False:
-                        new_contract.must[newstate].add(compose_guard_trans(trans1, trans2, node_dict))
+                    new_trans = compose_guard_trans(trans1, trans2, node_dict)
+                    if new_trans != False:
+                        new_contract.add_transition(new_trans, 1, 0)
 
     new_contract.trim()
     return new_contract
+
+def conjunct_contract(cr_1, cr_2):
+    cr_1.alphabetProjection(cr_2, 0)
+    # cr_1.convert_to_digraph().render('cr1', view = 'False')
+    cr_2.alphabetProjection(cr_1, 0)
+    # cr_2.convert_to_digraph().render('cr2', view = 'False')
+
+
+    new_contract = ContractAutomaton()
+    node_dict = dict() # maintain references to states being composed
+    for key1 in cr_1.states:
+        for key2 in cr_2.states:
+            newstate = product(key1, key2)
+            if key1 == cr_1.fail_state or key2 == cr_2.fail_state:
+                node_dict[(key1, key2)] = new_contract.fail_state
+            else:
+                node_dict[(key1, key2)] = product(key1, key2)
+
+    transdict = {} # key is (state, action, actiontype), value is a transition (if exists) from that state with that action/actiontype
+
+    # need to add states separately first
+    for key1 in cr_1.states:
+        for key2 in cr_2.states:
+            newstate = node_dict[(key1, key2)]
+            new_contract.add_state(newstate, start_state = key1 in cr_1.startStates and key2 in cr_2.startStates)
+
+    for key1 in cr_1.states:
+        for key2 in cr_2.states:
+
+            for trans1 in cr_1.transitions_dict[key1]:
+                for trans2 in cr_2.transitions_dict[key2]:
+                    new_trans = conjunct_may_trans(trans1, trans2, node_dict)
+                    if new_trans != False:
+                        new_contract.add_transition(new_trans)
+
+            # adds correct transition if both key1 and key2 have the same action type transition from them
+            for trans1 in cr_1.must[key1]:
+                for trans2 in cr_2.must[key2]:
+                    new_trans = conjunct_must_trans(trans1, trans2, node_dict)
+                    if new_trans != False:
+                        new_contract.add_transition(new_trans, 1, 0)
+                        transdict[(newstate, new_trans.action, new_trans.actionType)] = new_trans
+
+
+            for trans1 in cr_1.must[key1]:
+                # the following implies the transition w/ this actiontype is only in the first contract from this state, and the transition remains the same
+                if (newstate, trans1.action, trans1.actionType) not in transdict:
+                    startState = node_dict[(key1, key2)]
+                    endState = node_dict[(trans1.endState, key2)]
+                    new_trans = guardTransition(startState, endState, trans1.guard, trans1.action, trans1.actionType)
+                    new_contract.add_transition(new_trans, 1, 0)
+
+            for trans2 in cr_2.must[key2]:
+                # the following implies the transition w/ this actiontype is only in the first contract from this state, and the transition remains the same
+                if (newstate, trans2.action, trans2.actionType) not in transdict:
+                    startState = node_dict[(key1, key2)]
+                    endState = node_dict[(key1, trans2.endState)]
+                    new_trans = guardTransition(startState, endState, trans2.guard, trans2.action, trans2.actionType)
+                    new_contract.add_transition(new_trans, 1, 0)
+
+    # new_contract.trim()
+    # new_contract.prune_illegal_state()
+    return new_contract
+
 
 
 def check_simulation(trans1, trans2):
@@ -271,7 +314,10 @@ def check_simulation(trans1, trans2):
     if trans1.action != trans2.action or trans1.actionType != trans2.actionType:
         return False
 
-    pass
+    if trans2.guard == 'True' and trans1.guard != 'True':
+        return False
+
+    return True
 
 def is_satisfiable(guard):
     # TODO
@@ -279,13 +325,19 @@ def is_satisfiable(guard):
 
 # Makes contract automaton
 # change later so alphabet is better
-def construct_contract_automaton(state_set, musttrans, maytrans, starts, input_alphabet = set(), output_alphabet = set(), internal_alphabet = set()):
-    new_contract = ContractAutomaton()
+def construct_contract_automaton(state_set, starts, musttrans, maytrans, inp = set(), out = set(), internal = set()):
 
-    new_contract.input_alphabet = input_alphabet
-    new_contract.output_alphabet = output_alphabet
-    new_contract.internal_alphabet = internal_alphabet
-    new_contract.alphabet = input_alphabet.union(output_alphabet).union(internal_alphabet)
+
+    new_contract = ContractAutomaton()
+    print('-------')
+    for letter in new_contract.internal_alphabet:
+        print(letter)
+
+    new_contract.input_alphabet = inp
+    new_contract.output_alphabet = out
+    new_contract.internal_alphabet = internal
+    # print(new_contract.internal_alphabet)
+    new_contract.alphabet = new_contract.input_alphabet.union(new_contract.output_alphabet).union(new_contract.internal_alphabet)
 
     string_state_dict = dict()
     string_state_dict['⊥'] = new_contract.fail_state # add failure state manually
