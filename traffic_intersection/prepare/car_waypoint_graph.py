@@ -50,7 +50,7 @@ if visualize:
     import matplotlib.pyplot as plt
     from PIL import Image
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    intersection_fig = os.path.dirname(dir_path) + "/components/imglib/intersection.png"
+    intersection_fig = os.path.dirname(dir_path) + "/components/imglib/intersection_states/intersection_lights.png"
     fig = plt.figure()
     plt.axis("on") # turn on/off axes
     background = Image.open(intersection_fig)

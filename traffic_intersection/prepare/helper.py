@@ -101,14 +101,16 @@ def draw_pedestrians(ax):
     random.shuffle(global_vars.pedestrians_to_show)
 
 
-def spawn_car():
+def spawn_car(random_start_end=True):
     plate_number = generate_license_plate()
     rand_num = np.random.choice(10)
-    start_node = random.sample(car_graph.G._sources, 1)[0]
-    end_node = random.sample(car_graph.G._sinks, 1)[0]
+    if random_start_end:
+        start_node = random.sample(car_graph.G._sources, 1)[0]
+        end_node = random.sample(car_graph.G._sinks, 1)[0]
     color = np.random.choice(tuple(car.car_colors))
     the_car = car.KinematicCar(init_state=start_node, color=color, plate_number=plate_number)
-    return start_node, end_node, the_car
+    if random_start_end:
+        return start_node, end_node, the_car
 
 def draw_cars(vehicles, background):
     for vehicle in vehicles:
