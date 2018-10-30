@@ -42,13 +42,6 @@ def compact_product(state1, state2):
     for state in composite_list:
         new_name += state.name
     return State(new_name, composite_list)
-# test case for state class
-
-#s1 = State(1)
-#s2 = State(2)
-#s3 = State(3)
-#z = product(s3,product(s1,s2))
-#print(z.name)
 
 # General transition class. Transition is a string from the alphabet.
 class Transition:
@@ -80,13 +73,6 @@ class Transition:
 
     def show(self):
         return self.label
-
-# test case for general transition class
-#s1 = State(1)
-#s2 = State(2)
-#t = Transition(s1,s2, 'a')
-#t.print_transition()
-#print(t.show())
 
 # General transition class for guard (where the guard is a set of inequalities.)
 class guardTransition(Transition):
@@ -120,12 +106,6 @@ class guardTransition(Transition):
 
     def print_transition(self):
         print(self.get_start() + ' --[' + self.show() + ']--> ' + self.get_end())
-
-# test case for the guard transition class
-# s1 = State(1)
-# s2 = State(2)
-# t = guardTransition(start = s1, end = s2, guard = 'x > 3', label = 'test', action = 'a', actionType = '?')
-# t.print_transition()
 
 # General finite automaton. 
 class Automaton():

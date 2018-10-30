@@ -35,47 +35,12 @@ dt = options.dt
 
 #if true, pedestrians can cross street and cars cannot cross
 def safe_to_walk(green_duration, light_color, light_time):
-    walk_sign_delay = green_duration / 10
-    return(light_color == 'green' and (light_time + walk_sign_delay) <= (green_duration / 3 + walk_sign_delay))
+    walk_sign_delay = green_duration / 7.
+    return light_color == 'green' and light_time >= 2 and light_time <= (green_duration / 3. + walk_sign_delay)
 
 # checks if pedestrian is crossing street
 def is_between(lane, person_xy):
     return distance(lane[0], person_xy) + distance(lane[1], person_xy) == distance(lane[0], lane[1])
-
-# cross the street if light is green, or if the pedestrian just crossed the street, continue walking and ignore traffic light color
-def continue_walking(person, walk_sign, lane1, lane2, direction, remaining_time):
-    person_xy = (person.state[0], person.state[1])
-    theta = person.state[2]
-    if person_xy in (lane1 + lane2) and walk_sign:
-        prim_data, prim_progress = person.prim_queue.get_element_at_index(-2)
-        start, finish, vee = prim_data
-        dx = finish[0] - start[0]
-        dy = finish[1] - start[1]
-        remaining_distance = np.linalg.norm(np.array([dx, dy]))
-        vee_max = 50
-        if (remaining_distance / vee) > remaining_time:
-            vee = remaining_distance / remaining_time
-        return (vee <= vee_max)
-    elif (person_xy == lane1[0] or person_xy == lane2[0]) and theta == direction[0]:
-        return True
-    elif (person_xy == lane1[1] or person_xy == lane2[1]) and theta == direction[1]:
-        return True
-    else:
-        return False
-
-# if the pedestrian isn't going fast enough, increase speed to cross street before light turns red
-def walk_faster(person, remaining_time):
-    person_xy = (person.state[0], person.state[1])
-    prim_data, prim_progress = person.prim_queue.top()
-    start, finish, vee = prim_data
-    dx = finish[0] - person.state[0]
-    dy = finish[1] - person.state[1]
-    remaining_distance = np.linalg.norm(np.array([dx, dy]))
-    vee_max = 50
-    if (remaining_distance / vee) > remaining_time:
-        vee = remaining_distance / remaining_time
-        if (vee <= vee_max):
-            person.prim_queue.replace_top(((start, finish, vee), prim_progress))
 
 # create traffic intersection
 traffic_lights = traffic_signals.TrafficLights(yellow_max = 10, green_max = 50, random_start = True)
@@ -145,10 +110,10 @@ def animate(frame_idx): # update animation by dt
                 if person_xy not in (pedestrian_graph.lane1 + pedestrian_graph.lane2 + pedestrian_graph.lane3 + pedestrian_graph.lane4): # if pedestrian is not at any of the nodes then continue  
                     person.prim_next(dt)
                     global_vars.pedestrians_to_keep.add(person)
-                elif continue_walking(person, vertical_walk_safe, pedestrian_graph.lane1, pedestrian_graph.lane2, (-pi/2, pi/2), remaining_vertical_time): # if light is green cross the street, or if at a node and facing away from the street i.e. just crossed the street then continue
+                elif person.continue_walking(vertical_walk_safe, pedestrian_graph.lane1, pedestrian_graph.lane2, (-pi/2, pi/2), remaining_vertical_time): # if light is green cross the street, or if at a node and facing away from the street i.e. just crossed the street then continue
                     person.prim_next(dt)
                     global_vars.pedestrians_to_keep.add(person)
-                elif continue_walking(person, horizontal_walk_safe, pedestrian_graph.lane3, pedestrian_graph.lane4, (pi, 0), remaining_horizontal_time):
+                elif person.continue_walking(horizontal_walk_safe, pedestrian_graph.lane3, pedestrian_graph.lane4, (pi, 0), remaining_horizontal_time):
                     person.prim_next(dt)
                     global_vars.pedestrians_to_keep.add(person)
                 else:
@@ -156,9 +121,9 @@ def animate(frame_idx): # update animation by dt
 
                 # pedestrians walk faster if not going fast enough to finish crossing the street before walk sign is off or 'false'
                 if is_between(pedestrian_graph.lane1, person_xy) or is_between(pedestrian_graph.lane2, person_xy):
-                    walk_faster(person, remaining_vertical_time)
+                    person.walk_faster(remaining_vertical_time)
                 elif is_between(pedestrian_graph.lane3, person_xy) or is_between(pedestrian_graph.lane4, person_xy):
-                    walk_faster(person, remaining_horizontal_time)
+                    person.walk_faster(remaining_horizontal_time)
             else:
                 if person in global_vars.pedestrians_to_keep:
                     global_vars.pedestrians_to_keep.remove(person)
@@ -168,7 +133,7 @@ def animate(frame_idx): # update animation by dt
     # update cars
     cars_to_keep = []
     update_cars(cars_to_keep, dt)
-    draw_cars_fast(ax, cars_to_keep)
+    draw_cars_fast(plt, cars_to_keep)
     # highlight crossings
     vertical_lane_color = 'g' if vertical_walk_safe else 'r'
     horizontal_lane_color = 'g' if horizontal_walk_safe else 'r'
@@ -195,7 +160,7 @@ def animate(frame_idx): # update animation by dt
         plot_traffic_light_walls(ax, traffic_lights)
     # check for collisions and update pedestrian state
     check_for_collisions(cars_to_keep)
-    draw_pedestrians(ax) # draw pedestrians to background
+    draw_pedestrians(plt) # draw pedestrians to background
     the_intersection = [ax.imshow(intersection.intersection, origin="lower")] # update the stage
 
     all_artists = the_intersection + global_vars.crossing_highlights + global_vars.honk_waves + global_vars.boxes + global_vars.curr_tubes + global_vars.ids + global_vars.prim_ids_to_show + global_vars.walls + global_vars.show_traffic_lights + global_vars.cars_to_show + global_vars.pedestrians_to_show + global_vars.walk_signs
