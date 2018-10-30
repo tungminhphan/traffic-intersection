@@ -49,13 +49,17 @@ class DirectedGraph():
             print(str(start_node) + ' -> ' +  str(list(self._edges[start_node])).strip('[]'))
 
     def plot_edges(self, plt, plt_src_snk = False, plt_labels = False, edge_width = 0.5, head_width = 0.5, alpha = 0.5,
-            markersize = 10):
+            markersize = 10, pedestrian = False):
+        if pedestrian:
+            offset = -2
+        else:
+            offset = 0
         for start_node in self._edges:
-            start_x = int(start_node[2]) # conver to int to avoid overflow
-            start_y = int(start_node[3])
+            start_x = int(start_node[2+offset]) # conver to int to avoid overflow
+            start_y = int(start_node[3+offset])
             for end_node in self._edges[start_node]:
-                end_x = int(end_node[2])
-                end_y = int(end_node[3])
+                end_x = int(end_node[2+offset])
+                end_y = int(end_node[3+offset])
                 dx = end_x - start_x
                 dy = end_y - start_y
                 # plot transition

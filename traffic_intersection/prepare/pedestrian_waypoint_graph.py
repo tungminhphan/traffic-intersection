@@ -118,6 +118,6 @@ if show:
     head_width = 10
     transparency = 0.5
     G.plot_edges(plt, alpha = transparency, edge_width = edge_width, head_width=head_width,
-        plt_src_snk=False)
+        plt_src_snk=False, pedestrian=True)
     plt.show()
 

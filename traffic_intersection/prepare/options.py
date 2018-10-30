@@ -5,10 +5,10 @@ if custom:
     random_seed = 1
     np_random_seed = 1
     antialias_enabled = False
-    speed_up_factor = 4
-    dt = 0.15
-    duration = 150
-    highlight_crossings = True
+    speed_up_factor = 1
+    dt = 0.1
+    duration = 50
+    highlight_crossings = False
     create_collision_dictionary = False
     show_boxes = False
     show_tubes = False

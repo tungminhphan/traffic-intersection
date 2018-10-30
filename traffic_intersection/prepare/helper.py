@@ -72,7 +72,7 @@ def find_corner_coordinates(x_state_center_before, y_state_center_before, x_desi
     y_corner_unknown = int(y_desired - y_state_center_after + y_corner_center_after)
     return x_corner_unknown, y_corner_unknown
 
-def draw_pedestrians(plt):
+def draw_pedestrians_fast(plt):
     global_vars.pedestrians_to_show = []
     for pedestrian in global_vars.pedestrians_to_keep:
         if not pedestrian.is_dead:
@@ -100,6 +100,34 @@ def draw_pedestrians(plt):
         global_vars.pedestrians_to_show.append(plt.imshow(person_fig, extent=(x_corner,x_corner+w, y_corner, y_corner+h)))
     random.shuffle(global_vars.pedestrians_to_show)
 
+def draw_pedestrians(plt, background):
+    if len(global_vars.pedestrians_to_keep) > 0:
+        pedestrians = list(global_vars.pedestrians_to_keep)
+        random.shuffle(pedestrians)
+        for pedestrian in pedestrians:
+            if not pedestrian.is_dead:
+                x, y, theta, current_gait = pedestrian.state
+                i = current_gait % pedestrian.film_dim[1]
+                j = current_gait // pedestrian.film_dim[1]
+                film_fig = Image.open(pedestrian.fig)
+                scaled_film_fig_size  =  tuple([int(params.pedestrian_scale_factor * i) for i in film_fig.size])
+                film_fig = film_fig.resize(scaled_film_fig_size)
+                width, height = film_fig.size
+                sub_width = width/pedestrian.film_dim[1]
+                sub_height = height/pedestrian.film_dim[0]
+                lower = (i*sub_width,j*sub_height)
+                upper = ((i+1)*sub_width, (j+1)*sub_height)
+                area = (int(lower[0]), int(lower[1]), int(upper[0]), int(upper[1]))
+                person_fig = film_fig.crop(area)
+                person_fig = person_fig.rotate(-theta/np.pi * 180 - 90, expand = False)
+                x_corner, y_corner = find_corner_coordinates(0., 0, x, y, theta,  person_fig)
+            else:
+                x, y, theta, _ = pedestrian.state
+                person_fig = Image.open(pedestrian.fig)
+                person_fig = person_fig.resize((20,20))
+                x_corner, y_corner = find_corner_coordinates(0., 0., x, y, theta,  person_fig)
+            w, h = person_fig.size
+            background.paste(person_fig, (x_corner, y_corner), person_fig)
 
 def spawn_car(random_start_end=True):
     plate_number = generate_license_plate()
@@ -166,7 +194,7 @@ def generate_license_plate():
         plate_number = plate_number + random.choice(choices)
     return plate_number
 
-def dijkstra(start, end, graph):
+def dijkstra(start, end, graph, ped=False):
     '''
     this function takes in a weighted directed graph, a start node, an end node and outputs
     the shortest path from the start node to the end node on that graph
@@ -175,7 +203,7 @@ def dijkstra(start, end, graph):
             graph - weighted directed graph
     output: shortest path from start to end node
     '''
-    if (start, end, graph) in global_vars.path_table:
+    if not ped and (start, end, graph) in global_vars.path_table:
         return global_vars.path_table[(start,end,graph)]
     else:
         if start == end: # if start coincides with end

@@ -47,9 +47,10 @@ traffic_lights = traffic_signals.TrafficLights(yellow_max = 10, green_max = 50, 
 # create planner
 planner = scheduler.Scheduler()
 # create pedestrians
-pedestrians = []
 
+background = intersection.get_background()
 def animate(frame_idx): # update animation by dt
+    global background
     ax.clear()
     t0 = time.time()
     deadlocked = False
@@ -85,24 +86,29 @@ def animate(frame_idx): # update animation by dt
     if with_probability(options.new_pedestrian_probability):
         while True:
             name, begin_node, final_node, the_pedestrian = spawn_pedestrian()
-            if not begin_node == final_node:
+            if  begin_node != final_node:
                 break
-        _, shortest_path = dijkstra((begin_node[0], begin_node[1]), final_node, pedestrian_graph.G)
+        _, shortest_path = dijkstra(begin_node, final_node, pedestrian_graph.G, True)
+        if len(shortest_path) == 1:
+            print('gotcha')
+            print(begin_node)
+            print(final_node)
+            print(shortest_path)
         vee = np.random.uniform(20, 40)
         while len(shortest_path) > 1:
                 the_pedestrian.prim_queue.enqueue(((shortest_path[0], shortest_path[1], vee), 0))
                 del shortest_path[0]
-        pedestrians.append(the_pedestrian)
+        global_vars.pedestrians_to_keep.add(the_pedestrian)
 
     # update traffic lights
     traffic_lights.update(dt)
     update_traffic_lights(ax, plt, traffic_lights) # for plotting
-    draw_walk_signs(ax,traffic_signals.walk_sign_figs['vertical'][vertical_walk_safe], traffic_signals.walk_sign_figs['horizontal'][horizontal_walk_safe])
+#   draw_walk_signs(ax,traffic_signals.walk_sign_figs['vertical'][vertical_walk_safe], traffic_signals.walk_sign_figs['horizontal'][horizontal_walk_safe])
 
     # update pedestrians
-    if len(pedestrians) > 0:
-        for person in pedestrians:
-            if within_confines(person.state[0], person.state[1]):
+    if len(global_vars.pedestrians_to_keep) > 0:
+        for person in global_vars.pedestrians_to_keep.copy():
+            if True:
                 person_xy = (person.state[0], person.state[1])
                 remaining_vertical_time = abs(traffic_lights._walk_sign_duration - traffic_lights.get_elapsed_time('vertical'))
                 remaining_horizontal_time = abs(traffic_lights._walk_sign_duration  -traffic_lights.get_elapsed_time('horizontal'))
@@ -124,21 +130,20 @@ def animate(frame_idx): # update animation by dt
                     person.walk_faster(remaining_vertical_time)
                 elif is_between(pedestrian_graph.lane3, person_xy) or is_between(pedestrian_graph.lane4, person_xy):
                     person.walk_faster(remaining_horizontal_time)
-            else:
-                if person in global_vars.pedestrians_to_keep:
+                if person.prim_queue.len() == 0:
                     global_vars.pedestrians_to_keep.remove(person)
-                    del person
+
 
     ################################ Update and Generate Visuals ################################ 
-    # update cars
-    cars_to_keep = []
-    update_cars(cars_to_keep, dt)
-    draw_cars_fast(plt, cars_to_keep)
     # highlight crossings
     vertical_lane_color = 'g' if vertical_walk_safe else 'r'
     horizontal_lane_color = 'g' if horizontal_walk_safe else 'r'
     if options.highlight_crossings:
         draw_crossings(ax, plt, vertical_lane_color, horizontal_lane_color)
+    # update cars
+    cars_to_keep = []
+    update_cars(cars_to_keep, dt)
+    draw_cars(cars_to_keep, background)
     # show honk wavefronts
     if options.show_honks:
         show_wavefronts(ax, dt)
@@ -160,10 +165,13 @@ def animate(frame_idx): # update animation by dt
         plot_traffic_light_walls(ax, traffic_lights)
     # check for collisions and update pedestrian state
     check_for_collisions(cars_to_keep)
-    draw_pedestrians(plt) # draw pedestrians to background
-    the_intersection = [ax.imshow(intersection.intersection, origin="lower")] # update the stage
+    draw_pedestrians(plt, background) # draw pedestrians to background
+    # update background
+    the_intersection = [ax.imshow(background, origin="lower")] # update the stage
+    background.close()
+    background = intersection.get_background()
 
-    all_artists = the_intersection + global_vars.crossing_highlights + global_vars.honk_waves + global_vars.boxes + global_vars.curr_tubes + global_vars.ids + global_vars.prim_ids_to_show + global_vars.walls + global_vars.show_traffic_lights + global_vars.cars_to_show + global_vars.pedestrians_to_show + global_vars.walk_signs
+    all_artists = the_intersection + global_vars.cars_to_show + global_vars.crossing_highlights + global_vars.honk_waves + global_vars.boxes + global_vars.curr_tubes + global_vars.ids + global_vars.prim_ids_to_show + global_vars.walls + global_vars.show_traffic_lights + global_vars.walk_signs
     t1 = time.time()
     elapsed_time = (t1 - t0)
     print('{:.2f}'.format(global_vars.current_time)+'/'+str(options.duration) + ' at ' + str(int(1/elapsed_time)) + ' fps') # print out current time to 2 decimal places

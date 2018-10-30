@@ -15,6 +15,7 @@ else: # if the operating system is Linux or Windows
     try:
         import PySide2 # if pyside2 is installed
         matplotlib.use('Qt5Agg')
+        matplotlib.use('TkAgg') # this may be slower
     except ImportError:
         warnings.warn('Using the TkAgg backend, this may affect performance. Consider installing pyside2 for Qt5Agg backend')
         matplotlib.use('TkAgg') # this may be slower
@@ -74,16 +75,24 @@ def animate(frame_idx): # update animation by dt
     elapsed_time = (t1 - t0)
     print('{:.2f}'.format(global_vars.current_time)+'/'+str(options.duration) + ' at ' + str(int(1/elapsed_time)) + ' fps') # print out current time to 2 decimal places
     return all_artists
-t0 = time.time()
-animate(0)
-t1 = time.time()
-interval = (t1 - t0)
-ani = animation.FuncAnimation(fig, animate, frames=int(options.duration/options.dt), interval=interval, blit=True, repeat=False) # by default the animation function loops so set repeat to False in order to limit the number of frames generated to num_frames
-if options.save_video:
-    Writer = animation.writers['ffmpeg']
-    writer = Writer(fps = options.speed_up_factor*int(1/options.dt), metadata=dict(artist='Traffic Intersection Simulator'), bitrate=-1)
-    now = str(datetime.datetime.now())
-    ani.save('../movies/' + now + '.avi', dpi=200)
-plt.show()
-t2 = time.time()
-print('Total elapsed time: ' + str(t2-t0))
+
+if True:
+    ims = []
+    for i in range(1,500):
+        ims.append(animate(i))
+    ani = animation.ArtistAnimation(fig, ims)
+    ani.save('tes2.avi')
+else:
+    t0 = time.time()
+    animate(0)
+    t1 = time.time()
+    interval = (t1 - t0)
+    ani = animation.FuncAnimation(fig, animate, frames=int(options.duration/options.dt), interval=interval, blit=True, repeat=False) # by default the animation function loops so set repeat to False in order to limit the number of frames generated to num_frames
+    if options.save_video:
+        Writer = animation.writers['ffmpeg']
+        writer = Writer(fps = options.speed_up_factor*int(1/options.dt), metadata=dict(artist='Traffic Intersection Simulator'), bitrate=-1)
+        now = str(datetime.datetime.now())
+        ani.save('../movies/' + now + '.avi', dpi=200)
+    plt.show()
+    t2 = time.time()
+    print('Total elapsed time: ' + str(t2-t0))

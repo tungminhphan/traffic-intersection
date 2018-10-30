@@ -9,6 +9,10 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 #intersection_fig = dir_path + "/components/imglib/intersection_states/intersection_lights.png"
 intersection_fig = os.path.dirname(dir_path) + '/components/imglib/intersection_states/intersection_lights.png'
 intersection = Image.open(intersection_fig)
+
+def get_background():
+    return Image.open(intersection_fig)
+
 def reflect(coords, limit):
     new_coords = []
     for x in coords:
