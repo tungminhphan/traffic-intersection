@@ -3,7 +3,8 @@
 Tung M. Phan, Anhminh Nguyen, Steve Guo, Bastian Schürmann<br />
 ## Description
 This project involves the contract-based design and implementation of an autonomous traffic intersection system that may be extended and composed with other systems of the same class.
-![](demo.gif)
+![](demo.gif){:height="50%" width="50%"}
+
 ## Requirements
 Python 3.x <br />
 Packages: see **requirements.txt** <br />
