@@ -21,4 +21,4 @@ When code is modified or re-distributed, the LICENSE file should accompany the c
 it, however small.
 As an alternative, the LICENSE text can be copied within files, if so desired. <br />
 ## Demo
-![](/traffic_intersection/movies/demo.gif){:height="50%" width="50%"}
+![](demo.gif)
