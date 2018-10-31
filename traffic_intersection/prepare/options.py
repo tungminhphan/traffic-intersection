@@ -7,7 +7,7 @@ if custom:
     antialias_enabled = False
     speed_up_factor = 1
     dt = 0.1
-    duration = 50
+    duration = 200
     highlight_crossings = False
     create_collision_dictionary = False
     show_boxes = False
