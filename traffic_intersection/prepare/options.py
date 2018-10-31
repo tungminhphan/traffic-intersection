@@ -1,10 +1,10 @@
 custom = True
 if custom:
-    save_video = False
+    save_video = True
     random_simulation = True
     random_seed = 1
     np_random_seed = 1
-    antialias_enabled = False
+    antialias_enabled = True
     speed_up_factor = 1
     dt = 0.1
     duration = 200

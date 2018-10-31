@@ -437,7 +437,20 @@ def update_traffic_lights(ax, plt, traffic_lights):
         circ = plt.Circle((x,y), radius=6, alpha=alt_sin(0.3,1,100,global_vars.current_time), color=horizontal_light[0])
         global_vars.show_traffic_lights.append(ax.add_artist(circ))
 
-def draw_walk_signs(ax, vertical_fig, horizontal_fig):
+def draw_walk_signs(background, vertical_fig, horizontal_fig):
+    global_vars.walk_signs = []
+    for coordinate in traffic_signals.walk_sign_coordinates['vertical']:
+        x_corner, y_corner = find_corner_coordinates(0, 0, coordinate[0], coordinate[1], 0, vertical_fig)
+        w, h = vertical_fig.size
+#        vertical_fig.putalpha(int(alt_sin(50,200,100,global_vars.current_time)))
+        background.paste(vertical_fig, (x_corner, y_corner), vertical_fig)
+    for coordinate in traffic_signals.walk_sign_coordinates['horizontal']:
+        x_corner, y_corner = find_corner_coordinates(0, 0, coordinate[0], coordinate[1], 0, horizontal_fig)
+        w, h = horizontal_fig.size
+#        horizontal_fig.putalpha(int(alt_sin(50,200,100,global_vars.current_time)))
+        background.paste(horizontal_fig, (x_corner, y_corner), horizontal_fig)
+
+def draw_walk_signs_fast(ax, vertical_fig, horizontal_fig):
     global_vars.walk_signs = []
     for coordinate in traffic_signals.walk_sign_coordinates['vertical']:
         x_corner, y_corner = find_corner_coordinates(0, 0, coordinate[0], coordinate[1], 0, vertical_fig)

@@ -23,8 +23,8 @@ stop_fig = Image.open(walk_sign_stop).convert("RGBA")
 stop_fig = Image.open(walk_sign_stop)
 stop_fig = stop_fig.resize((18,18))
 
-vertical_go_fig = go_fig.rotate(0, expand = False)
-vertical_stop_fig = stop_fig.rotate(0, expand = False)
+vertical_go_fig = go_fig.rotate(180, expand = False)
+vertical_stop_fig = stop_fig.rotate(180, expand = False)
 horizontal_go_fig = go_fig.rotate(-90, expand = True)
 horizontal_stop_fig = stop_fig.rotate(-90, expand = True)
 

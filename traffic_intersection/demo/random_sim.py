@@ -35,8 +35,8 @@ dt = options.dt
 
 #if true, pedestrians can cross street and cars cannot cross
 def safe_to_walk(green_duration, light_color, light_time):
-    walk_sign_delay = green_duration / 7.
-    return light_color == 'green' and light_time >= 2 and light_time <= (green_duration / 3. + walk_sign_delay)
+    walk_sign_delay = green_duration / 8.
+    return light_color == 'green' and light_time >= 3 and light_time <= (green_duration / 3. + walk_sign_delay)
 
 # checks if pedestrian is crossing street
 def is_between(lane, person_xy):
@@ -103,7 +103,7 @@ def animate(frame_idx): # update animation by dt
     # update traffic lights
     traffic_lights.update(dt)
     update_traffic_lights(ax, plt, traffic_lights) # for plotting
-    draw_walk_signs(ax,traffic_signals.walk_sign_figs['vertical'][vertical_walk_safe], traffic_signals.walk_sign_figs['horizontal'][horizontal_walk_safe])
+    draw_walk_signs(background,traffic_signals.walk_sign_figs['vertical'][vertical_walk_safe], traffic_signals.walk_sign_figs['horizontal'][horizontal_walk_safe])
 
     # update pedestrians
     if len(global_vars.pedestrians_to_keep) > 0:
