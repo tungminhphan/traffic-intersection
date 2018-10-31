@@ -1,13 +1,13 @@
 custom = True
 if custom:
-    save_video = True
+    save_video = False
     random_simulation = True
     random_seed = 1
     np_random_seed = 1
     antialias_enabled = True
     speed_up_factor = 1
     dt = 0.1
-    duration = 200
+    duration = 400
     highlight_crossings = False
     create_collision_dictionary = False
     show_boxes = False

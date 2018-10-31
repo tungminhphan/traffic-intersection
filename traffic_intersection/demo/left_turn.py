@@ -21,78 +21,54 @@ else: # if the operating system is Linux or Windows
         matplotlib.use('TkAgg') # this may be slower
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
+from matplotlib.patches import Wedge
+from matplotlib.collections import PatchCollection
+from PIL import ImageFont, ImageDraw
 
-
-#import numpy as np
-#import matplotlib
-#from matplotlib.patches import Wedge
-#from matplotlib.collections import PatchCollection
-#import matplotlib.pyplot as plt
-#
-#
-#fig = plt.figure()
-#ax = fig.add_axes([0,0,1,1]) # get rid of white border
-#
-## Some limiting conditions on Wedge
-#theta = 50
-#theta_width = 20
-#depth_of_field = 0.5
-#patches = [Wedge((0, 0), depth_of_field, theta-theta_width, theta+theta_width)]
-#p = PatchCollection(patches, alpha=0.50)
-#ax.add_collection(p)
-#
-#plt.show()
-
-
-# set randomness
-if not options.random_simulation:
-    random.seed(options.random_seed)
-    np.random.seed(options.np_random_seed )
 # creates figure
 fig = plt.figure()
 ax = fig.add_axes([0,0,1,1]) # get rid of white border
 if not options.show_axes:
     plt.axis('off')
-# sampling time
-dt = options.dt
+# draw background
+background = intersection.get_background()
+# define draw
+draw = ImageDraw.Draw(background)
 
-# create traffic intersection
-traffic_lights = traffic_signals.TrafficLights(yellow_max = 10, green_max = 50, random_start = True)
+# draw traffic lights
+traffic_lights = traffic_signals.TrafficLights(yellow_max = 10, green_max = 50, random_start = False, horizontal_state = ['green', 28])
+update_traffic_lights(ax, plt, traffic_lights) # for plotting
 
-def animate(frame_idx): # update animation by dt
-    t0 = time.time()
-    global_vars.current_time = frame_idx * dt # update current time from frame index and dt
+# draw_cars
+car1 = car.KinematicCar(init_state=(0,0,250,380), color='red1')
+car2 = car.KinematicCar(init_state=(0,0,250,520), color='green')
+car3 = car.KinematicCar(init_state=(0,np.pi,550,310), color='yellow')
+car4 = car.KinematicCar(init_state=(0,np.pi,900,240), color='blue')
+cars = [car1, car2, car3, car4]
+draw_cars(cars, background)
 
-    # update traffic lights
-    traffic_lights.update(dt)
-    update_traffic_lights(ax, plt, traffic_lights) # for plotting
-    _,_,the_car = spawn_car()
-    draw_cars_fast(ax, [the_car])
-    the_intersection = [ax.imshow(intersection.intersection, origin="lower")] # update the stage
+# draw_pedestrians
+human1 = pedestrian.Pedestrian(init_state=(20,20,20,20))
+humans = [human1]
+draw_pedestrians(humans, background)
 
-    all_artists = the_intersection + global_vars.crossing_highlights + global_vars.honk_waves + global_vars.boxes + global_vars.curr_tubes + global_vars.ids + global_vars.prim_ids_to_show + global_vars.walls + global_vars.show_traffic_lights + global_vars.cars_to_show + global_vars.pedestrians_to_show + global_vars.walk_signs
-    t1 = time.time()
-    elapsed_time = (t1 - t0)
-    print('{:.2f}'.format(global_vars.current_time)+'/'+str(options.duration) + ' at ' + str(int(1/elapsed_time)) + ' fps') # print out current time to 2 decimal places
-    return all_artists
+# draw detected
+fontsize = 50
+font = ImageFont.truetype("NotoSans-BoldItalic.ttf", fontsize)
+draw.text((550, 310), '!', font=font)
+draw.text((900, 240), '!', font=font)
 
-if True:
-    ims = []
-    for i in range(1,500):
-        ims.append(animate(i))
-    ani = animation.ArtistAnimation(fig, ims)
-    ani.save('tes2.avi')
-else:
-    t0 = time.time()
-    animate(0)
-    t1 = time.time()
-    interval = (t1 - t0)
-    ani = animation.FuncAnimation(fig, animate, frames=int(options.duration/options.dt), interval=interval, blit=True, repeat=False) # by default the animation function loops so set repeat to False in order to limit the number of frames generated to num_frames
-    if options.save_video:
-        Writer = animation.writers['ffmpeg']
-        writer = Writer(fps = options.speed_up_factor*int(1/options.dt), metadata=dict(artist='Traffic Intersection Simulator'), bitrate=-1)
-        now = str(datetime.datetime.now())
-        ani.save('../movies/' + now + '.avi', dpi=200)
-    plt.show()
-    t2 = time.time()
-    print('Total elapsed time: ' + str(t2-t0))
+# draw field of view
+theta = car1.state[1]
+theta_width = 50
+depth_of_field = 1000
+rear_axle_to_eye = 30
+offset = [rear_axle_to_eye*np.cos(theta), rear_axle_to_eye*np.sin(theta)]
+patches = [Wedge((car1.state[2]+offset[0], car1.state[3])+offset[1], depth_of_field, theta-theta_width, theta+theta_width)]
+p = PatchCollection(patches, alpha=0.50)
+ax.add_collection(p)
+# show background
+ax.imshow(background)
+plt.show()
+
+

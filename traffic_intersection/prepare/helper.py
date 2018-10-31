@@ -100,9 +100,9 @@ def draw_pedestrians_fast(plt):
         global_vars.pedestrians_to_show.append(plt.imshow(person_fig, extent=(x_corner,x_corner+w, y_corner, y_corner+h)))
     random.shuffle(global_vars.pedestrians_to_show)
 
-def draw_pedestrians(plt, background):
-    if len(global_vars.pedestrians_to_keep) > 0:
-        pedestrians = list(global_vars.pedestrians_to_keep)
+def draw_pedestrians(pedestrian_set, background):
+    if len(pedestrian_set) > 0:
+        pedestrians = list(pedestrian_set)
         random.shuffle(pedestrians)
         for pedestrian in pedestrians:
             if not pedestrian.is_dead:

@@ -165,7 +165,7 @@ def animate(frame_idx): # update animation by dt
         plot_traffic_light_walls(ax, traffic_lights)
     # check for collisions and update pedestrian state
     check_for_collisions(cars_to_keep)
-    draw_pedestrians(plt, background) # draw pedestrians to background
+    draw_pedestrians(global_vars.pedestrians_to_keep, background) # draw pedestrians to background
     # update background
     the_intersection = [ax.imshow(background, origin="lower")] # update the stage
     background.close()

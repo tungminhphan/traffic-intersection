@@ -39,6 +39,7 @@ class Pedestrian:
         self.film_dim = film_dim
         self.name = name
         self.age = age
+        self.pedestrian_type = pedestrian_type
         if prim_queue == None:
             self.prim_queue = Queue()
         else:
