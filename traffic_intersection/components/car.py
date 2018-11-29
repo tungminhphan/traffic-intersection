@@ -20,6 +20,7 @@ from assumes.disturbance import get_disturbance
 import assumes.params as params
 import math
 from math import pi
+from scipy.optimize import newton_krylov, fsolve, anderson, broyden1, broyden2
 
 dir_path = os.path.dirname(os.path.realpath("__file__"))
 car_colors = {'blue', 'gray', 'white', 'yellow', 'brown',
@@ -229,7 +230,6 @@ class DynamicCar(KinematicCar): # bicycle 5 DOF model
         self.car_width = car_width
         self.I_w = 1/2. * m_w * R_w**2 # approximated as the moment of inertia around z-axis of a thin disk / cylinder of any length with radius R_w and mass m
         self.I_z = 1/12. * m * (self.L**2 + self.car_width**2)
-        self.traction_guesses = [0, 0, 0, 0]
 
     def state_dot(self, init_dyn_state, t, delta_f, delta_r, T_af, T_ar, T_bf, T_br):
         # state = [v_x, v_y, r, psi, w_f, w_r, X, Y]
@@ -252,91 +252,45 @@ class DynamicCar(KinematicCar): # bicycle 5 DOF model
         I_z = self.I_z
         g = params.g
 
-        # iteratively solving for a_x, F_xf, F_xr: the instantaneous longitudinal acceleration, and longitudinal traction forces for the front and rear tires respectively
-        F_xf_guess = self.traction_guesses[0] # first guess for front tire longitudinal traction
-        F_xr_guess = self.traction_guesses[1] # first guess for rear tire longitudinal traction
-        F_yf_guess = self.traction_guesses[2] # first guess for front tire tangential traction
-        F_yr_guess = self.traction_guesses[3] # first guess for rear tire tangential traction
+        alpha_f = arctan2(v_y + L_f * r, v_x) - delta_f # equation 11
+        alpha_r = arctan2(v_y - L_r * r, v_x) - delta_r # equation 12
+        V_tf = sqrt((v_y + L_f * r)**2 + v_x**2) # equation 13
+        V_tr = sqrt((v_y - L_r * r)**2 + v_x**2) # equation 14
+        v_wxf = V_tf * cos(alpha_f) # equation 15
+        v_wxr = V_tr * cos(alpha_r) # equation 16
+        S_af = self.get_longitudinal_slip(v_wxf, w_f) # equation 17
+        S_ar = self.get_longitudinal_slip(v_wxr, w_r) # equation 18
 
-        F_xf = F_xf_guess
-        F_xr = F_xr_guess
-        F_yf = F_yf_guess
-        F_yr = F_yr_guess
-
-        iter_error = float('inf')
-
-        while iter_error > 0.01: # 
-            iter_errors = []
-            # equation (1)
+        def algebra(var):
+            vdot_x, F_xf, F_xr, F_yf, F_yr = var
             rhs = -F_xf * cos(delta_f) - F_yf * sin(delta_f) - F_xr * cos(delta_r) - F_yr * sin(delta_r)
-            vdot_x = rhs / m + v_y * r # state 1
-            a_x = vdot_x
-            # equation (2)
-            rhs = F_yf * cos(delta_f) - F_xf * sin(delta_f) + F_yr * cos(delta_r) - F_xr * sin(delta_r)
-            vdot_y = rhs / m  - v_x * r # state 2
-            # equation (3)
-            rhs = L_f * (F_yf * cos(delta_f) - F_xf * sin(delta_f)) - L_r * (F_yr * cos(delta_r) - F_xr * sin(delta_r))
-            r_dot = rhs / I_z
-            # equation (4)
-            rhs = F_xf * R_w - T_bf + T_af
-            wdot_f =  rhs / I_w # state 3
-            # equation (5)
-            rhs = F_xr * R_w - T_br + T_ar
-            wdot_r =  rhs / I_w # state 4
-            # equation (6)
-            psi_dot = r # state 5
-            # equation (7)
-            v_X = v_x * cos(psi) - v_y * sin(psi) # state 6
-            # equation (8)
-            v_Y = v_x * sin(psi) + v_y * cos(psi) # state 7
-            # equation (11)
-            alpha_f = arctan2(v_y + L_f * r, v_x) - delta_f
-            # equation (12)
-            alpha_r = arctan2(v_y - L_r * r, v_x) - delta_r
-            # equation (13)
-            V_tf = sqrt((v_y + L_f * r)**2 + v_x**2)
-            # equation (14)
-            V_tr = sqrt((v_y - L_r * r)**2 + v_x**2)
-            # equation (15)
-            v_wxf = V_tf * cos(alpha_f)
-            # equation (16)
-            v_wxr = V_tr * cos(alpha_r)
-            # equation (17)
-            S_af = self.get_longitudinal_slip(v_wxf, w_f)
-            # equation (18)
-            S_ar = self.get_longitudinal_slip(v_wxr, w_r)
-            # equation (9)
-            F_zf = (m * g * L_r - m * a_x * h) / (L_f + L_r)
-            # equation (10)
-            F_zr = (m * g * L_f - m * a_x * h) / (L_f + L_r)
+            eq1 = vdot_x - rhs / m + v_y * r # equation 1
+            # substitutions
+            a_x = vdot_x # instantaneous longitudinal acceleration
+            F_zf = (m * g * L_r - m * a_x * h) / (L_f + L_r) # equation 9
+            F_zr = (m * g * L_f - m * a_x * h) / (L_f + L_r) # equation 10
+            F_xf_guess, F_yf_guess = self.get_traction(F_xf, F_zf, S_af, alpha_f)
+            F_xr_guess, F_yr_guess = self.get_traction(F_xr, F_zr, S_ar, alpha_r)
+            eq19 = F_xf - F_xf_guess # equation 19
+            eq20 = F_yf - F_yf_guess # equation 20
+            eq21 = F_xr - F_xr_guess # equation 21
+            eq22 = F_yf - F_yf_guess # equation 22
+            return eq1, eq19, eq20, eq21, eq22
 
-            # compute traction force estimates
-            F_xf, F_yf = self.get_traction(F_xf, F_zf, S_af, alpha_f)
-            F_xr, F_yr = self.get_traction(F_xr, F_zr, S_ar, alpha_r)
-
-            # recompute errors
-            error_F_xf = abs(F_xf_guess - F_xf)
-            iter_errors.append(error_F_xf)
-            error_F_xr = abs(F_xr_guess - F_xr)
-            iter_errors.append(error_F_xr)
-            error_F_yf = abs(F_yf_guess - F_yf)
-            iter_errors.append(error_F_yf)
-            error_F_yr = abs(F_yr_guess - F_yr)
-            iter_errors.append(error_F_yr)
-
-            iter_error = max(iter_errors)
-            F_xf_guess = F_xf
-            F_xr_guess = F_xr
-            F_yf_guess = F_yf
-            F_yr_guess = F_yr
-
-        temp = [F_xf, F_xr, F_yf, F_yr]
-        good = True
-        for F in temp:
-            good = good and not math.isnan(F)
-        if good:
-            self.traction_guesses = temp
-
+        # resolve interdependency with nonlinear solver
+        init_guess = [0,0,0,0,0]
+        vdot_x, F_xf, F_xr, F_yf, F_yr = anderson(algebra, init_guess)
+        rhs = F_yf * cos(delta_f) - F_xf * sin(delta_f) + F_yr * cos(delta_r) - F_xr * sin(delta_r)
+        vdot_y = rhs / m  - v_x * r # equation 2
+        rhs = L_f * (F_yf * cos(delta_f) - F_xf * sin(delta_f)) - L_r * (F_yr * cos(delta_r) - F_xr * sin(delta_r))
+        r_dot = rhs / I_z # equation 3
+        rhs = F_xf * R_w - T_bf + T_af
+        wdot_f =  rhs / I_w # equation 4
+        rhs = F_xr * R_w - T_br + T_ar
+        wdot_r =  rhs / I_w # equation 5
+        psi_dot = r # equation 6
+        v_X = v_x * cos(psi) - v_y * sin(psi) # equation 7
+        v_Y = v_x * sin(psi) + v_y * cos(psi) # equation 8
 
         dstate_dt = [vdot_x, vdot_y, r_dot, psi_dot, wdot_f, wdot_r, v_X, v_Y]
         return dstate_dt
@@ -409,3 +363,41 @@ class DynamicCar(KinematicCar): # bicycle 5 DOF model
         F_x = (f_of_sigma * K_c_prime * S / sqrt(K_s**2 * (tan(alpha))**2 + K_c_prime**2 * S**2)) * mu * F_z
 
         return F_x, F_y
+
+# TESTING
+v_x = 1
+v_y = 0
+r = 0
+psi = 0
+w_f = 0.1
+w_r = 0.1
+X = 100
+Y = 100
+init_dyn_state = np.array([v_x, v_y, r, psi, w_f, w_r, X, Y])
+dyn_car = DynamicCar(init_dyn_state = init_dyn_state)
+delta_f = 0
+delta_r = 0
+T_af = 5
+T_ar = 0
+T_bf = 0
+T_br = 0
+inputs = (delta_f, delta_r, T_af, T_ar, T_bf, T_br)
+dt = 0.1
+t_end = 10
+t_start = 0
+t_current = t_start
+X = []
+Y = []
+psi = []
+while t_current < t_end:
+    dyn_car.next(inputs, 0.1)
+    t_current += dt
+    state = dyn_car.dyn_state
+    X.append(state[-2])
+    Y.append(state[-1])
+    print(state)
+
+# state = [v_x, v_y, r, psi, w_f, w_r, X, Y]
+import matplotlib.pyplot as plt
+plt.plot(X,Y)
+plt.show()
