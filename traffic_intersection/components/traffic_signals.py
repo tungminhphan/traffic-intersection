@@ -37,7 +37,7 @@ class TrafficLights():
     def __init__(self, yellow_max = 5, green_max = 25, random_start = True, horizontal_state = ['red', 28], walk_sign_duration_factor = 3):
         '''
         @param yellow_max is the duration of yellow
-        @param green_max is the duration of yellow
+        @param green_max is the duration of green
         @param random_start
 
         '''
@@ -45,7 +45,7 @@ class TrafficLights():
         self._walk_sign_duration = self._max_time['green']/walk_sign_duration_factor
         if random_start:
             colors = ['red', 'yellow', 'green']
-            random_color = random.choice(colors)
+            random_color = random.choice(colors) 
             random_time = random.uniform(0, self._max_time[random_color])
             self._horizontal_init = [random_color, random_time]
             horizontal_state = self._horizontal_init
@@ -95,7 +95,7 @@ class TrafficLights():
             current_color = self._state['horizontal'][0]
         next_color = self.successor(current_color)
         last_color = self.successor(next_color)
-        if horizontal_time // self._max_time[current_color] < 1:
+        if horizontal_time // self._max_time[current_color] < 1: 
             horizontal_color = current_color
         elif horizontal_time // (full_cycle - self._max_time[last_color]) < 1:
             horizontal_color = next_color
@@ -126,9 +126,5 @@ class TrafficLights():
         elif which == 'vertical':
             return self.get_states('vertical', 'time')
 
-    def get_remaining_time(self, which):
-        if which == 'vertical':
-            return abs(self._walk_sign_duration - vertical_light_time)
-        elif which == 'horizontal':
-            return abs(self._walk_sign_duration  - horizontal_light_time)
+    
 

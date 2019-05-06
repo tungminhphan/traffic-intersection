@@ -100,7 +100,6 @@ class Scheduler:
         return is_safe
 
     def get_scheduled_intervals(self, path, effective_time, graph, complete_path=True):
-        now = effective_time
         path_prims = self.path_to_primitives(path)
         scheduled_intervals = dict()
         time_shift = effective_time
@@ -116,17 +115,17 @@ class Scheduler:
             last_subprim = (path_prims[-1], params.num_subprims-1)
             last_interval = scheduled_intervals[last_subprim]
             scheduled_intervals[last_subprim] = (last_interval[0], float('inf'))
-        return scheduled_intervals
+        return path_prims, scheduled_intervals
 
     def complete_path_is_safe(self, path, effective_time, graph, the_car, traffic_lights):
-        scheduled_intervals = self.get_scheduled_intervals(path, effective_time, graph)
+        _,scheduled_intervals = self.get_scheduled_intervals(path, effective_time, graph)
         for subprim in scheduled_intervals:
             if not self.subprim_is_safe(subprim_id=subprim, subprim_interval=scheduled_intervals[subprim], the_car=the_car, traffic_lights=traffic_lights):
                 return False
         return True
 
     def head_is_safe(self, path, effective_time, graph, the_car, traffic_lights):
-        scheduled_intervals = self.get_scheduled_intervals(path=path, effective_time=effective_time, graph=graph, complete_path=False)
+        _,scheduled_intervals = self.get_scheduled_intervals(path=path, effective_time=effective_time, graph=graph, complete_path=False)
         for subprim in scheduled_intervals:
             if not self.subprim_is_safe(subprim_id=subprim, subprim_interval=scheduled_intervals[subprim], the_car=the_car,traffic_lights=traffic_lights):
                 return False
@@ -189,18 +188,16 @@ class Scheduler:
         _, path = dijkstra(depart, arrive, graph)
         if self.complete_path_is_safe(path=path, effective_time=effective_time, graph=graph, the_car=the_car, traffic_lights=traffic_lights):
             self.unwait(the_car)
-            scheduled_intervals = self.get_scheduled_intervals(path, effective_time, graph)
+            path_prims, scheduled_intervals = self.get_scheduled_intervals(path, effective_time, graph)
             self.update_table(scheduled_intervals=scheduled_intervals,the_car=the_car)
-            path_prims = self.path_to_primitives(path)
             self.send_prims_and_update_effective_times(the_car, path_prims)
         else:
             head = self.find_transit(path=path, graph=graph,  effective_time=effective_time,  the_car=the_car,  traffic_lights=traffic_lights)
             if head != None:
                 self.unwait(the_car)
                 transit = head[-1]
-                scheduled_intervals = self.get_scheduled_intervals(path=head, effective_time=effective_time, graph=graph, complete_path=False)
+                path_prims, scheduled_intervals = self.get_scheduled_intervals(path=head, effective_time=effective_time, graph=graph, complete_path=False)
                 self.update_table(scheduled_intervals=scheduled_intervals,the_car=the_car)
-                path_prims = self.path_to_primitives(head)
                 self.send_prims_and_update_effective_times(the_car=the_car,path_prims=path_prims)
                 wait_subprim = (path_prims[-1],params.num_subprims-1)
                 self.make_wait(the_car=the_car,wait_subprim=wait_subprim)

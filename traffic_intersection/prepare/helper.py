@@ -89,13 +89,12 @@ def draw_pedestrians_fast(plt):
             upper = ((i+1)*sub_width, (j+1)*sub_height)
             area = (int(lower[0]), int(lower[1]), int(upper[0]), int(upper[1]))
             person_fig = film_fig.crop(area)
-            person_fig = person_fig.rotate(180+theta/np.pi * 180 + 90, expand = False)
-            x_corner, y_corner = find_corner_coordinates(0., 0, x, y, theta,  person_fig)
+            person_fig = person_fig.rotate(180 + theta/pi * 180 + 90, expand = False)
+            x_corner, y_corner = find_corner_coordinates(0., 0, x, y, theta, person_fig)
         else:
             x, y, theta, _ = pedestrian.state
-            person_fig = Image.open(pedestrian.fig)
-            person_fig = person_fig.resize((20,20))
-            x_corner, y_corner = find_corner_coordinates(0., 0., x, y, theta,  person_fig)
+            person_fig = Image.open(pedestrian.fig).resize((20,20))
+            x_corner, y_corner = find_corner_coordinates(0., 0., x, y, theta, person_fig)
         w, h = person_fig.size
         global_vars.pedestrians_to_show.append(plt.imshow(person_fig, extent=(x_corner,x_corner+w, y_corner, y_corner+h)))
     random.shuffle(global_vars.pedestrians_to_show)
@@ -107,33 +106,32 @@ def draw_pedestrians(pedestrian_set, background):
         for pedestrian in pedestrians:
             if not pedestrian.is_dead:
                 x, y, theta, current_gait = pedestrian.state
-                i = current_gait % pedestrian.film_dim[1]
-                j = current_gait // pedestrian.film_dim[1]
+                # convert gait number to i, j coordinates of subfigure
+                subfigure_index = current_gait % pedestrian.film_dim[1]
                 film_fig = Image.open(pedestrian.fig)
-                scaled_film_fig_size  =  tuple([int(params.pedestrian_scale_factor * i) for i in film_fig.size])
+                scaled_film_fig_size  =  tuple([int(params.pedestrian_scale_factor * p) for p in film_fig.size])
                 film_fig = film_fig.resize(scaled_film_fig_size)
                 width, height = film_fig.size
                 sub_width = width/pedestrian.film_dim[1]
                 sub_height = height/pedestrian.film_dim[0]
-                lower = (i*sub_width,j*sub_height)
-                upper = ((i+1)*sub_width, (j+1)*sub_height)
+                lower = (subfigure_index*sub_width, 0)
+                upper = ((subfigure_index+1)*sub_width, sub_height)
                 area = (int(lower[0]), int(lower[1]), int(upper[0]), int(upper[1]))
                 person_fig = film_fig.crop(area)
                 person_fig = person_fig.rotate(-theta/np.pi * 180 - 90, expand = False)
                 x_corner, y_corner = find_corner_coordinates(0., 0, x, y, theta,  person_fig)
             else:
                 x, y, theta, _ = pedestrian.state
-                person_fig = Image.open(pedestrian.fig)
-                person_fig = person_fig.resize((20,20))
+                person_fig = Image.open(pedestrian.fig).resize((20,20))
                 x_corner, y_corner = find_corner_coordinates(0., 0., x, y, theta,  person_fig)
             w, h = person_fig.size
             background.paste(person_fig, (x_corner, y_corner), person_fig)
 
 def spawn_car(random_start_end=True):
     plate_number = generate_license_plate()
-    rand_num = np.random.choice(10)
+    #rand_num = np.random.choice(10)
     if random_start_end:
-        start_node = random.sample(car_graph.G._sources, 1)[0]
+        start_node = random.sample(car_graph.G._sources, 1)[0] 
         end_node = random.sample(car_graph.G._sinks, 1)[0]
     color = np.random.choice(tuple(car.car_colors))
     the_car = car.KinematicCar(init_state=start_node, color=color, plate_number=plate_number)
@@ -253,11 +251,11 @@ def dijkstra(start, end, graph, ped=False):
 
 def is_disjoint(interval_A, interval_B):
     '''
-    this subroutine checks if two intervals intersect with each other; it returns True if
+    this subroutine checks if two intervals are disjoint with each other; it returns True if
     they do and False otherwise
     input : interval_A - first interval
             interval_B - second interval
-    output: is_intersecting - True if interval_A intersects interval_B, False otherwise
+    output: is_disjoint - True if interval_A not intersects with interval_B, False otherwise
     '''
     disjoint = (interval_A[0] > interval_B[1]) or (interval_B[0] > interval_A[1])
     return disjoint

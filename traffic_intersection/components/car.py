@@ -11,14 +11,14 @@ import numpy as np
 from primitives.prim_car import prim_state_dot
 from components.auxiliary.tire_data import get_tire_data
 from scipy.integrate import odeint
-from numpy import cos, sin, tan, arctan2, sqrt
+from numpy import cos, sin, tan, arctan2, sqrt, sign, diag
 main_dir = os.path.dirname(os.path.dirname(os.path.realpath("__file__")))
 primitive_data = main_dir + '/primitives/MA3.mat'
 from prepare.queue import Queue
+from primitives.load_primitives import get_prim_data
 from PIL import Image
 from assumes.disturbance import get_disturbance
 import assumes.params as params
-import math
 from math import pi
 from scipy.optimize import newton_krylov, fsolve, anderson, broyden1, broyden2
 
@@ -33,39 +33,50 @@ for color in car_colors:
 mat = scipy.io.loadmat(primitive_data)
 
 
-def saturation_filter(u, u_max, u_min):
+def saturation_filter(u, u_min, u_max):
     ''' saturation_filter Helper Function
 
         the output is equal to u_max if u >= u_max, u_min if u <= u_min, and u otherwise
     '''
     return max(min(u, u_max), u_min)
 
-class KinematicCar:
+# for convenience if a bunch of primitive data is requested
+def get_bunch_prim_data(prim_id, data_fields):
+    data = dict()
+    for data_field in data_fields:
+        data[data_field] = mat['MA3'][prim_id,0][data_field][0,0]
+    return list(data.values())
+
+class KinematicCar():
     '''Kinematic car class
 
     init_state is [vee, theta, x, y], where vee, theta, x, y are the velocity, orientation, and
     coordinates of the car respectively
     '''
-    def __init__(self, init_state=[0, 0, 0, 0],
-                 L=50,  # length of vehicle in pixels
-                 a_max=9.81,  # maximum acceleration of vehicle
-                 a_min=-9.81,  # maximum deceleration of vehicle
-                 nu_max=0.5,  # maximum steering input in radians/sec
-                 nu_min=-0.5,  # minimum steering input in radians/sec)
-                 vee_max=100,  # maximum velocity
-                 is_honking=False,  # the car is honking
-                 color='blue',  # color of the car
-                 plate_number=None,  # license plate number
+    def __init__(self, 
+                 init_state=[0, 0, 0, 0],
+                 length = 50,  # length of vehicle in pixels
+                 acc_max = 9.81,  # maximum acceleration of vehicle
+                 acc_min = -9.81,  # maximum deceleration of vehicle
+                 steer_max = 0.5,  # maximum steering input in radians
+                 steer_min = -0.5,  # minimum steering input in radians
+                 vee_max = 100,  # maximum velocity
+                 is_honking = False,  # the car is honking
+                 color = 'blue',  # color of the car
+                 plate_number = None,  # license plate number
                  # queue of primitives, each item in the queue has the form (prim_id, prim_progress) where prim_id is the primitive ID and prim_progress is the progress of the primitive)
-                 prim_queue=None,
-                 fuel_level=float('inf')):  # TODO: fuel level of the car
+                 prim_queue = None,
+                 fuel_level = float('inf')):  # TODO: fuel level of the car
         if color not in car_colors:
             raise Exception("This car color doesn't exist!")
-        self.params = (L, a_max, a_min, nu_max, nu_min, vee_max)
+        self._length = length
+        self._vee_max = vee_max
+        self.acc_range = (acc_min, acc_max)
+        self.steer_range = (steer_min, steer_max)
         self.alive_time = 0
         self.plate_number = plate_number
-        self.init_state = np.array(init_state, dtype='float')
-        self.state = self.init_state
+        #self.init_state = np.array(init_state, dtype='float')
+        self.state = np.array(init_state, dtype='float')
         self.color = color
 #        self.new_unpause = False
 #        self.new_pause = False
@@ -79,33 +90,24 @@ class KinematicCar:
         self.fuel_level = fuel_level
         self.fig = Image.open(car_figs[color])
 
-    def state_dot(self,
-                  state,
-                  t,
-                  a,
-                  nu):
+    def state_dot(self, state, time, acc, steer):
         """
-        state_dot is a function that defines the system dynamics
-
+        This function defines the system dynamics
+        
         Inputs
-        state: current state
-        t: current time
-        a: acceleration input
-        nu: steering input
-
+        acc: acceleration input
+        steer: steering input
         """
-        (L, a_max, a_min, nu_max, nu_min, vee_max) = self.params
-        dstate_dt = np.zeros(np.shape(state))
-        dstate_dt[0] = saturation_filter(a, a_max, a_min)
         # if already at maximum speed, can't no longer accelerate
-        if np.abs(state[1]) >= vee_max and np.sign(a) == np.sign(state[1]):
-            dstate_dt[1] = 0
+        if abs(state[0]) >= self._vee_max and sign(acc) == sign(state[0]):
+            vee_dot = 0
         else:
-            dstate_dt[1] = state[0] / L * \
-                tan(saturation_filter(nu, nu_max, nu_min))
-        dstate_dt[2] = state[0] * cos(state[1])
-        dstate_dt[3] = state[0] * sin(state[1])
-        return dstate_dt
+            vee_dot = saturation_filter(acc, self.acc_range[0], self.acc_range[1])    
+        theta_dot = state[0] / self._length * tan(saturation_filter(steer, self.steer_range[0], self.steer_range[1]))
+        x_dot = state[0] * cos(state[1]) 
+        y_dot = state[0] * sin(state[1]) 
+        dstate = [vee_dot, theta_dot, x_dot, y_dot]
+        return dstate
 
     def toggle_honk(self):
         self.is_honking = not self.is_honking
@@ -113,6 +115,7 @@ class KinematicCar:
     def next(self, inputs, dt):
         """
         next is a function that updates the current position of the car when inputs are applied for a duration of dt
+        
         Inputs:
         inputs: acceleration and steering inputs
         dt: integration time
@@ -120,20 +123,16 @@ class KinematicCar:
         Outputs:
         None - the states of the car will get updated
         """
-        a, nu = inputs
-
+        acc, steer = inputs
         # take only the real part of the solution
-        self.state = odeint(self.state_dot, self.state,
-                            t=(0, dt), args=(a, nu))[1]
-        # fuel decreases linearly with acceleration/deceleration
-        self.fuel_level -= np.abs(a) * dt
-        # update alive time
+        self.state = odeint(self.state_dot, self.state, t=(0, dt), args=(acc, steer))[1]
+        self.fuel_level -= abs(acc) * dt # fuel decreases linearly with acceleration
         self.alive_time += dt
 
         # fix floating
-        if abs(a) < 0.1:
+        if abs(acc) < 0.1:
             self.state[0] = 0
-
+            
     def extract_primitive(self):
         """
         This function updates the primitive queue and picks the next primitive to be applied. When there is no more primitive in the queue, it will
@@ -162,46 +161,35 @@ class KinematicCar:
             self.next((0, 0), dt)
         else:
             prim_id, prim_progress = self.extract_primitive()
-            # load primitive data TODO: make this portion of the code more automated
+            # TODO: make this portion of the code more automated
             if prim_id > -1:
-                # the primitive corresponding to the primitive number
-                prim = mat['MA3'][prim_id, 0]
-                # extract duration of primitive
-                t_end = prim['t_end'][0, 0][0, 0]
-                # number of subintervals encoded in primitive
-                N = prim['K'][0, 0].shape[0]
-                # this diagonal matrix encodes the size of input set (a constraint)
-                G_u = np.diag([175, 1.29])
-                nu = 2  # number of inputs
-                nx = 4  # number of states
-
+                # load primitive data 
+                list_of_key = ['x0', 'x_ref', 'u_ref', 'alpha', 'K']
+                x0, x_ref, u_ref, alpha, K = get_bunch_prim_data(prim_id, list_of_key)
+                
                 if prim_progress == 0:  # compute initial extended state
-                    x1 = self.state.reshape((-1, 1))
-                    x2 = prim['x0'][0, 0]
-                    x3 = x1 - prim['x0'][0, 0]
-                    x4 = np.matmul(np.linalg.inv(
-                        np.diag([4, 0.02, 4, 4])), (x1-prim['x0'][0, 0]))
-                    # initial state, consisting of actual state and virtual states for the controller
-                    self.extended_state = (np.vstack((x1, x2, x3, x4)))[:, 0]
-                k = int(prim_progress * N)  # calculate primitive waypoint
-
+                    x_real = self.state.reshape((-1, 1))                   
+                    x1 = x_real - x0
+                    x2 = np.matmul(np.linalg.inv(diag([4, 0.02, 4, 4])), x1)
+                    # initial state, consisting of actual and virtual states for the controller
+                    self.extended_state = (np.vstack((x_real, x0, x1, x2)))[:, 0] 
+                
+                num_of_inputs = 2 
+                G_u = np.diag([175, 1.29]) # this diagonal matrix encodes the size of input set (a constraint)
                 dist = get_disturbance()
-                q1 = prim['K'][0, 0][k, 0].reshape((-1, 1), order='F')
-                q2 = 0.5 * (prim['x_ref'][0, 0][:, k+1] +
-                            prim['x_ref'][0, 0][:, k]).reshape(-1, 1)
-                q3 = prim['u_ref'][0, 0][:, k].reshape(-1, 1)
-                q4 = prim['u_ref'][0, 0][:, k].reshape(-1, 1)
-                q5 = np.matmul(
-                    G_u, prim['alpha'][0, 0][k*nu:(k+1)*nu]).reshape((-1, 1), order='F')
+                k = int(prim_progress * params.num_subprims)  # calculate primitive waypoint
+                q1 = K[k, 0].reshape((-1, 1), order='F')
+                q2 = 0.5 * (x_ref[:, k+1] + x_ref[:, k]).reshape(-1, 1)
+                q3 = u_ref[:, k].reshape(-1, 1)
+                q4 = u_ref[:, k].reshape(-1, 1)
+                q5 = np.matmul(G_u, alpha[k*num_of_inputs: (k+1)*num_of_inputs]).reshape((-1, 1), order='F')
                 # parameters for the controller
                 q = np.vstack((q1, q2, q3, q4, q5))
-                self.extended_state = odeint(func=prim_state_dot, y0=self.extended_state, t=[
-                                             0, dt], args=(dist, q))[-1, :]
-                self.state = self.extended_state[0:4]
-                # update alive time
+                
+                self.extended_state = odeint(func=prim_state_dot, y0=self.extended_state, t=[0, dt], args=(dist, q))[-1, :]
+                self.state = self.extended_state[0: len(self.state)]
                 self.alive_time += dt
-                # update progress
-                prim_progress = prim_progress + dt / t_end
+                prim_progress = prim_progress + dt / get_prim_data(prim_id, 't_end')[0]
                 self.prim_queue.replace_top((prim_id, prim_progress))
             else:  # if is stopping primitive
                 self.next((0, 0), dt)
